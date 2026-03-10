@@ -12,6 +12,13 @@
 
 const LISTEN_CONFIG = {
 
+    // Дефолтний CEFR-рівень береться централізовано з sett_set.js
+    get defaultExerciseLevel() {
+        return (typeof getDefaultExerciseLevel === 'function')
+            ? getDefaultExerciseLevel(this.levels.map(l => l.value))
+            : 'B1';
+    },
+
     // ─── ТЕМИ ────────────────────────────────────────────────────────────────────
     // Беремо з глобальних налаштувань (sett_set.js), щоб усі модулі
     // працювали з єдиним списком пріоритетних тем.
@@ -22,11 +29,11 @@ const LISTEN_CONFIG = {
 
     // ─── РІВНІ ───────────────────────────────────────────────────────────────────
     levels: [
-        { value: 'A1', label: 'A1 — Елементарний',     wordCount: 6               },
-        { value: 'A2', label: 'A2 — Початковий',       wordCount: 10              },
-        { value: 'B1', label: 'B1 — Середній',         wordCount: 17, default: true },
-        { value: 'B2', label: 'B2 — Вище середнього',  wordCount: 25              },
-        { value: 'C1', label: 'C1 — Просунутий',       wordCount: 35              },
+        { value: 'A1', label: 'A1 — Елементарний',     wordCount: 6  },
+        { value: 'A2', label: 'A2 — Початковий',       wordCount: 10 },
+        { value: 'B1', label: 'B1 — Середній',         wordCount: 17 },
+        { value: 'B2', label: 'B2 — Вище середнього',  wordCount: 25 },
+        { value: 'C1', label: 'C1 — Просунутий',       wordCount: 35 },
     ],
 
     // ─── ПРОФІЛІ РІВНІВ ДЛЯ AI-ПРОМПТУ ─────────────────────────────────────────

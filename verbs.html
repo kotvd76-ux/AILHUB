@@ -934,7 +934,7 @@ body::before {
         </label>
         <select id="sel-level" class="ph-select">
           <option value="A2">Рівень A2 — Елементарний</option>
-          <option value="B1" selected>Рівень B1 — Середній</option>
+          <option value="B1">Рівень B1 — Середній</option>
           <option value="B2">Рівень B2 — Просунутий</option>
         </select>
       </div>
@@ -1315,7 +1315,10 @@ body::before {
 // ══════════════════════════════════════════════
 
 // Поточний вибраний рівень — читається при генерації
-let selectedLevel = 'B1';
+const grammarAllowedLevels = ['A2', 'B1', 'B2'];
+let selectedLevel = (typeof getDefaultExerciseLevel === 'function')
+  ? getDefaultExerciseLevel(grammarAllowedLevels)
+  : 'B1';
 let selectedTheme = ''; // '' => авто (випадкова з sett_set)
 const AUTO_THEME_ROTATE_MS = 60 * 1000;
 let autoThemeState = { value: '', ts: 0 };
@@ -2195,6 +2198,11 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
   // Build dropdowns in selection screen
   buildSelectionThemeDropdown();
   buildSelectionDropdown();
+
+  const levelSelect = document.getElementById('sel-level');
+  if (levelSelect && grammarAllowedLevels.includes(selectedLevel)) {
+    levelSelect.value = selectedLevel;
+  }
 
   // Build main app dropdown (hidden until Start)
   buildDropdown();

@@ -16,6 +16,10 @@ const HARDCODED_KEYS = {
 
 const SETTINGS_CONFIG = {
 
+    // ── Базовий рівень складності для всіх вправ ───────────
+    // Єдине джерело дефолтного CEFR-рівня (A1–C1) у всіх модулях.
+    defaultExerciseLevel: 'B1',
+
     // ── Глобальні пріоритетні теми для AI-промптів ──────────
     // Використовувати у вправах як єдине джерело тематик.
     // Це дає однаковий набір тем для всіх модулів.
@@ -293,4 +297,20 @@ function getLangConfig() {
 function getGrammarThemeDefaultMode() {
     const mode = (SETTINGS_CONFIG && SETTINGS_CONFIG.grammarThemeDefaultMode) || 'random';
     return mode === 'manual' ? 'manual' : 'random';
+}
+
+
+// ── Глобальна функція дефолтного рівня для вправ ───────────
+// Повертає CEFR-рівень з sett_set.js, з перевіркою допустимих
+// значень для конкретного модуля (allowedLevels).
+function getDefaultExerciseLevel(allowedLevels = ['A1', 'A2', 'B1', 'B2', 'C1']) {
+    const valid = Array.isArray(allowedLevels) && allowedLevels.length
+        ? allowedLevels
+        : ['A1', 'A2', 'B1', 'B2', 'C1'];
+
+    const configured = String(SETTINGS_CONFIG?.defaultExerciseLevel || '').trim().toUpperCase();
+    if (valid.includes(configured)) return configured;
+
+    if (valid.includes('B1')) return 'B1';
+    return valid[0];
 }
