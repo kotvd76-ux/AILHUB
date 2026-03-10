@@ -114,11 +114,11 @@ const GRAMMAR_CONFIG = {
       ); },
     },
 
-    // ── 02 SUBJUNTIVO ──────────────────────────────────────────
+    // ── 02 КОНТРАСТ ФОРМ (мовозалежна) ────────────────────────
     {
-      id:    'subjuntivo',
+      id:    'contrast',
       num:   '02',
-      label: 'Subjuntivo — завершення фрази',
+      label: 'Контраст форм (мовозалежна)',
       level: 'B1–B2',
 
       // Seeds: емоційні та міжособистісні ситуації — тягнуть Subjuntivo природно
@@ -222,11 +222,11 @@ const GRAMMAR_CONFIG = {
       ); },
     },
 
-    // ── 04 ГРАМАТИЧНИЙ СВАЙП ───────────────────────────────────
+    // ── 04 КОНТЕКСТНИЙ ВИБІР (3 варіанти, мовозалежна) ────────
     {
-      id:    'swipe',
+      id:    'context3',
       num:   '04',
-      label: 'Граматичний свайп',
+      label: 'Контекстний вибір (3 варіанти)',
       level: 'A2–B1',
 
       // Seeds: люди в конкретних станах і місцях — тягнуть ser/estar природно
@@ -256,31 +256,25 @@ const GRAMMAR_CONFIG = {
       ],
 
       get aiPrompt() { const L = _vLang();
-        // Для іспанської — ser/estar; для інших мов — еквівалентна бінарна граматична опозиція
-        const gramFocus = L.target.id === 'es'
-          ? {
-              desc: `вибір між ser та estar у ${L.targetName}. Речення містить ___ на місці дієслова. Варіант A — форма ser, варіант B — форма estar.`,
-              rules: `ОБОВ'ЯЗКОВО: кожне речення — окрема граматична ситуація:\n  1. ser + стала характеристика\n  2. estar + тимчасовий стан або настрій\n  3. estar + місцезнаходження\n  4. ser + незмінна властивість\n  5. прикметник що змінює значення з ser/estar`,
-              json: L.helper.id !== 'none'
-                ? '{"tasks":[{"sentence":"речення з ___","optA":"форма ser","optB":"форма estar","correct":"A або B","hint":"підказка","uk":"переклад","en":"переклад допоміжною мовою","explain":"7–12 слів"}]}'
-                : '{"tasks":[{"sentence":"речення з ___","optA":"форма ser","optB":"форма estar","correct":"A або B","hint":"підказка","uk":"переклад","explain":"7–12 слів"}]}'
-            }
-          : {
-              desc: `бінарний граматичний вибір (артикль a/an, часи Present Simple/Continuous, to be/to have тощо) у ${L.targetName}. Речення містить ___ на місці форми. Варіант A і Варіант B — дві конкуруючі форми.`,
-              rules: `ОБОВ'ЯЗКОВО: 5 різних граматичних опозицій, жодних повторів`,
-              json: L.helper.id !== 'none'
-                ? '{"tasks":[{"sentence":"речення з ___","optA":"варіант A","optB":"варіант B","correct":"A або B","hint":"підказка про правило","uk":"переклад","en":"переклад допоміжною мовою","explain":"7–12 слів"}]}'
-                : '{"tasks":[{"sentence":"речення з ___","optA":"варіант A","optB":"варіант B","correct":"A або B","hint":"підказка про правило","uk":"переклад","explain":"7–12 слів"}]}'
-            };
+        const focusMap = L.target.id === 'en'
+          ? 'фразові дієслова та артиклі (a/an/the/zero)'
+          : L.target.id === 'es'
+            ? 'Subjuntivo / Ser vs Estar / Indefinido vs Imperfecto'
+            : L.target.id === 'fr'
+              ? 'займенники-додатки (en/y/le-la-les) та узгодження'
+              : `контекстний граматичний вибір у ${L.targetName}`;
         return (
-        `Ти вчитель ${L.targetName}. Згенеруй 5 завдань на ${gramFocus.desc}\n` +
-        `\n${gramFocus.rules}\n\n` +
-        `Поле hint — підказка про правило мовою ${L.uiLanguage} (1 речення).\n` +
-        `Поле explain — ОБОВ'ЯЗКОВЕ, 7–12 слів.${L.helperClause}\n` +
-        `Поле uk — переклад мовою ${L.uiLanguage}.\n` +
-        (L.helper.id !== 'none' ? `Поле en — переклад мовою ${L.helper.nameEn} (для лінгвістичного містку).\n` : '') +
+        `Ти вчитель ${L.targetName}. Згенеруй 5 завдань на ${focusMap}.\n` +
+        'Кожне завдання: sentence (з ___), opts (РІВНО 3 варіанти), correct (один з opts), hint, explain.\n' +
+        'ВАЖЛИВО: це вправа на вибір між 3 варіантами, не swipe A/B.\n' +
+        `Поле hint — коротка підказка мовою ${L.uiLanguage}.\n` +
+        `Поле uk — переклад мовою ${L.uiLanguage}.${L.helperClause}\n` +
+        (L.helper.id !== 'none' ? `Поле en — переклад мовою ${L.helper.nameEn}.\n` : '') +
         'Відповідай ТІЛЬКИ валідним JSON без markdown:\n' +
-        gramFocus.json + '\n' +
+        (L.helper.id !== 'none'
+          ? '{"tasks":[{"sentence":"речення з ___","opts":["варіант1","варіант2","варіант3"],"correct":"варіант1","hint":"підказка","uk":"переклад","en":"переклад","explain":"7–12 слів"}]}'
+          : '{"tasks":[{"sentence":"речення з ___","opts":["варіант1","варіант2","варіант3"],"correct":"варіант1","hint":"підказка","uk":"переклад","explain":"7–12 слів"}]}'
+        ) + '\n' +
         'Згенеруй рівно 5 об\'єктів у масиві tasks.'
       ); },
     },
@@ -332,6 +326,7 @@ const GRAMMAR_CONFIG = {
         'correctWord, fixOptions (рівно 3: correctWord + 2 хибних),\n' +
         `uk — ТІЛЬКИ переклад мовою ${L.uiLanguage}, без жодних інших мов у дужках.\n` +
         (L.helper.id !== 'none' ? `en — ТІЛЬКИ переклад мовою ${L.helper.nameEn}, ОКРЕМО від поля uk.\n` : '') +
+        'ВАЖЛИВО: words[errorIdx] має бути ПОМИЛКОВИМ словом і НЕ дорівнювати correctWord.\n' +
         'ВАЖЛИВО: correctWord ОБОВ\'ЯЗКОВО присутній серед fixOptions.\n' +
         'Відповідай ТІЛЬКИ валідним JSON без markdown:\n' +
         (L.helper.id !== 'none'
@@ -339,6 +334,61 @@ const GRAMMAR_CONFIG = {
             : '{"tasks":[{"words":[...],"errorIdx":0,"correctWord":"...","fixOptions":["...","...","..."],"uk":"...","explain":"..."}]}\n'
         ) +
         'Згенеруй рівно 5 об\'єктів у масиві tasks.'
+      ); },
+    },
+
+    // ── 06 TAP-ORDER TRANSFORM ───────────────────────────────
+    {
+      id:    'transform',
+      num:   '06',
+      label: 'Tap-order transform',
+      level: 'A2–B1',
+      seeds: [
+        'на співбесіді', 'у кавʼярні', 'під час подорожі потягом', 'на прийомі у лікаря',
+        'під час сімейної вечері', 'під час онлайн-уроку', 'на вечірці з друзями'
+      ],
+      focuses: [
+        'перетворення часу', 'перетворення ствердження у заперечення',
+        'заміна іменника займенником', 'коректний порядок слів'
+      ],
+      get aiPrompt() { const L = _vLang(); return (
+        `Ти вчитель ${L.targetName}. Згенеруй 5 завдань формату Tap-order transform.\n` +
+        'Кожне завдання містить: instruction, source, tokens (перемішані слова), correctSentence, uk, explain.\n' +
+        'ОБОВ\'ЯЗКОВО: correctSentence коротке — максимум 5 слів.\n' +
+        'tokens мають складати correctSentence без зайвих слів.\n' +
+        (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
+        'JSON only:\n' +
+        (L.helper.id !== 'none'
+          ? '{"tasks":[{"instruction":"...","source":"...","tokens":["..."],"correctSentence":"...","uk":"...","en":"...","explain":"7–12 слів"}]}'
+          : '{"tasks":[{"instruction":"...","source":"...","tokens":["..."],"correctSentence":"...","uk":"...","explain":"7–12 слів"}]}'
+        )
+      ); },
+    },
+
+    // ── 07 СЛОВНИК ───────────────────────────────────────────
+    {
+      id:    'vocab',
+      num:   '07',
+      label: 'Словник',
+      level: 'A1–B1',
+      seeds: [
+        'подорожі', 'офіс', 'ресторан', 'small talk', 'сімʼя', 'шопінг', 'здоровʼя', 'надзвичайні ситуації'
+      ],
+      focuses: [
+        'колокації', 'щоденна лексика', 'короткі корисні фрази', 'контекстне запамʼятовування'
+      ],
+      get aiPrompt() { const L = _vLang(); return (
+        `Ти вчитель ${L.targetName}. Згенеруй 5 словникових завдань для смартфона.\n` +
+        `Формат: nativeWord (одне слово або усталений вираз мовою ${L.uiLanguage}), opts (рівно 3 варіанти мовою ${L.targetName}), correct, uk, explain, example.\n` +
+        'ВАРІАНТИ opts мають бути близькі за темою/сенсом, але лише один правильний.\n' +
+        'Дозволено використовувати усталені вирази (напр. ввічливі формули), не лише одиничні слова.\n' +
+        'Використовуй лексику з теми сесії, яку передано нижче в промпті.\n' +
+        (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
+        'JSON only:\n' +
+        (L.helper.id !== 'none'
+          ? '{"tasks":[{"nativeWord":"...","opts":["...","...","..."],"correct":"...","uk":"...","en":"...","example":"...","explain":"7–12 слів"}]}'
+          : '{"tasks":[{"nativeWord":"...","opts":["...","...","..."],"correct":"...","uk":"...","example":"...","explain":"7–12 слів"}]}'
+        )
       ); },
     },
 
