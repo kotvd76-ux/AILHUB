@@ -1164,8 +1164,8 @@ body::before {
     </div>
     <div class="card">
       <div class="exercise-label">Вправа 4</div>
-      <div class="exercise-title">Контекстний вибір (3 варіанти)</div>
-      <div class="exercise-desc">Обери правильний варіант із 3 відповідей у контексті.</div>
+      <div class="exercise-title">Ser / Estar — контекст (3 варіанти)</div>
+      <div class="exercise-desc">Обери правильну форму ser/estar із 3 варіантів у контексті.</div>
       <div class="fib-sentence" id="e4-sentence"></div>
       <div class="swipe-hint" id="e4-hint"></div>
       <div class="options-list" id="e4-options" role="list" aria-label="Вибір відповіді"></div>
@@ -1249,8 +1249,8 @@ body::before {
     </div>
     <div class="card">
       <div class="exercise-label">Вправа 6</div>
-      <div class="exercise-title">Tap-order transform</div>
-      <div class="exercise-desc">Збери правильну трансформацію: натискай слова у правильному порядку.</div>
+      <div class="exercise-title">Tap-order: усталені вирази</div>
+      <div class="exercise-desc">Збери усталений вираз або коротку фразу (до 5 слів) у правильному порядку.</div>
       <div class="fib-sentence" id="e6-instruction" aria-live="polite"></div>
       <div class="fib-sentence" id="e6-built" aria-live="polite"><span class="fib-blank">___</span></div>
       <div class="options-list" id="e6-options" role="list" aria-label="Слова для складання"></div>
@@ -1317,6 +1317,8 @@ body::before {
 // Поточний вибраний рівень — читається при генерації
 let selectedLevel = 'B1';
 let selectedTheme = ''; // '' => авто (випадкова з sett_set)
+const AUTO_THEME_ROTATE_MS = 60 * 1000;
+let autoThemeState = { value: '', ts: 0 };
 
 
 function buildSelectionThemeDropdown() {
@@ -1386,9 +1388,9 @@ const CFG = (typeof GRAMMAR_CONFIG !== 'undefined') ? GRAMMAR_CONFIG : {
     { id:'domino',    num:'01', label:'Дієслівне доміно' },
     { id:'contrast',  num:'02', label:'Контраст форм (мовозалежна)' },
     { id:'fill',      num:'03', label:'Fill-in-the-Blank' },
-    { id:'context3',  num:'04', label:'Контекстний вибір (3 варіанти)' },
+    { id:'context3',  num:'04', label:'Ser / Estar — контекст (3 варіанти)' },
     { id:'spotfix',   num:'05', label:'Знайди помилку' },
-    { id:'transform', num:'06', label:'Tap-order transform' },
+    { id:'transform', num:'06', label:'Tap-order: усталені вирази' },
     { id:'vocab',     num:'07', label:'Словник' },
   ]
 };
@@ -1967,7 +1969,7 @@ function renderE6() {
   e6State.picked = [];
   e6State.answered = false;
 
-  document.getElementById('e6-instruction').innerHTML = `<strong>${d.instruction || 'Збери правильне речення'}</strong><br>${d.source || ''}`;
+  document.getElementById('e6-instruction').innerHTML = `<strong>${d.instruction || 'Збери усталений вираз'}</strong><br>${d.source || ''}`;
   document.getElementById('e6-built').innerHTML = '<span class="fib-blank">___</span>';
   document.getElementById('e6-uk').textContent = d.uk || '';
   document.getElementById('e6-en').textContent = d.en || '';
@@ -2408,8 +2410,20 @@ async function goGenerateEx(exNum, retryCount = 0) {
   const chosenTheme = selectedTheme
     ? (themes.find(t => t.value === selectedTheme) || { value: selectedTheme, label: selectedTheme })
     : null;
-  const randomTheme = themes.length ? pickRandom(themes) : null;
-  const theme = chosenTheme || (themeMode === 'random' ? randomTheme : null);
+
+  let randomTheme = null;
+  if (!chosenTheme && themeMode === 'random' && themes.length) {
+    const now = Date.now();
+    const cacheValid = autoThemeState.value && (now - autoThemeState.ts) < AUTO_THEME_ROTATE_MS;
+    if (cacheValid) {
+      randomTheme = themes.find(t => t.value === autoThemeState.value) || { value: autoThemeState.value, label: autoThemeState.value };
+    } else {
+      randomTheme = pickRandom(themes);
+      autoThemeState = { value: randomTheme.value, ts: now };
+    }
+  }
+
+  const theme = chosenTheme || randomTheme;
   const level     = selectedLevel || 'B1';
   const token     = Date.now();
 
@@ -2561,13 +2575,17 @@ function normalizeTasksByExercise(exNum, tasks) {
   }
 
   if (exNum === 7) {
+    const toTwoWords = (val) => String(val || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
+
     return arr.map((t) => {
-      const nativeWord = String(t.nativeWord || t.word || t.sentence || '').trim();
-      const correct = String(t.correct || '').trim();
-      let opts = Array.isArray(t.opts) ? t.opts.map(v => String(v || '').trim()).filter(Boolean) : [];
+      const nativeWord = toTwoWords(t.nativeWord || t.word || t.sentence || '');
+      const correct = toTwoWords(t.correct || '');
+      let opts = Array.isArray(t.opts) ? t.opts.map(v => toTwoWords(v)).filter(Boolean) : [];
+
       if (!opts.includes(correct) && correct) opts.unshift(correct);
-      opts = Array.from(new Set(opts)).slice(0, 3);
+      opts = Array.from(new Set(opts)).filter(v => v.split(/\s+/).length <= 2).slice(0, 3);
       while (opts.length < 3) opts.push(`варіант ${opts.length + 1}`);
+
       return {
         ...t,
         nativeWord,

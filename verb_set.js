@@ -259,13 +259,19 @@ const GRAMMAR_CONFIG = {
         const focusMap = L.target.id === 'en'
           ? 'фразові дієслова та артиклі (a/an/the/zero)'
           : L.target.id === 'es'
-            ? 'Subjuntivo / Ser vs Estar / Indefinido vs Imperfecto'
+            ? 'Ser vs Estar (лише це протиставлення у всіх 5 завданнях)'
             : L.target.id === 'fr'
               ? 'займенники-додатки (en/y/le-la-les) та узгодження'
               : `контекстний граматичний вибір у ${L.targetName}`;
         return (
         `Ти вчитель ${L.targetName}. Згенеруй 5 завдань на ${focusMap}.\n` +
+        (L.target.id === 'es'
+          ? 'ОБОВ\'ЯЗКОВО для іспанської: усі 5 завдань тільки на ser/estar (Presente), без Subjuntivo та без інших тем.\n'
+          : '') +
         'Кожне завдання: sentence (з ___), opts (РІВНО 3 варіанти), correct (один з opts), hint, explain.\n' +
+        (L.target.id === 'es'
+          ? 'Для іспанської opts повинні бути тільки формами ser/estar: 1 правильна форма + 2 правдоподібні хибні форми.\n'
+          : '') +
         'ВАЖЛИВО: це вправа на вибір між 3 варіантами, не swipe A/B.\n' +
         `Поле hint — коротка підказка мовою ${L.uiLanguage}.\n` +
         `Поле uk — переклад мовою ${L.uiLanguage}.${L.helperClause}\n` +
@@ -354,6 +360,7 @@ const GRAMMAR_CONFIG = {
       get aiPrompt() { const L = _vLang(); return (
         `Ти вчитель ${L.targetName}. Згенеруй 5 завдань формату Tap-order transform.\n` +
         'Кожне завдання містить: instruction, source, tokens (перемішані слова), correctSentence, uk, explain.\n' +
+        'ОБОВ\'ЯЗКОВО: щонайменше 3 з 5 завдань мають бути усталеними виразами/колокаціями.\n' +
         'ОБОВ\'ЯЗКОВО: correctSentence коротке — максимум 5 слів.\n' +
         'tokens мають складати correctSentence без зайвих слів.\n' +
         (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
@@ -381,6 +388,8 @@ const GRAMMAR_CONFIG = {
         `Ти вчитель ${L.targetName}. Згенеруй 5 словникових завдань для смартфона.\n` +
         `Формат: nativeWord (одне слово або усталений вираз мовою ${L.uiLanguage}), opts (рівно 3 варіанти мовою ${L.targetName}), correct, uk, explain, example.\n` +
         'ВАРІАНТИ opts мають бути близькі за темою/сенсом, але лише один правильний.\n' +
+        'У вправі 7 дозволені ТІЛЬКИ: 1) окремі слова; 2) усталені вирази до 2 слів.\n' +
+        'ОБОВ\'ЯЗКОВО: і nativeWord, і кожен елемент opts, і correct — максимум 2 слова.\n' +
         'Дозволено використовувати усталені вирази (напр. ввічливі формули), не лише одиничні слова.\n' +
         'Використовуй лексику з теми сесії, яку передано нижче в промпті.\n' +
         (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
