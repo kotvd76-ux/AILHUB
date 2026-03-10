@@ -647,7 +647,11 @@
 
         // Теми
         const themeSelect = document.getElementById('theme-select');
-        LISTEN_CONFIG.themes.forEach(t => {
+        const globalThemes = (typeof getPriorityThemes === 'function')
+            ? getPriorityThemes()
+            : LISTEN_CONFIG.themes;
+
+        globalThemes.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.value;
             opt.textContent = t.label;

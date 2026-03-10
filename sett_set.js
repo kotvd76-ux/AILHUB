@@ -16,6 +16,20 @@ const HARDCODED_KEYS = {
 
 const SETTINGS_CONFIG = {
 
+    // ── Глобальні пріоритетні теми для AI-промптів ──────────
+    // Використовувати у вправах як єдине джерело тематик.
+    // Це дає однаковий набір тем для всіх модулів.
+    priorityThemes: [
+        { value: 'Travel',      label: '✈️ Подорожі'             },
+        { value: 'Office',      label: '💼 Офіс'                 },
+        { value: 'Restaurant',  label: '🍽️ Ресторан'             },
+        { value: 'SmallTalk',   label: '💬 Small Talk'           },
+        { value: 'Family',      label: "👨‍👩‍👧 Сім'я"             },
+        { value: 'Shopping',    label: '🛍️ Шопінг'              },
+        { value: 'Health',      label: "🏥 Здоров'я"            },
+        { value: 'Emergencies', label: '🚨 Надзвичайні ситуації' },
+    ],
+
     // ── Провайдери ШІ ────────────────────────────────────────
     providers: [
         { id: 'openai',    label: 'OpenAI (ChatGPT)',   icon: 'fa-robot' },
@@ -211,6 +225,28 @@ function getApiKey(provider) {
 // ── Перевірка: чи ключ провайдера захардкоджений у файлі ────
 function isKeyHardcoded(provider) {
     return !!(HARDCODED_KEYS[provider] || '').trim();
+}
+
+
+// ── Глобальна функція отримання пріоритетних тем ─────────────
+// Повертає єдиний список тем для всіх вправ з безпечним fallback.
+function getPriorityThemes() {
+    const themes = Array.isArray(SETTINGS_CONFIG?.priorityThemes)
+        ? SETTINGS_CONFIG.priorityThemes
+        : [];
+
+    if (themes.length) return themes;
+
+    return [
+        { value: 'Travel',      label: '✈️ Подорожі'             },
+        { value: 'Office',      label: '💼 Офіс'                 },
+        { value: 'Restaurant',  label: '🍽️ Ресторан'             },
+        { value: 'SmallTalk',   label: '💬 Small Talk'           },
+        { value: 'Family',      label: "👨‍👩‍👧 Сім'я"             },
+        { value: 'Shopping',    label: '🛍️ Шопінг'              },
+        { value: 'Health',      label: "🏥 Здоров'я"            },
+        { value: 'Emergencies', label: '🚨 Надзвичайні ситуації' },
+    ];
 }
 
 // ── Глобальна функція отримання мовної конфігурації ─────────
