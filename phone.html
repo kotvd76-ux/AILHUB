@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Тренажер - Spanish AI Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Підключення конфігів — ПОРЯДОК ВАЖЛИВИЙ -->
+    <script src="sett_set.js"></script>
+    <script src="phone_set.js"></script>
+    <script src="logger.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        
+        :root {
+            --bg-dark: #020617;
+            --card-bg: rgba(15, 23, 42, 0.8);
+            --accent-orange: #f97316;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-dark);
+            color: #fff;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(249, 115, 22, 0.1);
+        }
+
+        @keyframes pulse-ring {
+            0% { transform: scale(.33); opacity: 1; }
+            80%, 100% { opacity: 0; transform: scale(1.2); }
+        }
+
+        .recording-ring {
+            position: absolute;
+            width: 120%;
+            height: 120%;
+            border-radius: 50%;
+            border: 4px solid #ef4444;
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .chat-bubble-ai {
+            background: rgba(30, 41, 59, 0.7);
+            border-left: 4px solid var(--accent-orange);
+        }
+
+        .chat-bubble-user {
+            background: rgba(249, 115, 22, 0.1);
+            border-right: 4px solid rgba(249, 115, 22, 0.5);
+        }
+
+        #scroll-area::-webkit-scrollbar { width: 4px; }
+        #scroll-area::-webkit-scrollbar-thumb { background: rgba(249, 115, 22, 0.3); border-radius: 10px; }
+
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1.5em;
+        }
+
+        .log-line {
+            font-family: monospace;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-bottom: 1px solid #1e293b;
+            word-break: break-all;
+            color: #94a3b8;
+        }
+
+        .btn-glow {
+            box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col max-w-2xl mx-auto p-4">
+
+    <!-- Header -->
+    <header class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-orange-400">
+                <i class="fa-solid fa-chevron-left"></i>
+            </a>
+            <div>
+                <h1 id="header-title" class="text-lg font-bold text-orange-500">Spanish AI Trainer</h1>
+                <p id="header-subtitle" class="text-[10px] uppercase tracking-widest text-slate-500 font-black">Налаштування сесії</p>
+            </div>
+        </div>
+        <a href="settings.html" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-zinc-400">
+            <i class="fa-solid fa-cog"></i>
+        </a>
+    </header>
+
+    <!-- 1. Selection Screen -->
+    <div id="selection-screen" class="flex flex-col flex-grow justify-center space-y-8 animate-in fade-in duration-500">
+        <div class="space-y-6">
+            <!-- Level Select -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Рівень знань</label>
+                <select id="level-select" onchange="updateGameOptions()" class="w-full glass-card p-5 rounded-3xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
+                    <option value="A1">Рівень A1 — Початківець</option>
+                    <option value="A2">Рівень A2 — Елементарний</option>
+                    <option value="B1">Рівень B1 — Середній</option>
+                    <option value="B2">Рівень B2 — Просунутий</option>
+                    <option value="C1">Рівень C1 — Просунутий+</option>
+                </select>
+            </div>
+
+            <!-- Game Select -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Тип вправи</label>
+                <select id="type-select" class="w-full glass-card p-5 rounded-3xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
+                    <!-- Буде заповнено через JS -->
+                </select>
+            </div>
+        </div>
+
+        <div class="pt-8">
+            <button onclick="handleStart()" class="w-full py-6 bg-orange-600 hover:bg-orange-500 text-white rounded-[2.5rem] font-black text-2xl shadow-xl shadow-orange-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 btn-glow">
+                <i class="fa-solid fa-play"></i>
+                ПОЧАТИ
+            </button>
+            <button onclick="toggleLogs()" class="w-full mt-6 text-[10px] text-slate-600 font-bold uppercase tracking-widest underline decoration-orange-500/30">Логи налагодження</button>
+        </div>
+    </div>
+
+    <!-- 2. Active Exercise Screen -->
+    <div id="exercise-screen" class="hidden flex-col flex-grow">
+        <!-- Optional Scene Image (for 'describe' game) -->
+        <div id="image-container" class="mb-4 hidden">
+            <div id="scene-image" class="w-full aspect-video rounded-3xl bg-slate-900 flex items-center justify-center overflow-hidden border border-white/5 shadow-2xl">
+                <span class="text-zinc-500 text-xs">Малюємо сцену...</span>
+            </div>
+        </div>
+
+        <!-- Chat History -->
+        <div id="scroll-area" class="flex-grow overflow-y-auto space-y-4 pr-2 mb-4 text-sm custom-scrollbar">
+            <!-- Messages injected here -->
+        </div>
+
+        <!-- Feedback Layer -->
+        <div id="feedback-sheet" class="hidden glass-card p-6 rounded-[2.5rem] border-orange-500/30 mb-4 animate-in slide-in-from-bottom duration-500 shadow-2xl">
+            <div class="flex items-center gap-2 mb-3">
+                <div class="w-1.5 h-6 bg-orange-500 rounded-full"></div>
+                <h3 class="text-[10px] font-black uppercase tracking-widest text-orange-400">Аналіз вашої іспанської</h3>
+            </div>
+            <div id="feedback-content" class="text-slate-200 text-sm leading-relaxed mb-6 font-medium"></div>
+            <div class="flex gap-3">
+                <button onclick="clearFeedback()" class="flex-1 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-black text-[10px] uppercase transition-colors">Ще раз</button>
+                <button onclick="confirmFeedback()" class="flex-[1.5] py-4 bg-white text-black rounded-2xl font-black text-[10px] uppercase transition-transform active:scale-95 shadow-lg">Продовжити</button>
+            </div>
+        </div>
+
+        <!-- Interactive Mic Controls -->
+        <div class="glass-card p-6 rounded-[3.5rem] flex flex-col items-center gap-4 mb-4">
+            <div class="relative w-24 h-24 flex items-center justify-center">
+                <div id="mic-ring" class="hidden recording-ring"></div>
+                <button id="record-btn" class="w-20 h-20 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/20 active:scale-95 transition-all z-10">
+                    <i id="mic-icon" class="fa-solid fa-microphone text-3xl text-white"></i>
+                </button>
+            </div>
+            <div class="text-center">
+                <p id="stt-status" class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Торкніться, щоб говорити</p>
+                <p id="transcript-preview" class="text-xs italic text-orange-400 mt-1 max-w-xs mx-auto min-h-[1.25rem]"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Logs View -->
+    <div id="debug-logs" class="hidden fixed bottom-4 left-4 right-4 max-h-48 bg-slate-950/95 border border-slate-800 rounded-2xl p-4 overflow-y-auto z-[60] shadow-2xl backdrop-blur-md">
+        <div class="flex justify-between items-center mb-3">
+            <span class="text-[10px] text-orange-500 font-black uppercase tracking-tighter">System Debug Console</span>
+            <button onclick="toggleLogs()" class="text-[10px] text-slate-500 underline">Закрити</button>
+        </div>
+        <div id="log-content" class="space-y-1"></div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let currentLevel = 'A1';
+        let currentType = '';
+        let isRecording = false;
+        let conversation = [];
+        let recognition = null;
+        let currentTranscript = "";
+        
+        // --- Config from Storage (через sett_set.js storageKeys) ---
+        function getConfig() {
+            const SK = (typeof SETTINGS_CONFIG !== 'undefined') ? SETTINGS_CONFIG.storageKeys : {
+                provider: 'sp_provider', model: 'sp_model',
+                apiKeyOpenai: 'sp_api_key_openai', apiKeyGoogle: 'sp_api_key_google',
+                apiKeyAnthro: 'sp_api_key_anthropic', speed: 'sp_speed', voiceNative: 'sp_voice_native'
+            };
+            return {
+                provider:    localStorage.getItem(SK.provider)      || 'google',
+                model:       localStorage.getItem(SK.model)         || 'gemini-2.5-flash',
+                apiKeys: {
+                    openai:    (typeof getApiKey === 'function') ? getApiKey('openai')    : (localStorage.getItem(SK.apiKeyOpenai) || ''),
+                    google:    (typeof getApiKey === 'function') ? getApiKey('google')    : (localStorage.getItem(SK.apiKeyGoogle) || ''),
+                    anthropic: (typeof getApiKey === 'function') ? getApiKey('anthropic') : (localStorage.getItem(SK.apiKeyAnthro) || '')
+                },
+                speed:       parseFloat(localStorage.getItem(SK.speed) || '0.9'),
+                voiceNative: localStorage.getItem(SK.voiceNative) || ''
+            };
+        }
+        // Читаємо конфіг при кожному старті (враховує зміни в settings.html)
+        let config = getConfig();
+
+        // --- Logging Utility ---
+        function addLog(msg, type = "info") {
+            const container = document.getElementById('log-content');
+            if (!container) return;
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = 'log-line';
+            div.style.color = type === 'error' ? '#f87171' : (type === 'success' ? '#4ade80' : '#94a3b8');
+            div.innerText = `[${time}] ${msg}`;
+            container.appendChild(div);
+            container.parentElement.scrollTo({ top: container.parentElement.scrollHeight, behavior: 'smooth' });
+        }
+
+        function toggleLogs() {
+            document.getElementById('debug-logs').classList.toggle('hidden');
+        }
+
+        // --- Exercise Logic Mapping — будується з phone_set.js ---
+        function getExercisesByLevel() {
+            const set = window.AI_EXERCISE_CONFIG;
+            if (!set || !set.exercises) {
+                return {
+                    'A1': [{ id: 'echo', name: 'Echo-імітація' }, { id: 'simple_question', name: 'Просте запитання' }, { id: 'conversion', name: 'Конвертація речення' }],
+                    'A2': [{ id: 'describe', name: 'Опиши картинку' }, { id: 'explain_word', name: 'Поясни слово' }, { id: 'what_happened', name: 'Що сталося?' }],
+                    'B1': [{ id: 'roleplay', name: 'Рольова гра' }, { id: 'expand_sentence', name: 'Розширення речення' }],
+                    'B2': [{ id: 'paraphrase', name: 'Перефразування' }, { id: 'story_continue', name: 'Продовж історію' }],
+                    'C1': [{ id: 'debate', name: 'Дебати з ШІ' }, { id: 'translate_interpret', name: 'Перекладач-інтерпретатор' }, { id: 'argue_position', name: 'Захист позиції' }]
+                };
+            }
+            const nameMap = {
+                echo: 'Echo-імітація', simple_question: 'Просте запитання', conversion: 'Конвертація речення',
+                describe: 'Опиши картинку', explain_word: 'Поясни слово', what_happened: 'Що сталося?',
+                expand_sentence: 'Розширення речення', roleplay: 'Рольова гра',
+                paraphrase: 'Перефразування', story_continue: 'Продовж історію',
+                debate: 'Дебати з ШІ', translate_interpret: 'Перекладач-інтерпретатор', argue_position: 'Захист позиції'
+            };
+            const levelAssign = {
+                echo: 'A1', simple_question: 'A1', conversion: 'A1',
+                describe: 'A2', explain_word: 'A2', what_happened: 'A2',
+                expand_sentence: 'B1', roleplay: 'B1',
+                paraphrase: 'B2', story_continue: 'B2',
+                debate: 'C1', translate_interpret: 'C1', argue_position: 'C1'
+            };
+            const map = { A1: [], A2: [], B1: [], B2: [], C1: [] };
+            Object.keys(set.exercises).forEach(id => {
+                const lvl = levelAssign[id] || 'B1';
+                if (map[lvl]) map[lvl].push({ id, name: nameMap[id] || id });
+            });
+            return map;
+        }
+
+        function updateGameOptions() {
+            const lvl = document.getElementById('level-select').value;
+            const select = document.getElementById('type-select');
+            select.innerHTML = '';
+            const exercisesByLevel = getExercisesByLevel();
+            (exercisesByLevel[lvl] || []).forEach(ex => {
+                const opt = document.createElement('option');
+                opt.value = ex.id;
+                opt.textContent = ex.name;
+                select.appendChild(opt);
+            });
+            addLog(`Список вправ оновлено для рівня ${lvl}`);
+        }
+
+        // --- Core Exercise Flow ---
+        function handleStart() {
+            // Перечитуємо конфіг щоразу (враховує зміни в settings.html)
+            config = getConfig();
+
+            const lvl = document.getElementById('level-select').value;
+            const type = document.getElementById('type-select').value;
+            const typeText = document.getElementById('type-select').options[document.getElementById('type-select').selectedIndex].text;
+
+            const activeKey = config.apiKeys[config.provider];
+            if (!activeKey) {
+                addLog(`Помилка: Немає API ключа для провайдера «${config.provider}»`, "error");
+                alert(`Вкажіть API ключ для провайдера «${config.provider}» у налаштуваннях.`);
+                return;
+            }
+
+            currentLevel = lvl;
+            currentType = type;
+
+            document.getElementById('header-title').innerText = typeText;
+            document.getElementById('header-subtitle').innerText = `Рівень ${lvl}`;
+            document.getElementById('selection-screen').classList.add('hidden');
+            document.getElementById('exercise-screen').classList.remove('hidden');
+            document.getElementById('exercise-screen').classList.add('flex');
+
+            if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
+
+            addLog(`Запуск ${typeText}. Модель: ${config.model}`, "success");
+            initAI();
+        }
+
+        async function initAI() {
+            addMessage('ai', 'ініціалізація за налаштуваннями phone_set...');
+            
+            const set = window.AI_EXERCISE_CONFIG;
+            const basePrompt = set?.baseSystemPrompt || "";
+            const taskSet = set?.exercises[currentType];
+            
+            const lvl = document.getElementById("level-select")?.value || "B1";
+            const sysRaw = taskSet?.system;
+            const systemInstruction = basePrompt + (typeof sysRaw === "function" ? sysRaw(lvl) : (sysRaw || ""));
+            
+            conversation = [{ role: 'system', content: systemInstruction }];
+            addLog(`Промпт: ${systemInstruction}`);
+            callAI();
+        }
+
+        // --- API & AI logic ---
+        async function callAI(userMsg = null) {
+            if (userMsg) conversation.push({ role: 'user', content: userMsg });
+            
+            addLog("Запит до ШІ...");
+            try {
+                const response = await fetchAI(conversation);
+                conversation.push({ role: 'assistant', content: response });
+                addMessage('ai', response);
+                speakText(response);
+                
+                if (currentType === 'describe' && conversation.length <= 3) generateScene(response);
+            } catch (err) {
+                addLog(`Критична помилка: ${err.message}`, "error");
+            }
+        }
+
+        async function fetchAI(messages, customSystem = null) {
+            const activeKey = config.apiKeys[config.provider];
+            if (!activeKey) throw new Error('Немає API ключа для: ' + config.provider);
+
+            // Витягуємо системний промпт
+            const sys = customSystem || (messages[0]?.role === 'system' ? messages[0].content : '');
+            const chatMsgs = messages.filter(m => m.role !== 'system');
+
+            if (config.provider === 'openai') {
+                const allMsgs = sys ? [{ role: 'system', content: sys }, ...chatMsgs] : chatMsgs;
+                const res = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeKey}` },
+                    body: JSON.stringify({ model: config.model, messages: allMsgs })
+                });
+                if (!res.ok) { const e = await res.json(); addLog(`OpenAI error: ${JSON.stringify(e)}`, 'error'); throw new Error('API error'); }
+                return (await res.json()).choices[0].message.content;
+
+            } else if (config.provider === 'google') {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${activeKey}`;
+                const payload = {
+                    contents: [{ parts: [{ text: chatMsgs.map(m => `${m.role}: ${m.content}`).join('\n') }] }],
+                };
+                if (sys) payload.systemInstruction = { parts: [{ text: sys }] };
+                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!res.ok) { const e = await res.json(); addLog(`Gemini error: ${JSON.stringify(e)}`, 'error'); throw new Error('API error'); }
+                return (await res.json()).candidates[0].content.parts[0].text;
+
+            } else if (config.provider === 'anthropic') {
+                const payload = { model: config.model, max_tokens: 1024, messages: chatMsgs };
+                if (sys) payload.system = sys;
+                const res = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-api-key': activeKey, 'anthropic-version': '2023-06-01' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); addLog(`Claude error: ${JSON.stringify(e)}`, 'error'); throw new Error('API error'); }
+                return (await res.json()).content[0].text;
+            }
+            throw new Error('Невідомий провайдер: ' + config.provider);
+        }
+
+        async function runFeedback(transcript) {
+            addLog("Аналіз відповіді...");
+            const set = window.AI_EXERCISE_CONFIG;
+            const feedbackSystem = set?.feedback?.system || "Ти вчитель іспанської.";
+            
+            const lastTask = conversation[conversation.length - 1].content;
+            const prompt = `Завдання було: ${lastTask}. Учень відповів: "${transcript}". Проаналізуй і виправ помилки українською мовою.`;
+            
+            try {
+                const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
+                document.getElementById('feedback-content').innerText = feedback;
+                document.getElementById('feedback-sheet').classList.remove('hidden');
+                addLog("Аналіз готовий", "success");
+            } catch (err) {
+                addLog("Помилка аналізу, продовжуємо", "error");
+                confirmFeedback();
+            }
+        }
+
+        // --- Interaction Handlers ---
+        function clearFeedback() {
+            document.getElementById('feedback-sheet').classList.add('hidden');
+            document.getElementById('transcript-preview').innerText = "";
+            currentTranscript = "";
+            addLog("Повторна спроба");
+        }
+
+        function confirmFeedback() {
+            document.getElementById('feedback-sheet').classList.add('hidden');
+            const toSend = currentTranscript;
+            currentTranscript = "";
+            document.getElementById('transcript-preview').innerText = "";
+            callAI(toSend);
+        }
+
+        // --- Audio: TTS & STT ---
+        function speakText(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const speechLang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES';
+            utterance.lang = speechLang;
+            utterance.rate = config.speed;
+            if (config.voiceNative) {
+                const v = window.speechSynthesis.getVoices().find(x => x.name === config.voiceNative);
+                if (v) utterance.voice = v;
+            }
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function setupSTT() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                addLog("STT не підтримується", "error");
+                return;
+            }
+            recognition = new SpeechRec();
+            recognition.lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onstart = () => {
+                isRecording = true;
+                document.getElementById('mic-ring').classList.remove('hidden');
+                document.getElementById('mic-icon').className = 'fa-solid fa-square';
+                document.getElementById('stt-status').innerText = "СЛУХАЮ ІСПАНСЬКУ...";
+                addLog("Мікрофон активний");
+            };
+
+            recognition.onresult = (e) => {
+                currentTranscript = Array.from(e.results).map(r => r[0].transcript).join('');
+                document.getElementById('transcript-preview').innerText = currentTranscript;
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                document.getElementById('mic-ring').classList.add('hidden');
+                document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
+                document.getElementById('stt-status').innerText = "ТОРКНІТЬСЯ, ЩОБ ГОВОРИТИ";
+                addLog("Запис завершено");
+                
+                if (currentTranscript.trim()) {
+                    addMessage('user', currentTranscript);
+                    runFeedback(currentTranscript);
+                }
+            };
+
+            recognition.onerror = (e) => {
+                addLog(`STT Error: ${e.error}`, "error");
+                recognition.stop();
+            };
+        }
+
+        document.getElementById('record-btn').onclick = () => {
+            if (!recognition) setupSTT();
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                window.speechSynthesis.cancel();
+                currentTranscript = "";
+                document.getElementById('transcript-preview').innerText = "";
+                document.getElementById('feedback-sheet').classList.add('hidden');
+                recognition.start();
+            }
+        };
+
+        // --- Helpers ---
+        function addMessage(sender, text) {
+            const area = document.getElementById('scroll-area');
+            const div = document.createElement('div');
+            div.className = `p-4 rounded-2xl max-w-[85%] animate-in slide-in-from-bottom-2 duration-300 ${sender === 'ai' ? 'chat-bubble-ai self-start' : 'chat-bubble-user self-end ml-auto'}`;
+            div.innerHTML = `<p>${text}</p>`;
+            area.appendChild(div);
+            area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+        }
+
+        async function generateScene(desc) {
+            const activeKey = config.apiKeys[config.provider] || config.apiKeys.google;
+            const container = document.getElementById('scene-image');
+            container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">ГЕНЕРУЄМО СЦЕНУ...</div>`;
+            
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${activeKey}`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instances: [{ prompt: `Minimalist educational illustration: ${desc}` }] })
+                });
+                const data = await res.json();
+                container.innerHTML = `<img src="data:image/png;base64,${data.predictions[0].bytesBase64Encoded}" class="w-full h-full object-cover">`;
+                addLog("Картинку згенеровано", "success");
+            } catch (e) {
+                container.innerHTML = `<span class="text-slate-600 text-xs italic">Зображення недоступне</span>`;
+                addLog("Помилка генерації картинки", "error");
+            }
+        }
+
+        window.onload = () => {
+            updateGameOptions();
+            addLog("Тренажер готовий до роботи");
+        };
+    </script>
+</body>
+</html>

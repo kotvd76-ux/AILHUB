@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Вільний чат — Spanish AI Hub</title>
+<script src="sett_set.js"></script>
+<script src="gemini_live_connector.js"></script>
+<script src="openai_nad_connector.js"></script>
+<script src="chat_set.js"></script>
+<script src="logger.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* Базовий шрифт — більший за замовчуванням для зручності */
+  html { font-size: 16px; }
+  @media (min-width: 640px)  { html { font-size: 17px; } }
+  @media (min-width: 1024px) { html { font-size: 18px; } }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0f0f1a;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  textarea { font-family: inherit; }
+
+  /* Видимий фокус для клавіатурної навігації */
+  :focus-visible {
+    outline: 3px solid #4a9ede;
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 99px; }
+
+  @keyframes dot {
+    0%,100% { opacity:.3; transform:scale(.8); }
+    50%      { opacity:1;  transform:scale(1);  }
+  }
+  @keyframes fadeIn {
+    from { opacity:0; transform:translateY(8px); }
+    to   { opacity:1; transform:translateY(0);   }
+  }
+  @keyframes nadRecPulse {
+    0%,100% { outline-color:rgba(239,68,68,0.15); }
+    50%     { outline-color:rgba(239,68,68,0.5);  }
+  }
+  /* Мінімальний розмір кнопки для доступності */
+  button { min-height: 44px; min-width: 44px; }
+
+  /* Центруючий контейнер */
+  .pw { max-width: 640px; margin: 0 auto; width: 100%; }
+  @media (min-width: 640px)  { .pw { padding: 0 8px; } }
+  @media (min-width: 1024px) { .pw { padding: 0 16px; } }
+
+  /* Debug console */
+  #dbg {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    max-height: 220px; background: rgba(8,8,18,0.97);
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 200; display: none; flex-direction: column;
+    backdrop-filter: blur(8px);
+  }
+  #dbg.open { display: flex; }
+  #dbg-hdr {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 14px; border-bottom: 1px solid rgba(255,255,255,0.07); flex-shrink: 0;
+  }
+  #dbg-body {
+    overflow-y: auto; padding: 8px 14px; flex: 1;
+    font-family: 'Consolas','Courier New',monospace; font-size: 0.72rem; line-height: 1.5;
+  }
+  .dl { margin-bottom: 2px; }
+  .di { color: #94a3b8; } .ds { color: #4ade80; } .de { color: #f87171; } .dw { color: #fbbf24; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Debug console -->
+<div id="dbg" role="complementary" aria-label="Консоль діагностики">
+  <div id="dbg-hdr">
+    <span style="font-size:.72rem;color:#f59e0b;font-weight:700;letter-spacing:.07em">⚙ ДІАГНОСТИКА · chat</span>
+    <button onclick="toggleDbg()" style="background:transparent;border:none;color:#64748b;font-size:.82rem;cursor:pointer;min-height:28px;">Закрити ✕</button>
+  </div>
+  <div id="dbg-body"></div>
+</div>
+
+<script>
+function addLog(msg, type) {
+  type = type || 'info';
+  if (localStorage.getItem('sp_techlog_enabled') !== '1') return;
+  var body = document.getElementById('dbg-body');
+  if (!body) return;
+  var t = new Date().toLocaleTimeString('uk-UA');
+  var d = document.createElement('div');
+  d.className = 'dl d' + type[0];
+  d.textContent = '[' + t + '] ' + msg;
+  body.appendChild(d);
+  body.scrollTop = body.scrollHeight;
+}
+function toggleDbg() {
+  document.getElementById('dbg').classList.toggle('open');
+}
+window.addLog = addLog;
+window.toggleDbg = toggleDbg;
+</script>
+
+<script type="text/babel">
+const { useState, useRef, useEffect, useCallback, useMemo } = React;
+
+/* ── UI-константи (відображення) ─────────────────────── */
+const ASPECTS_UI = [
+  { id:'grammar',    label:'Граматика',  icon:'📐', color:'#e85d4a' },
+  { id:'vocabulary', label:'Лексика',    icon:'📚', color:'#f59e0b' },
+  { id:'listening',  label:'Аудіювання', icon:'🎧', color:'#8b5cf6' },
+  { id:'reading',    label:'Читання',    icon:'📖', color:'#4a9ede' },
+  { id:'writing',    label:'Письмо',     icon:'📝', color:'#06b6d4' },
+  { id:'speaking',   label:'Мовлення',   icon:'🎤', color:'#ec4899' },
+  { id:'pragmatics', label:'Прагматика', icon:'🤝', color:'#4ade80' },
+];
+const MODES_UI = [
+  { id:'test',   icon:'🧪', label:'Тестування',        desc:'Діагностичний тест рівня',   color:'#e85d4a' },
+  { id:'lesson', icon:'📖', label:'Вільний урок',       desc:'AI обирає тему і веде урок', color:'#4a9ede' },
+  { id:'chat',   icon:'💬', label:'Вільне спілкування', desc:'Розмова + корекції помилок', color:'#4ade80' },
+];
+
+/* Повна шкала CEFR для тесту */
+const CEFR_ALL    = ['A1','A2','B1','B2','C1'];
+const CEFR_COLORS = { A1:'#f87171', A2:'#fb923c', B1:'#facc15', B2:'#4ade80', C1:'#38bdf8', C2:'#a78bfa' };
+const CEFR_DESCS  = { A1:'Початківець', A2:'Елементарний', B1:'Середній', B2:'Вище середнього', C1:'Просунутий' };
+
+/* Рівні для уроків/чату */
+
+
+const BG = 'linear-gradient(135deg,#0f0f1a 0%,#1a1a2e 50%,#16213e 100%)';
+const isoDate = () => new Date().toISOString().slice(0,10);
+
+/* ── Допоміжні функції ──────────────────────────────── */
+const getSettings = () => {
+  const p = localStorage.getItem(SETTINGS_CONFIG.storageKeys.provider) || 'anthropic';
+  return {
+    provider:   p,
+    model:      localStorage.getItem(SETTINGS_CONFIG.storageKeys.model) || 'claude-sonnet-4-6',
+    apiKey:     getApiKey(p),
+    speed:      parseFloat(localStorage.getItem(SETTINGS_CONFIG.storageKeys.speed)) || SETTINGS_CONFIG.speed.default,
+    ttsMode:    localStorage.getItem(SETTINGS_CONFIG.storageKeys.ttsMode) || 'offline',
+    voice:      localStorage.getItem(SETTINGS_CONFIG.storageKeys.voice) || '',
+    speechLang: (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES',
+    techLogOn:  localStorage.getItem(SETTINGS_CONFIG.storageKeys.techLogEnabled) === '1',
+  };
+};
+
+const callAI = async (messages, system, maxTokens) => {
+  maxTokens = maxTokens || 1000;
+  const { provider, model, apiKey } = getSettings();
+  if (!apiKey) throw new Error('API ключ для ' + provider + ' не вказано. Відкрийте налаштування.');
+  addLog('callAI ' + provider + '/' + model, 'info');
+
+  if (provider === 'openai') {
+    const r = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey },
+      body: JSON.stringify({ model, max_tokens:maxTokens, messages:[{role:'system',content:system},...messages] }),
+    });
+    const d = await r.json();
+    if (!r.ok) { addLog('OpenAI '+r.status+': '+((d.error||{}).message||''), 'error'); throw new Error((d.error||{}).message||'OpenAI error'); }
+    return (d.choices||[])[0]?.message?.content || '';
+  }
+  if (provider === 'google') {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts:[{text:system}] },
+        contents: messages.map(m=>({ role:m.role==='assistant'?'model':'user', parts:[{text:m.content}] })),
+        generationConfig: { maxOutputTokens:maxTokens },
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) { addLog('Gemini '+r.status, 'error'); throw new Error('Gemini error'); }
+    return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  /* Anthropic */
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type':'application/json', 'x-api-key':apiKey,
+      'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body: JSON.stringify({ model, max_tokens:maxTokens, system, messages }),
+  });
+  const d = await r.json();
+  if (!r.ok) { addLog('Anthropic '+r.status+': '+((d.error||{}).message||''), 'error'); throw new Error((d.error||{}).message||'Anthropic error'); }
+  addLog('OK tokens='+((d.usage||{}).output_tokens||'?'), 'success');
+  return d.content?.[0]?.text || '';
+};
+
+const speak = async (text) => {
+  const { provider, apiKey, speed, ttsMode, voice, speechLang } = getSettings();
+  if (ttsMode === 'online' && provider === 'openai' && apiKey) {
+    try {
+      const r = await fetch('https://api.openai.com/v1/audio/speech', {
+        method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},
+        body: JSON.stringify({ model:'tts-1', voice:voice||'alloy', input:text, speed:Math.max(0.25,Math.min(4,speed)) }),
+      });
+      if (r.ok) { new Audio(URL.createObjectURL(await r.blob())).play(); return; }
+    } catch(_) { addLog('Online TTS failed, fallback', 'warn'); }
+  }
+  if (!window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = speechLang; u.rate = speed || 0.85;
+  if (voice) { const v = window.speechSynthesis.getVoices().find(v=>v.name===voice||v.voiceURI===voice); if(v) u.voice=v; }
+  window.speechSynthesis.speak(u);
+};
+
+const parseJSON = t => { try { return JSON.parse(t.replace(/```json|```/g,'').trim()); } catch(e){ return null; } };
+
+const parseCorrection = text => {
+  const { open, close } = CHAT_CONFIG.correctionMarkers;
+  const esc = s => s.replace(/[-[\]{}()*+?.,\\^$|#\s]/g,'\\$&');
+  const re = new RegExp(esc(open)+'\\s*([\\s\\S]*?)\\s*'+esc(close));
+  const m = text.match(re);
+  if (!m) return { mainText:text, correction:null };
+  try { return { mainText:text.replace(re,'').trim(), correction:JSON.parse(m[1]) }; }
+  catch(e) { return { mainText:text, correction:null }; }
+};
+
+/* ── Radar Chart ─────────────────────────────────────── */
+function RadarChart({ scores, aspects }) {
+  const cx=150,cy=150,r=88,n=aspects.length;
+  if(n<3) return null;
+  const pts = vals => vals.map((v,i) => {
+    const a=(i/n)*2*Math.PI-Math.PI/2, rv=r*(v/10);
+    return [cx+rv*Math.cos(a), cy+rv*Math.sin(a)];
+  });
+  const grid = [2,4,6,8,10].map(g=>pts(Array(n).fill(g)));
+  const dp = pts(aspects.map(a=>scores[a.id]||0));
+  const poly = pp => pp.map(p=>p.join(',')).join(' ');
+  return (
+    <svg viewBox="0 0 300 300" style={{width:'100%',maxWidth:300}} role="img" aria-label="Профіль компетенцій">
+      {grid.map((gp,gi)=><polygon key={gi} points={poly(gp)} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="1"/>)}
+      {Array.from({length:n},(_,i)=>{const a=(i/n)*2*Math.PI-Math.PI/2;return <line key={i} x1={cx} y1={cy} x2={cx+r*Math.cos(a)} y2={cy+r*Math.sin(a)} stroke="rgba(255,255,255,0.1)" strokeWidth="1"/>;})}
+      <polygon points={poly(dp)} fill="rgba(74,158,222,0.22)" stroke="#4a9ede" strokeWidth="2"/>
+      {dp.map(([x,y],i)=><circle key={i} cx={x} cy={y} r="5" fill={aspects[i].color}/>)}
+      {aspects.map((a,i)=>{const ang=(i/n)*2*Math.PI-Math.PI/2;return <text key={i} x={cx+(r+26)*Math.cos(ang)} y={cy+(r+26)*Math.sin(ang)} textAnchor="middle" dominantBaseline="middle" style={{fontSize:10,fill:'#cbd5e1',fontFamily:'Segoe UI,sans-serif'}}>{a.icon} {a.label}</text>;})}
+    </svg>
+  );
+}
+
+/* ── Шапка (загальна) ───────────────────────────────── */
+function Header({ onBack, title, badge, badgeColor, extra, techLogOn }) {
+  return (
+    <header style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.08)',background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',gap:8,flexShrink:0,flexWrap:'wrap',backdropFilter:'blur(8px)'}}>
+      {onBack && <button onClick={onBack} aria-label="Назад" style={{background:'transparent',border:'none',color:'#8892b0',cursor:'pointer',fontSize:'1.5rem',lineHeight:1,padding:'2px 6px',minWidth:36}}>‹</button>}
+      {title && <span style={{color:'#fff',fontWeight:700,fontSize:'1rem',flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{title}</span>}
+      {badge && <span style={{color:badgeColor||'#4a9ede',background:(badgeColor||'#4a9ede')+'22',border:'1px solid '+(badgeColor||'#4a9ede')+'44',borderRadius:8,padding:'3px 10px',fontWeight:700,fontSize:'0.8rem',flexShrink:0}}>{badge}</span>}
+      {extra}
+      <a href="settings.html" aria-label="Налаштування" title="Глобальні налаштування"
+        style={{display:'flex',alignItems:'center',justifyContent:'center',width:40,height:40,borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'#8892b0',textDecoration:'none',fontSize:'1.1rem',flexShrink:0}}>⚙</a>
+      {techLogOn && (
+        <button onClick={()=>window.toggleDbg()} aria-label="Консоль діагностики" title="Діагностика"
+          style={{display:'flex',alignItems:'center',justifyContent:'center',width:40,height:40,borderRadius:10,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.3)',color:'#f59e0b',cursor:'pointer',fontSize:'1rem',flexShrink:0}}>🔧</button>
+      )}
+    </header>
+  );
+}
+
+/* ── CEFR Range picker ──────────────────────────────── */
+function CefrRange({ from, to, onChange }) {
+  return (
+    <fieldset style={{border:'none',padding:0,width:'100%'}}>
+      <legend style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:14,display:'block'}}>Рівень знань</legend>
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        {['Від','До'].map((lbl,li)=>(
+          <div key={lbl}>
+            <span style={{color:'#8892b0',fontSize:'0.78rem',display:'block',marginBottom:7}}>{lbl}</span>
+            <div style={{display:'flex',gap:6}} role="group" aria-label={lbl+' рівень'}>
+              {CEFR_ALL.map((lvl,i)=>{
+                const active = li===0 ? i===from : i===to;
+                const inRange = i>=from && i<=to;
+                const disabled = li===0 ? i>to : i<from;
+                return (
+                  <button key={lvl} onClick={()=>{ if(!disabled) li===0?onChange(i,to):onChange(from,i); }}
+                    aria-pressed={active} aria-label={lbl+' '+lvl} disabled={disabled}
+                    style={{flex:1,padding:'10px 4px',borderRadius:10,border:'2px solid '+(active?CEFR_COLORS[lvl]:inRange?CEFR_COLORS[lvl]+'55':'rgba(255,255,255,0.1)'),background:active?CEFR_COLORS[lvl]+'2a':inRange?CEFR_COLORS[lvl]+'11':'rgba(255,255,255,0.03)',color:inRange?CEFR_COLORS[lvl]:'#8892b0',fontWeight:active?800:400,fontSize:'0.88rem',cursor:disabled?'default':'pointer',opacity:disabled?0.35:1,transition:'all 0.15s'}}>
+                    {lvl}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{marginTop:12,background:'rgba(255,255,255,0.04)',borderRadius:10,padding:'9px 14px',textAlign:'center'}}>
+        <span style={{color:'#8892b0',fontSize:'0.85rem'}}>Поточний рівень: </span>
+        {CEFR_ALL.slice(from,to+1).map(lvl=>(
+          <span key={lvl} style={{color:CEFR_COLORS[lvl],fontWeight:700,fontSize:'0.9rem',marginLeft:5}}>{lvl}</span>
+        ))}
+        <span style={{color:'#4b5563',fontSize:'0.78rem',marginLeft:8}}>{CEFR_DESCS[CEFR_ALL[from]]} → {CEFR_DESCS[CEFR_ALL[to]]}</span>
+      </div>
+    </fieldset>
+  );
+}
+
+/* ── Question Card ──────────────────────────────────── */
+function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript, speechError, fallbackText, onStartRec, onStopRec, onSetFallback, onSetSpeechError }) {
+  const [sel,setSel]   = useState(null);
+  const [tv,setTv]     = useState('');
+  const [played,setP]  = useState(false);
+  const asp = ASPECTS_UI.find(a=>a.id===q.aspect)||{};
+  const col = asp.color||'#4a9ede';
+  const sub = v => { if(!answered) onAnswer(v); };
+  return (
+    <article style={{background:'rgba(255,255,255,0.05)',border:'2px solid '+col+'44',borderRadius:20,padding:'20px 16px',maxWidth:600,margin:'0 auto',width:'100%',animation:'fadeIn .3s ease'}}>
+      <div style={{display:'flex',justifyContent:'space-between',marginBottom:14,flexWrap:'wrap',gap:6}}>
+        <span style={{background:col+'22',color:col,borderRadius:8,padding:'4px 12px',fontWeight:700,fontSize:'0.82rem'}}>{asp.icon} {asp.label}</span>
+        <span style={{color:'#8892b0',fontSize:'0.82rem',alignSelf:'center'}} aria-live="polite">{idx+1} / {total}</span>
+      </div>
+      {q.passage && <blockquote style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:'12px 14px',marginBottom:14,color:'#cbd5e1',fontSize:'0.95rem',lineHeight:1.75,fontStyle:'italic',borderLeft:'3px solid '+col}}>{q.passage}</blockquote>}
+      {q.aspect==='listening'&&q.audio_text&&(
+        <button onClick={()=>{speak(q.audio_text);setP(true);}} aria-label={played?'Відтворити знову':'Відтворити фразу'}
+          style={{display:'flex',alignItems:'center',gap:10,background:col+'22',border:'2px solid '+col+'55',borderRadius:12,padding:'12px 18px',color:col,cursor:'pointer',marginBottom:14,fontSize:'0.95rem',fontWeight:700,width:'100%'}}>
+          🔊 {played?'Відтворити знову':'Відтворити фразу'}
+        </button>
+      )}
+      <p style={{color:'#e8edf3',fontSize:'1.05rem',lineHeight:1.7,marginBottom:18}}>{q.question}</p>
+      {q.options&&(
+        <div style={{display:'flex',flexDirection:'column',gap:10}} role="group" aria-label="Варіанти відповіді">
+          {q.options.map((opt,oi)=>(
+            <button key={oi} onClick={()=>{if(!answered){setSel(oi);sub(opt);}}} aria-pressed={sel===oi}
+              style={{background:sel===oi?col+'33':'rgba(255,255,255,0.05)',border:'2px solid '+(sel===oi?col:'rgba(255,255,255,0.14)'),borderRadius:12,padding:'13px 16px',color:'#e2e8f0',cursor:answered?'default':'pointer',textAlign:'left',fontSize:'0.95rem',transition:'all .15s',display:'flex',gap:10}}>
+              <span style={{color:col,fontWeight:800,flexShrink:0,minWidth:22}}>{String.fromCharCode(65+oi)}.</span><span>{opt}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {!q.options&&q.aspect!=='speaking'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          <textarea value={tv} onChange={e=>setTv(e.target.value)} disabled={answered} rows={q.aspect==='writing'?4:2}
+            placeholder={q.aspect==='writing'?'Напиши своє речення…':'Введи відповідь…'} aria-label="Поле відповіді"
+            style={{background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'12px 14px',color:'#fff',fontSize:'1rem',resize:'vertical',outline:'none',lineHeight:1.6}}/>
+          <button onClick={()=>sub(tv)} disabled={!tv.trim()||answered}
+            style={{background:tv.trim()&&!answered?col:'rgba(255,255,255,0.1)',border:'none',borderRadius:12,padding:'13px',color:'#fff',fontWeight:700,cursor:tv.trim()&&!answered?'pointer':'default',fontSize:'1rem'}}>
+            Підтвердити
+          </button>
+        </div>
+      )}
+      {q.aspect==='speaking'&&(
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {!speechError?(
+            <>
+              <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                <button onClick={recording?onStopRec:onStartRec} disabled={answered} aria-label={recording?'Зупинити':'Почати запис'}
+                  style={{flex:1,minWidth:130,background:recording?'rgba(236,72,153,.2)':col+'22',border:'2px solid '+(recording?'#ec4899':col+'55'),borderRadius:12,padding:'12px 14px',color:recording?'#ec4899':col,fontWeight:700,cursor:answered?'default':'pointer',fontSize:'1rem',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                  {recording?'⏹ Зупинити':'🎤 Почати запис'}
+                </button>
+                {recording&&<div style={{display:'flex',alignItems:'center',gap:6,padding:'0 14px',background:'rgba(236,72,153,.1)',border:'2px solid rgba(236,72,153,.3)',borderRadius:12}} aria-live="polite">
+                  {[0,1,2].map(n=><div key={n} style={{width:6,height:6,borderRadius:'50%',background:'#ec4899',animation:'dot .8s infinite',animationDelay:(n*.15)+'s'}}/>)}
+                </div>}
+              </div>
+              {transcript&&<div style={{background:'rgba(255,255,255,0.07)',borderRadius:10,padding:'12px 14px',color:'#cbd5e1',fontSize:'0.95rem'}} role="status">📝 {transcript}</div>}
+              {transcript&&!answered&&(
+                <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                  <button onClick={()=>{onSetFallback('');onStartRec();}} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'2px solid rgba(255,255,255,0.14)',borderRadius:10,padding:'11px',color:'#8892b0',cursor:'pointer',fontSize:'0.9rem'}}>Повторити</button>
+                  <button onClick={()=>sub(transcript)} style={{flex:2,background:col,border:'none',borderRadius:10,padding:'11px',color:'#fff',fontWeight:700,cursor:'pointer',fontSize:'0.95rem'}}>Підтвердити</button>
+                </div>
+              )}
+              <button onClick={()=>onSetSpeechError(true)} style={{background:'transparent',border:'none',color:'#4b5563',fontSize:'0.82rem',cursor:'pointer',textDecoration:'underline',alignSelf:'flex-start',minHeight:'auto'}}>Не працює мікрофон? Написати текстом</button>
+            </>
+          ):(
+            <>
+              <div role="alert" style={{background:'rgba(251,191,36,.1)',border:'2px solid rgba(251,191,36,.35)',borderRadius:12,padding:'12px 14px',color:'#fbbf24',fontSize:'0.9rem',lineHeight:1.7}}>⚠️ Запис недоступний. Введіть відповідь текстом.</div>
+              <textarea value={fallbackText} onChange={e=>onSetFallback(e.target.value)} disabled={answered} rows={3}
+                placeholder="Напиши відповідь іспанською…" aria-label="Текстова відповідь"
+                style={{background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'12px 14px',color:'#fff',fontSize:'1rem',resize:'vertical',outline:'none'}}/>
+              <button onClick={()=>sub(fallbackText)} disabled={!fallbackText.trim()||answered}
+                style={{background:fallbackText.trim()&&!answered?col:'rgba(255,255,255,0.1)',border:'none',borderRadius:12,padding:'13px',color:'#fff',fontWeight:700,cursor:fallbackText.trim()&&!answered?'pointer':'default',fontSize:'1rem'}}>
+                Підтвердити
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+/* ── App ─────────────────────────────────────────────── */
+function App() {
+  const [screen,setScreen]   = useState('home');
+  const [mode,setMode]       = useState(null);
+
+  /* Єдиний CEFR-діапазон для всього модуля */
+  const [cfFrom,setCfFrom]   = useState(1); /* A2 */
+  const [cfTo,setCfTo]       = useState(3); /* B2 */
+
+  const [selAsp,setSelAsp]   = useState(ASPECTS_UI.map(a=>a.id));
+
+  const [msgs,setMsgs]       = useState([]);
+  const [input,setInput]     = useState('');
+  const [loading,setLoading] = useState(false);
+  const [hist,setHist]       = useState([]);
+  const [showTxt,setShowTxt] = useState(true);
+  const [showCor,setShowCor] = useState(true);
+  const [showRem,setShowRem] = useState(true);
+
+  const [topic,setTopic]     = useState('');
+  const [lesFile,setLesFile] = useState(null);
+  const [lesText,setLesText] = useState('');
+
+  const [testPh,setTestPh]   = useState('idle');
+  const [qs,setQs]           = useState([]);
+  const [qi,setQi]           = useState(0);
+  const [ans,setAns]         = useState([]);
+  const [ansd,setAnsd]       = useState(false);
+  const [fb,setFb]           = useState(null);
+  const [scores,setScores]   = useState({});
+  const [report,setReport]   = useState(null);
+
+  const [rec,setRec]         = useState(false);
+  const [tr,setTr]           = useState('');
+  const [se,setSe]           = useState(false);
+  const [ft,setFt]           = useState('');
+  const recRef = useRef(null);
+
+  const [chatRec,setChatRec] = useState(false);
+  const [chatErr,setChatErr] = useState(false);
+  const cRecRef = useRef(null);
+
+  const [nadOn,setNadOn]     = useState(false);   // тогл Native Audio Dialog
+  const nadRef   = useRef(null);                   // GeminiLiveConnector instance
+  const sessRef  = useRef(null);                   // поточний session ID
+  const [nadState,setNadState] = useState('idle'); // 'idle'|'connecting'|'ready'|'listening'|'speaking'|'closed'|'error'
+  const [nadErr,setNadErr]   = useState(false);    // помилка мікрофона NAD
+  const [nadShowText,setNadShowText] = useState(true); // показувати текст AI-фраз у NAD
+  const [nadHintLoading,setNadHintLoading] = useState(false); // завантаження підказки
+  const [nadRecording,setNadRecording] = useState(false); // запис аудіо
+
+  const [noKey,setNoKey]     = useState(false);
+  const [tlOn,setTlOn]       = useState(false);
+
+  const botRef = useRef(null);
+  const inpRef = useRef(null);
+
+  useEffect(()=>{
+    const s = getSettings();
+    setNoKey(!s.apiKey); setTlOn(s.techLogOn);
+    // Скидаємо nadOn якщо провайдер не підтримує NAD
+    const nadProviders = ['google', 'openai'];
+    if(!nadProviders.includes(s.provider)) setNadOn(false);
+  },[screen]);
+
+  useEffect(()=>{ botRef.current&&botRef.current.scrollIntoView({behavior:'smooth'}); },[msgs]);
+
+  // Для тесту і відображення: повний діапазон "A2-B2"
+  const testLabel = useMemo(()=>CEFR_ALL.slice(cfFrom,cfTo+1).join('-'),[cfFrom,cfTo]);
+  // Для промптів уроку/чату: середній рівень (нижня середина)
+  const sessLevel = useMemo(()=>CEFR_ALL[Math.floor((cfFrom+cfTo)/2)],[cfFrom,cfTo]);
+
+  /* Файл прогресу */
+  const onFile = e => {
+    const f = e.target.files[0]; if(!f) return;
+    setLesFile(f.name);
+    const r = new FileReader();
+    r.onload = ev => setLesText(ev.target.result);
+    r.readAsText(f,'UTF-8');
+  };
+
+  /* Мікрофон (тест) */
+  const startRec = () => {
+    setSe(false);
+    const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){setSe(true);return;}
+    try{
+      const r = new SR(); r.lang=getSettings().speechLang; r.interimResults=false; r.maxAlternatives=1;
+      r.onresult = e=>{setTr(e.results[0][0].transcript);setRec(false);};
+      r.onerror  = ()=>{setSe(true);setRec(false);};
+      r.onend    = ()=>setRec(false);
+      recRef.current=r; r.start(); setRec(true);
+    }catch(e){setSe(true);}
+  };
+  const stopRec = () => { recRef.current&&recRef.current.stop(); setRec(false); };
+
+  /* Мікрофон (чат) */
+  const startCRec = async () => {
+    setChatErr(false);
+    try{await navigator.mediaDevices.getUserMedia({audio:true});}catch(e){setChatErr(true);return;}
+    const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){setChatErr(true);return;}
+    try{
+      const r = new SR(); r.lang=getSettings().speechLang; r.interimResults=false; r.maxAlternatives=1;
+      r.onresult = e=>{const t=e.results[0][0].transcript;setInput(p=>p?p+' '+t:t);setChatRec(false);};
+      r.onerror  = ()=>{setChatErr(true);setChatRec(false);};
+      r.onend    = ()=>setChatRec(false);
+      cRecRef.current=r; r.start(); setChatRec(true);
+    }catch(e){setChatErr(true);}
+  };
+  const stopCRec = () => { cRecRef.current&&cRecRef.current.stop(); setChatRec(false); };
+
+  /* AI: генерація питань */
+  const genQs = useCallback(async(aspects,lvl)=>{
+    addLog('genQs aspects='+aspects+' lvl='+lvl,'info');
+    const raw = await callAI([{role:'user',content:CHAT_PROMPTS.testGenerate.user(aspects,lvl)}],CHAT_PROMPTS.testGenerate.system,CHAT_CONFIG.test.maxTokensGenerate);
+    const p = parseJSON(raw);
+    return Array.isArray(p)?p:[];
+  },[]);
+
+  /* AI: оцінка відкритої відповіді */
+  const evalOpen = useCallback(async(q,a,m,asp)=>{
+    const raw = await callAI([{role:'user',content:CHAT_PROMPTS.testEvaluate.user(q,a,m,asp)}],CHAT_PROMPTS.testEvaluate.system,CHAT_CONFIG.test.maxTokensEvaluate);
+    return parseJSON(raw)||{score:5,correct:false,feedback:'Не вдалося оцінити.',error_analysis:''};
+  },[]);
+
+  /* AI: фінальний звіт */
+  const genReport = async(fs,allA,asp) => {
+    setTestPh('evaluating');
+    const raw = await callAI([{role:'user',content:CHAT_PROMPTS.testReport.user(fs,allA)}],CHAT_PROMPTS.testReport.system,CHAT_CONFIG.test.maxTokensReport);
+    const rep = parseJSON(raw)||{cefr:'B1',overall_score:50,weak_aspects:[],strong_aspects:[],recommendations:[]};
+    setReport(rep); setTestPh('report');
+    // Зміщуємо діапазон до рекомендованого рівня
+    const idx = CEFR_ALL.indexOf(rep.cefr);
+    if(idx>=0){ setCfFrom(Math.max(0,idx-1)); setCfTo(Math.min(CEFR_ALL.length-1,idx+1)); }
+  };
+
+  /* Запуск тесту */
+  const startTest = async aspects => {
+    setScreen('test'); setTestPh('generating');
+    setQs([]); setAns([]); setQi(0); setScores({}); setReport(null);
+    setAnsd(false); setFb(null); setTr(''); setFt(''); setSe(false);
+    const q = await genQs(aspects,testLabel);
+    if(!q.length){setTestPh('error');return;}
+    setQs(q); setTestPh('questions');
+  };
+
+  /* Відповідь у тесті */
+  const handleAns = useCallback(async v => {
+    if(ansd) return;
+    setAnsd(true);
+    const q = qs[qi];
+    let result;
+    if(q.options){
+      const ok = v===q.correct;
+      result = {score:ok?10:0,correct:ok,feedback:ok?'Правильно!':'Правильна відповідь: '+q.correct,error_analysis:''};
+      setFb(result);
+    } else {
+      setTestPh('evaluating');
+      result = await evalOpen(q.question,v,q.correct,q.aspect);
+      setTestPh('questions'); setFb(result);
+    }
+    const newAns = [...ans,{q,v,result}];
+    setAns(newAns);
+    setTimeout(async()=>{
+      setFb(null); setAnsd(false); setTr(''); setFt(''); setSe(false);
+      const next = qi+1;
+      if(next<qs.length){ setQi(next); } else {
+        const asp = [...new Set(qs.map(x=>x.aspect))];
+        const fs = {};
+        asp.forEach(id=>{ const g=newAns.filter(a=>a.q.aspect===id); fs[id]=Math.round(g.reduce((s,a)=>s+(a.result.score||0),0)/Math.max(g.length,1)*10)/10; });
+        setScores(fs);
+        await genReport(fs,newAns,asp);
+      }
+    },CHAT_CONFIG.test.feedbackDelay);
+  },[ansd,qs,qi,ans]);
+
+  /* Сесія */
+  const startSess = async () => {
+    setScreen('session'); setMsgs([]); setHist([]); setLoading(true);
+    sessRef.current = Math.random().toString(36).slice(2, 10);
+    setNadRecording(false);
+    setNadErr(false);
+
+    // ── NAD-гілка: Gemini Live або OpenAI Realtime ────────────
+    if(nadOn && mode.id==='chat'){
+      const { apiKey, provider } = getSettings();
+      const sys = CHAT_PROMPTS.chatNAD.system(sessLevel, topic);
+
+      if(nadRef.current){ nadRef.current.disconnect(); nadRef.current=null; }
+
+      // Вибір конектора залежно від провайдера
+      const ConnectorClass = provider === 'openai'
+        ? (typeof OpenAIRealtimeConnector !== 'undefined' ? OpenAIRealtimeConnector : null)
+        : (typeof GeminiLiveConnector     !== 'undefined' ? GeminiLiveConnector     : null);
+
+      if(!ConnectorClass){
+        setMsgs([{role:'ai',content:'❌ NAD конектор не знайдено для провайдера: '+provider,error:true}]);
+        setLoading(false); return;
+      }
+
+      // Ідентифікатори поточних активних бульбашок (скидаються після final)
+      const nadActiveId = { ai: null, user: null };
+
+      const onTranscript = ({ role, text, partial, final }) => {
+        const isAI    = role === 'assistant';
+        const msgRole = isAI ? 'ai' : 'user';
+        const isHint  = isAI && !!nadRef._nextIsHint;
+        if(isAI && final && nadRef._nextIsHint) nadRef._nextIsHint = false;
+
+        setMsgs(p => {
+          const activeId = nadActiveId[msgRole];
+
+          // Є активна бульбашка — оновлюємо її
+          if(activeId !== null){
+            const idx = p.findIndex(m => m.nadId === activeId);
+            if(idx !== -1){
+              const updated = p.map((m, i) => i === idx
+                ? { ...m, content: text, final: !!final, streaming: !!partial } : m);
+              // Після final — скидаємо активний ID, наступна репліка буде новою бульбашкою
+              if(final) nadActiveId[msgRole] = null;
+              return updated;
+            }
+          }
+
+          // Нова репліка — створюємо нову бульбашку з унікальним ID
+          const newId = Math.random().toString(36).slice(2, 9);
+          nadActiveId[msgRole] = final ? null : newId;
+          return [...p, { role: msgRole, content: text, nad: true, nadId: newId,
+            final: !!final, streaming: !!partial, isHint: isHint && !partial }];
+        });
+      };
+
+      const conn = new ConnectorClass({ onTranscript,
+        onStateChange: (state) => {
+          setNadState(state);
+          addLog('NAD state → '+state, 'info');
+          if(state==='error') setNadErr(true);
+        },
+        onError: (e) => {
+          setNadErr(true);
+          setMsgs(p=>[...p,{role:'ai',content:'❌ NAD: '+(e.message||e),error:true}]);
+          addLog('NAD error: '+(e.message||e),'error');
+        },
+        onRecordingChange: (isRec) => {
+          setNadRecording(isRec);
+          addLog('NAD: recording ' + (isRec ? 'started' : 'stopped'), 'info');
+        },
+      });
+
+      nadRef.current = conn;
+      conn.connect(apiKey, sys);
+      setLoading(false);
+      return;
+    }
+
+    // ── Стандартна text-гілка (без змін) ─────────────────────
+    const sys = mode.id==='lesson' ? CHAT_PROMPTS.lesson.system(sessLevel,lesText) : CHAT_PROMPTS.chat.system(sessLevel,topic);
+    const init = [{role:'user',content:'Починай.'}];
+    try{
+      const reply = await callAI(init,sys,CHAT_CONFIG.session.maxTokensInit);
+      setHist([...init,{role:'assistant',content:reply}]);
+      if(mode.id==='chat'){
+        const {mainText,correction} = parseCorrection(reply);
+        setMsgs([{role:'ai',content:mainText,correction,ttsText:mainText}]);
+        speak(mainText);
+      } else { setMsgs([{role:'ai',content:reply,ttsText:reply}]); }
+    }catch(e){ setMsgs([{role:'ai',content:'❌ '+e.message,error:true}]); }
+    setLoading(false);
+  };
+
+  const sendMsg = async () => {
+    if(!input.trim()||loading) return;
+    const txt=input.trim(); setInput(''); setLoading(true);
+    setMsgs(p=>[...p,{role:'user',content:txt}]);
+    const newHist=[...hist,{role:'user',content:txt}];
+    const sys = mode.id==='lesson' ? CHAT_PROMPTS.lesson.system(sessLevel,lesText) : CHAT_PROMPTS.chat.system(sessLevel,topic);
+    try{
+      const reply = await callAI(newHist,sys,CHAT_CONFIG.session.maxTokensReply);
+      setHist([...newHist,{role:'assistant',content:reply}]);
+      if(mode.id==='chat'){
+        const {mainText,correction}=parseCorrection(reply);
+        if(correction){ setMsgs(p=>{const u=[...p];for(let i=u.length-1;i>=0;i--){if(u[i].role==='user'){u[i]={...u[i],correction};break;}}return u;}); }
+        setMsgs(p=>[...p,{role:'ai',content:mainText,ttsText:mainText}]);
+        speak(mainText);
+      } else { setMsgs(p=>[...p,{role:'ai',content:reply,ttsText:reply}]); }
+    }catch(e){ setMsgs(p=>[...p,{role:'ai',content:'❌ '+e.message,error:true}]); }
+    setLoading(false);
+    inpRef.current&&inpRef.current.focus();
+  };
+  const onKey = e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();} };
+
+  /* NAD: достроково надіслати аудіо (перервати VAD-паузу) */
+  const interruptNAD = () => {
+    if(nadRef.current && typeof nadRef.current.interrupt === 'function'){
+      nadRef.current.interrupt();
+      addLog('NAD: interrupt', 'info');
+    }
+  };
+
+  /* PTT: почати говорити */
+  const pttStart = () => {
+    const blocked = ['connecting','error','closed','idle','speaking'];
+    if(!nadRef.current || blocked.includes(nadState)) return;
+    nadRef.current.startSpeaking();
+  };
+
+  const pttStop = () => {
+    if(!nadRef.current) return;
+    nadRef.current.stopSpeaking();
+  };
+
+  /* NAD: повторити останню фразу AI — через живу WebSocket сесію */
+  const repeatLast = () => {
+    if(!nadRef.current) return;
+    nadRef.current._send({
+      clientContent: {
+        turns: [{ role:'user', parts:[{ text:'Repite tu última frase en español, por favor.' }] }],
+        turnComplete: true
+      }
+    });
+    addLog('NAD: repeat request sent', 'info');
+  };
+
+  /* NAD: підказка — AI відповідає ГОЛОСОМ українською прямо в сесії */
+  const getHint = () => {
+    if(!nadRef.current || nadHintLoading) return;
+    setNadHintLoading(true);
+    // Позначаємо що наступна відповідь AI буде підказкою
+    nadRef._nextIsHint = true;
+    nadRef.current._send({
+      clientContent: {
+        turns: [{ role:'user', parts:[{ text:'Дай мені коротку підказку УКРАЇНСЬКОЮ мовою (1-2 речення): поясни що потрібно відповісти і яку лексику або граматику використати, але НЕ кажи готову іспанську відповідь.' }] }],
+        turnComplete: true
+      }
+    });
+    addLog('NAD: hint request sent', 'info');
+    setTimeout(() => setNadHintLoading(false), 3000);
+  };
+
+  /* NAD: запис аудіо — одна кнопка: старт / зупинити+зберегти */
+  const toggleRecording = async () => {
+    if(!nadRef.current) return;
+    if(!nadRecording){
+      nadRef.current.startRecording();
+      setNadRecording(true);
+      addLog('NAD: recording started', 'info');
+    } else {
+      setNadRecording(false);
+      addLog('NAD: saving recording...', 'info');
+      const sessId = sessRef.current || Date.now().toString(36);
+      const file = await nadRef.current.saveRecording(sessId);
+      addLog('NAD: saved → ' + (file || 'error'), file ? 'success' : 'warn');
+    }
+  };
+  const expTxt = () => {
+    if(!report) return;
+    const asp=[...new Set(qs.map(q=>q.aspect))].map(id=>ASPECTS_UI.find(a=>a.id===id)).filter(Boolean);
+    const lines=["РЕЗУЛЬТАТИ ТЕСТУВАННЯ ІСПАНСЬКОЇ МОВИ","Дата: "+new Date().toLocaleString("uk-UA"),
+      "Рівні тесту: "+testLabel,"CEFR: "+report.cefr,"Бал: "+report.overall_score+"/100","",
+      "ОЦІНКИ:",...asp.map(a=>"  "+a.label+": "+(scores[a.id]||0)+"/10"),"",
+      "СЛАБКІ: "+((report.weak_aspects||[]).map(id=>{const a=ASPECTS_UI.find(x=>x.id===id);return a?a.label:id;}).join(", ")||"—"),
+      "СИЛЬНІ: "+((report.strong_aspects||[]).map(id=>{const a=ASPECTS_UI.find(x=>x.id===id);return a?a.label:id;}).join(", ")||"—"),"",
+      "РЕКОМЕНДАЦІЇ:",...(report.recommendations||[]).map((r,i)=>"  "+(i+1)+". "+r),"","ВІДПОВІДІ:",
+      ...ans.map((a,i)=>{const a2=ASPECTS_UI.find(x=>x.id===a.q.aspect);return "\n"+(i+1)+". ["+(a2?a2.label:a.q.aspect)+"] "+a.q.question+"\n   Відповідь: "+a.v+"\n   Результат: "+(a.result.correct?"✓":"✗")+" ("+a.result.score+"/10)\n   "+a.result.feedback;})
+    ].join("\n");
+    const b=new Blob([lines],{type:"text/plain;charset=utf-8"});
+    const u=URL.createObjectURL(b);
+    const el=document.createElement("a");el.href=u;el.download="spanish_test_"+isoDate()+".txt";el.click();URL.revokeObjectURL(u);
+  };
+  const expJSON = () => {
+    if(!report) return;
+    const d={date:new Date().toISOString(),testLevel:testLabel,cefr:report.cefr,overall_score:report.overall_score,scores,weak_aspects:report.weak_aspects,strong_aspects:report.strong_aspects,recommendations:report.recommendations,answers:ans.map(a=>({aspect:a.q.aspect,question:a.q.question,answer:a.v,correct:a.result.correct,score:a.result.score,feedback:a.result.feedback}))};
+    const b=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});
+    const u=URL.createObjectURL(b);
+    const el=document.createElement("a");el.href=u;el.download="spanish_test_"+isoDate()+".json";el.click();URL.revokeObjectURL(u);
+  };
+  const expRTF = () => {
+    const date=new Date().toLocaleString("uk-UA");
+    const esc=s=>s.replace(/\\/g,"\\\\").replace(/\{/g,"\\{").replace(/\}/g,"\\}").replace(/\n/g,"\\par\n");
+    const uc=s=>{let o="";for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);if(c>127){o+="\\u"+c+"?";}else{o+=s[i];}}return o;};
+    const enc=s=>uc(esc(s));
+    let body="";
+    msgs.forEach(msg=>{
+      if(msg.role==='user'){
+        body+="{\\pard\\sa120\\sb60 {\\b\\cf2 [Я]:} {\\cf3 "+enc(msg.content)+"}\\par}\n";
+        if(msg.correction&&msg.correction.has_errors&&(msg.correction.corrections||[]).length){
+          body+="{\\pard\\sa60\\li400 {\\i\\cf4 Корекція:}\\par\n";
+          msg.correction.corrections.forEach(c=>{const n=c.note?" ("+c.note+")":"";body+="{\\li400\\cf5 "+enc(c.wrong)+" \\cf4 \\u8594? "+enc(c.right)+"\\cf6 "+enc(n)+"}\\par\n";});
+          if(msg.correction.overall)body+="{\\li400\\i\\cf6 "+enc(msg.correction.overall)+"}\\par\n";
+          body+="}\n";
+        }else if(msg.correction&&!msg.correction.has_errors){body+="{\\pard\\li400\\i\\cf7 "+enc(msg.correction.overall||"Без помилок!")+"}\\par\n";}
+      }else if(msg.role==='ai'){body+="{\\pard\\sa120\\sb60 {\\b\\cf8 [AI]:} {\\cf0 "+enc(msg.content)+"}\\par}\n";}
+    });
+    const rtf=["{\\rtf1\\ansi\\deff0","{\\fonttbl{\\f0\\fswiss\\fcharset204 Arial;}}","{\\colortbl;\\red0\\green0\\blue0;\\red30\\green90\\blue210;\\red20\\green60\\blue160;\\red120\\green40\\blue160;\\red200\\green40\\blue40;\\red100\\green100\\blue100;\\red30\\green140\\blue60;\\red10\\green120\\blue110;}","{\\f0\\fs24","{\\pard\\qc\\b\\fs30 "+uc("Розмова іспанською")+"\\par}","{\\pard\\qc\\fs20\\cf6 "+uc(date)+(topic?" \\u183? "+uc("Тема: "+topic):"")+"\\par}","{\\pard\\qc\\fs20\\cf6 "+uc("Рівень: "+testLabel)+"\\par}","{\\pard\\brdrb\\brdrs\\brdrw10\\brsp20 \\par}",body,"}}"].join("\n");
+    const b=new Blob([rtf],{type:"application/rtf"});
+    const u=URL.createObjectURL(b);
+    const el=document.createElement("a");el.href=u;el.download="spanish_chat_"+isoDate()+".rtf";el.click();URL.revokeObjectURL(u);
+  };
+
+  /* ═════════════ РЕНДЕР ═════════════ */
+
+  /* HOME */
+  if(screen==='home') return (
+    <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column'}}>
+      {/* ── Шапка головної сторінки ── */}
+      <header style={{padding:'10px 14px',borderBottom:'1px solid rgba(255,255,255,0.08)',background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',backdropFilter:'blur(8px)',flexShrink:0}}>
+        {/* Ліворуч — вихід у хаб */}
+        <a href="index.html" aria-label="Повернутися до головного меню" title="Головне меню"
+          style={{display:'flex',alignItems:'center',gap:7,height:40,paddingLeft:4,paddingRight:12,borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'#8892b0',textDecoration:'none',fontSize:'0.88rem',fontWeight:600,flexShrink:0,whiteSpace:'nowrap'}}>
+          <span style={{fontSize:'1.1rem'}}>‹</span> Хаб
+        </a>
+
+        {/* По центру — кнопка діагностики (тільки якщо techlog увімкнено) */}
+        <div style={{flex:1,display:'flex',justifyContent:'center'}}>
+          {tlOn && (
+            <button onClick={()=>window.toggleDbg()} aria-label="Консоль діагностики" title="Діагностика"
+              style={{display:'flex',alignItems:'center',gap:6,height:40,padding:'0 14px',borderRadius:10,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.3)',color:'#f59e0b',cursor:'pointer',fontSize:'0.88rem',fontWeight:600}}>
+              🔧 Діагностика
+            </button>
+          )}
+        </div>
+
+        {/* Праворуч — глобальні налаштування */}
+        <a href="settings.html" aria-label="Глобальні налаштування" title="Налаштування"
+          style={{display:'flex',alignItems:'center',gap:7,height:40,paddingLeft:12,paddingRight:10,borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'#8892b0',textDecoration:'none',fontSize:'0.88rem',fontWeight:600,flexShrink:0,whiteSpace:'nowrap'}}>
+          ⚙ Налаштування
+        </a>
+      </header>
+      <main style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 16px'}}>
+        <div className="pw">
+          {/* ── Вибір рівня (для всіх режимів) ─────────── */}
+          <div style={{marginBottom:24,width:'100%'}}>
+            <CefrRange from={cfFrom} to={cfTo} onChange={(f,t)=>{setCfFrom(f);setCfTo(t);}}/>
+          </div>
+
+          <p style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:10}}>Режим навчання</p>
+          <nav aria-label="Режими навчання" style={{display:'flex',flexDirection:'column',gap:12}}>
+            {MODES_UI.map(m=>(
+              <button key={m.id} onClick={()=>{setMode(m);setScreen('setup');}} aria-label={m.label+': '+m.desc}
+                style={{background:'rgba(255,255,255,0.05)',border:'2px solid rgba(255,255,255,0.1)',borderRadius:18,padding:'18px 20px',cursor:'pointer',display:'flex',alignItems:'center',gap:16,textAlign:'left',width:'100%',transition:'all .2s'}}
+                onMouseEnter={e=>{e.currentTarget.style.background=m.color+'18';e.currentTarget.style.borderColor=m.color+'99';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,0.05)';e.currentTarget.style.borderColor='rgba(255,255,255,0.1)';}}>
+                <span style={{fontSize:'1.8rem',lineHeight:1}} aria-hidden="true">{m.icon}</span>
+                <div style={{flex:1}}>
+                  <div style={{color:'#fff',fontWeight:700,fontSize:'1rem'}}>{m.label}</div>
+                  <div style={{color:'#8892b0',fontSize:'0.85rem',marginTop:3}}>{m.desc}</div>
+                </div>
+                <span style={{color:'#8892b0',fontSize:'1.3rem'}} aria-hidden="true">›</span>
+              </button>
+            ))}
+          </nav>
+
+          {noKey&&(
+            <div role="alert" style={{marginTop:22,background:'rgba(248,113,113,0.1)',border:'2px solid rgba(248,113,113,0.35)',borderRadius:14,padding:'14px 18px',color:'#f87171',fontSize:'0.95rem',textAlign:'center',lineHeight:1.65}}>
+              ⚠️ API ключ не вказано.<br/>
+              <a href="settings.html" style={{color:'#fca5a5',fontWeight:700}}>Відкрити налаштування →</a>
+            </div>
+          )}
+
+        </div>
+      </main>
+    </div>
+  );
+
+  /* SETUP */
+  if(screen==='setup') return (
+    <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column'}}>
+      <Header onBack={()=>setScreen('home')} title={mode.icon+' '+mode.label}
+        badge={testLabel} badgeColor={'#4a9ede'}
+        techLogOn={tlOn}/>
+      <main style={{flex:1,overflowY:'auto',padding:'24px 16px 44px'}}>
+        <div className="pw" style={{display:'flex',flexDirection:'column',alignItems:'center',gap:22}}>
+
+          {/* Тема (чат) */}
+          {mode.id==='chat'&&(
+            <div style={{width:'100%',maxWidth:440}}>
+              <label htmlFor="chat-topic" style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,display:'block',marginBottom:10}}>Тема розмови (необов'язково)</label>
+              <input id="chat-topic" value={topic} onChange={e=>setTopic(e.target.value)} placeholder="Подорожі, їжа, кіно…"
+                style={{width:'100%',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'13px 15px',color:'#fff',fontSize:'1rem',outline:'none'}}/>
+              {topic&&<p style={{marginTop:8,color:'#4ade80',fontSize:'0.88rem'}}>✓ Тема: «{topic}»</p>}
+            </div>
+          )}
+
+          {/* NAD тогл (Google або OpenAI, якщо showToggle увімкнено) */}
+          {mode.id==='chat'&&(()=>{
+            const cfg       = (typeof CHAT_CONFIG !== 'undefined' && CHAT_CONFIG.nad) || {};
+            const showToggle = cfg.showToggle !== false;
+            const prov      = getSettings().provider;
+            const hasKey    = !!getSettings().apiKey;
+            const nadSupported = (prov === 'google' || prov === 'openai') && hasKey;
+            const recMode   = cfg.recordingMode || 'button';
+            const provLabel = prov === 'openai' ? 'OpenAI Realtime' : 'Gemini Native Audio';
+            const recHint   = recMode === 'auto' ? ' · запис авто' : recMode === 'button' ? ' · кнопка запису' : '';
+            if(!showToggle || !nadSupported) return null;
+            return (
+              <div style={{width:'100%',maxWidth:440,background:'rgba(255,255,255,0.04)',border:'2px solid '+(nadOn?'rgba(74,158,222,0.5)':'rgba(255,255,255,0.1)'),borderRadius:16,padding:'16px 18px',transition:'border-color .2s'}}>
+                <div style={{display:'flex',alignItems:'center',gap:14}}>
+                  <span style={{fontSize:'1.4rem'}}>🎙</span>
+                  <div style={{flex:1}}>
+                    <div style={{color:'#fff',fontWeight:700,fontSize:'0.95rem'}}>Живий голосовий режим</div>
+                    <div style={{color:'#8892b0',fontSize:'0.8rem',marginTop:2}}>{provLabel}{recHint}</div>
+                  </div>
+                  <button onClick={()=>setNadOn(x=>!x)} aria-pressed={nadOn} aria-label="Увімкнути живий голосовий режим"
+                    style={{width:50,height:28,borderRadius:14,border:'none',cursor:'pointer',padding:3,background:nadOn?'#4a9ede':'rgba(255,255,255,0.15)',transition:'background .2s',flexShrink:0,position:'relative'}}>
+                    <div style={{width:22,height:22,borderRadius:'50%',background:'#fff',transition:'transform .2s',transform:nadOn?'translateX(22px)':'translateX(0)'}}/>
+                  </button>
+                </div>
+                {nadOn&&(
+                  <p style={{marginTop:10,color:'#fbbf24',fontSize:'0.8rem',lineHeight:1.55}}>
+                    ⚠️ Сесія обмежена {cfg.sessionMaxMin||10} хв · Корекція помилок вбудована в мовлення
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Файл прогресу (урок) */}
+          {mode.id==='lesson'&&(
+            <div style={{width:'100%',maxWidth:440}}>
+              <label style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,display:'block',marginBottom:10}}>Файл прогресу (необов'язково)</label>
+              <label style={{display:'flex',alignItems:'center',gap:14,padding:'14px 16px',background:'rgba(255,255,255,0.05)',border:'2px dashed '+(lesFile?'#4a9ede':'rgba(255,255,255,0.2)'),borderRadius:14,cursor:'pointer'}}>
+                <span style={{fontSize:'1.5rem'}}>{lesFile?'📄':'📂'}</span>
+                <div style={{flex:1}}>
+                  <div style={{color:lesFile?'#4a9ede':'#8892b0',fontSize:'0.95rem'}}>{lesFile||'.txt / .json файл'}</div>
+                  {!lesFile&&<div style={{color:'#4b5563',fontSize:'0.8rem',marginTop:2}}>результати тестів, нотатки</div>}
+                </div>
+                {lesFile&&<button onClick={e=>{e.preventDefault();setLesFile(null);setLesText('');}} aria-label="Видалити файл" style={{background:'rgba(248,113,113,0.2)',border:'none',borderRadius:8,padding:'5px 10px',color:'#f87171',cursor:'pointer',fontSize:'0.85rem'}}>✕</button>}
+                <input type="file" accept=".txt,.json,.md" onChange={onFile} style={{display:'none'}}/>
+              </label>
+              {lesText&&<p style={{marginTop:8,color:'#4ade80',fontSize:'0.88rem'}}>✓ AI врахує ваш прогрес</p>}
+            </div>
+          )}
+
+          {/* Аспекти тесту */}
+          {mode.id==='test'&&(
+            <div style={{width:'100%',maxWidth:440}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                <span style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700}}>Аспекти тестування</span>
+                <div style={{display:'flex',gap:6}}>
+                  {[['Всі',ASPECTS_UI.map(a=>a.id)],['Жоден',[]]].map(([lbl,val])=>(
+                    <button key={lbl} onClick={()=>setSelAsp(val)} style={{padding:'5px 12px',borderRadius:8,border:'1px solid rgba(255,255,255,0.14)',background:'rgba(255,255,255,0.06)',color:'#8892b0',fontSize:'0.82rem',cursor:'pointer',minHeight:36}}>
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8}} role="group">
+                {ASPECTS_UI.map(a=>{
+                  const on=selAsp.includes(a.id);
+                  const n=(CHAT_CONFIG.aspects.find(x=>x.id===a.id)||{questions:5}).questions;
+                  return (
+                    <button key={a.id} onClick={()=>setSelAsp(p=>on?p.filter(x=>x!==a.id):[...p,a.id])} aria-pressed={on}
+                      style={{display:'flex',alignItems:'center',gap:14,padding:'13px 14px',borderRadius:12,border:'2px solid '+(on?a.color+'66':'rgba(255,255,255,0.09)'),background:on?a.color+'14':'rgba(255,255,255,0.04)',cursor:'pointer',textAlign:'left',transition:'all .15s'}}>
+                      <span style={{fontSize:'1.15rem'}}>{a.icon}</span>
+                      <span style={{flex:1,color:on?'#fff':'#8892b0',fontWeight:on?700:400,fontSize:'0.95rem'}}>{a.label}</span>
+                      <span style={{color:'#4b5563',fontSize:'0.78rem',marginRight:6}}>{n} пит.</span>
+                      <div style={{width:22,height:22,borderRadius:'50%',border:'2px solid '+(on?a.color:'rgba(255,255,255,0.2)'),background:on?a.color:'transparent',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'0.7rem',color:'#fff'}} aria-hidden="true">{on?'✓':''}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              {selAsp.length>0&&<p style={{marginTop:10,color:'#8892b0',fontSize:'0.85rem',textAlign:'center'}}>{selAsp.length} аспектів · ~{selAsp.reduce((s,id)=>s+(CHAT_CONFIG.aspects.find(x=>x.id===id)||{questions:5}).questions,0)} питань</p>}
+            </div>
+          )}
+
+          <button onClick={()=>{if(mode.id==='test'){if(selAsp.length>0)startTest(selAsp);}else{startSess();}}}
+            disabled={mode.id==='test'&&selAsp.length===0}
+            style={{background:mode.id==='test'&&selAsp.length===0?'rgba(255,255,255,0.1)':mode.color,border:'none',borderRadius:16,padding:'15px 0',color:'#fff',fontSize:'1rem',fontWeight:700,cursor:mode.id==='test'&&selAsp.length===0?'default':'pointer',width:'100%',maxWidth:440}}>
+            Почати →
+          </button>
+        </div>
+      </main>
+    </div>
+  );
+
+  /* TEST */
+  if(screen==='test'){
+    const curAsp = qs[qi]?ASPECTS_UI.find(a=>a.id===qs[qi].aspect):null;
+    if(testPh==='generating') return (
+      <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,padding:24}} role="status" aria-live="polite">
+        <div style={{fontSize:'2.8rem'}}>🧪</div>
+        <div style={{display:'flex',gap:10}}>{[0,1,2].map(n=><div key={n} style={{width:12,height:12,borderRadius:'50%',background:'#e85d4a',animation:'dot 1.2s infinite',animationDelay:(n*.2)+'s'}}/>)}</div>
+        <p style={{color:'#fff',fontWeight:700,fontSize:'1.05rem'}}>Генерую тест…</p>
+        <p style={{color:'#8892b0',fontSize:'0.88rem'}}>Рівні: {testLabel} · {selAsp.length} аспектів</p>
+      </div>
+    );
+    if(testPh==='error') return (
+      <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:18,padding:24}} role="alert">
+        <div style={{fontSize:'2.5rem'}}>⚠️</div>
+        <p style={{color:'#f87171',fontSize:'1.05rem',fontWeight:700}}>Помилка генерації тесту</p>
+        <button onClick={()=>setScreen('setup')} style={{background:'#e85d4a',border:'none',borderRadius:13,padding:'13px 32px',color:'#fff',fontWeight:700,cursor:'pointer',fontSize:'1rem'}}>Спробувати знову</button>
+      </div>
+    );
+    if(testPh==='report'&&report){
+      const cc=CEFR_COLORS[report.cefr]||'#fff';
+      const rAsp=[...new Set(qs.map(q=>q.aspect))].map(id=>ASPECTS_UI.find(a=>a.id===id)).filter(Boolean);
+      return (
+        <div style={{minHeight:'100vh',background:BG,paddingBottom:40}}>
+          <Header onBack={()=>setScreen('home')} title="Результати тесту" badge={report.cefr} badgeColor={cc} techLogOn={tlOn}
+            extra={<>
+              <button onClick={expTxt} style={{background:'rgba(74,222,128,0.15)',border:'1px solid rgba(74,222,128,0.4)',borderRadius:9,padding:'6px 14px',color:'#4ade80',fontSize:'0.82rem',fontWeight:700,cursor:'pointer'}}>TXT</button>
+              <button onClick={expJSON} style={{background:'rgba(74,158,222,0.15)',border:'1px solid rgba(74,158,222,0.4)',borderRadius:9,padding:'6px 14px',color:'#4a9ede',fontSize:'0.82rem',fontWeight:700,cursor:'pointer'}}>JSON</button>
+            </>}
+          />
+          <div className="pw" style={{padding:'26px 16px 40px',display:'flex',flexDirection:'column',gap:20}}>
+            <div style={{textAlign:'center'}}>
+              <div style={{fontSize:'clamp(3rem,15vw,5rem)',color:cc,fontWeight:900,letterSpacing:-2,lineHeight:1}} aria-label={'CEFR рівень '+report.cefr}>{report.cefr}</div>
+              <p style={{color:'#8892b0',fontSize:'0.9rem',marginTop:6}}>Рекомендований рівень CEFR</p>
+              <p style={{color:'#4b5563',fontSize:'0.8rem',marginTop:2}}>Тест охоплював: {testLabel}</p>
+              <div style={{marginTop:12,background:cc+'22',border:'1px solid '+cc+'44',borderRadius:12,padding:'8px 24px',display:'inline-block',color:cc,fontWeight:700,fontSize:'1rem'}}>Бал: {report.overall_score}/100</div>
+            </div>
+            {rAsp.length>=3&&(
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:20,padding:20}}>
+                <p style={{color:'#fff',fontWeight:700,marginBottom:14,textAlign:'center',fontSize:'0.95rem'}}>Профіль компетенцій</p>
+                <RadarChart scores={scores} aspects={rAsp}/>
+              </div>
+            )}
+            <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,padding:18}}>
+              {rAsp.map(a=>{
+                const s=scores[a.id]||0;
+                return (
+                  <div key={a.id} style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+                    <span style={{fontSize:'1.05rem'}} aria-hidden="true">{a.icon}</span>
+                    <span style={{color:'#cbd5e1',fontSize:'0.9rem',width:96,flexShrink:0}}>{a.label}</span>
+                    <div style={{flex:1,height:8,background:'rgba(255,255,255,0.09)',borderRadius:99}} role="progressbar" aria-valuenow={s} aria-valuemax={10} aria-label={a.label}>
+                      <div style={{width:(s*10)+'%',height:'100%',background:a.color,borderRadius:99,transition:'width .6s ease'}}/>
+                    </div>
+                    <span style={{color:a.color,fontWeight:700,fontSize:'0.9rem',width:32,textAlign:'right'}}>{s}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+              {[{key:'weak_aspects',label:'Слабкі місця',color:'#f87171',emoji:'⚠️'},{key:'strong_aspects',label:'Сильні сторони',color:'#4ade80',emoji:'✅'}].map(item=>(
+                <div key={item.key} style={{flex:1,minWidth:130,background:'rgba(255,255,255,0.04)',border:'1px solid '+item.color+'33',borderRadius:14,padding:14}}>
+                  <p style={{color:item.color,fontWeight:700,fontSize:'0.82rem',marginBottom:8}}>{item.emoji} {item.label}</p>
+                  {!(report[item.key]&&report[item.key].length)?<p style={{color:'#8892b0',fontSize:'0.88rem'}}>—</p>
+                    :report[item.key].map(id=>{const a=ASPECTS_UI.find(x=>x.id===id);return a?<p key={id} style={{color:'#cbd5e1',fontSize:'0.9rem',marginBottom:4}}>{a.icon} {a.label}</p>:null;})}
+                </div>
+              ))}
+            </div>
+            {(report.recommendations||[]).length>0&&(
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,padding:18}}>
+                <p style={{color:'#fff',fontWeight:700,marginBottom:14,fontSize:'0.95rem'}}>Рекомендації</p>
+                {report.recommendations.map((r,i)=>(
+                  <div key={i} style={{display:'flex',gap:12,marginBottom:10}}>
+                    <span style={{color:'#4a9ede',fontWeight:700,fontSize:'0.9rem',flexShrink:0}}>{i+1}.</span>
+                    <span style={{color:'#cbd5e1',fontSize:'0.9rem',lineHeight:1.65}}>{r}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{display:'flex',gap:12,flexWrap:'wrap'}}>
+              <button onClick={expTxt}  style={{flex:1,minWidth:130,background:'rgba(74,222,128,0.12)',border:'1px solid rgba(74,222,128,0.3)',borderRadius:12,padding:'14px',color:'#4ade80',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>⬇ TXT</button>
+              <button onClick={expJSON} style={{flex:1,minWidth:130,background:'rgba(74,158,222,0.12)',border:'1px solid rgba(74,158,222,0.3)',borderRadius:12,padding:'14px',color:'#4a9ede',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>⬇ JSON</button>
+            </div>
+            <button onClick={()=>setScreen('home')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:14,padding:'14px',color:'#8892b0',fontWeight:700,fontSize:'0.95rem',cursor:'pointer'}}>На головну</button>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column'}}>
+        <Header onBack={()=>setScreen('home')} title={'🧪 Тест · '+testLabel} badge={curAsp?curAsp.icon+' '+curAsp.label:undefined} badgeColor={(curAsp||{}).color} techLogOn={tlOn}
+          extra={<span style={{color:'#8892b0',fontSize:'0.8rem',marginLeft:'auto'}} aria-live="polite">{qi}/{qs.length}</span>}
+        />
+        <div style={{height:5,background:'rgba(255,255,255,0.07)',flexShrink:0}} role="progressbar" aria-valuenow={qi} aria-valuemax={Math.max(qs.length,1)}>
+          <div style={{height:'100%',width:(qi/Math.max(qs.length,1)*100)+'%',background:(curAsp||{}).color||'#4a9ede',transition:'width .4s'}}/>
+        </div>
+        <div style={{flex:1,overflowY:'auto',padding:'22px 14px',display:'flex',flexDirection:'column',gap:16,alignItems:'center'}}>
+          {testPh==='evaluating'&&(
+            <div style={{display:'flex',gap:8,padding:'13px 20px',background:'rgba(255,255,255,0.05)',borderRadius:14}} role="status" aria-live="polite">
+              {[0,1,2].map(n=><div key={n} style={{width:9,height:9,borderRadius:'50%',background:'#4a9ede',animation:'dot 1s infinite',animationDelay:(n*.2)+'s'}}/>)}
+              <span style={{color:'#8892b0',fontSize:'0.9rem',marginLeft:8}}>AI оцінює відповідь…</span>
+            </div>
+          )}
+          {qs[qi]&&(
+            <QuestionCard key={qi} q={qs[qi]} idx={qi} total={qs.length}
+              onAnswer={handleAns} answered={ansd} recording={rec} transcript={tr}
+              speechError={se} fallbackText={ft} onStartRec={startRec} onStopRec={stopRec}
+              onSetFallback={setFt} onSetSpeechError={setSe}/>
+          )}
+          {fb&&(
+            <div role="alert" style={{maxWidth:600,width:'100%',background:fb.correct?'rgba(74,222,128,0.1)':'rgba(248,113,113,0.1)',border:'2px solid '+(fb.correct?'rgba(74,222,128,0.35)':'rgba(248,113,113,0.35)'),borderRadius:16,padding:18,animation:'fadeIn .3s ease'}}>
+              <p style={{fontWeight:800,fontSize:'1rem',color:fb.correct?'#4ade80':'#f87171',marginBottom:8}}>{fb.correct?'✓ Правильно!':'✗ Неправильно'}</p>
+              <p style={{color:'#cbd5e1',fontSize:'0.95rem',lineHeight:1.65}}>{fb.feedback}</p>
+              {fb.error_analysis&&<p style={{color:'#8892b0',fontSize:'0.85rem',marginTop:8}}>{fb.error_analysis}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* SESSION */
+  return (
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:BG}}>
+      <Header onBack={async ()=>{
+          if(nadRef.current){
+            // Автозбереження якщо запис активний
+            if(nadRecording){
+              setNadRecording(false);
+              const sessId = sessRef.current || Date.now().toString(36);
+              await nadRef.current.saveRecording(sessId).catch(()=>{});
+            }
+            nadRef.current.disconnect(); nadRef.current=null;
+          }
+          setNadState('idle');
+          setScreen('home');
+        }} title={mode.icon+' '+mode.label} badge={testLabel} badgeColor={'#4a9ede'} techLogOn={tlOn}
+        extra={<>
+          {mode.id==='chat'&&topic&&<span style={{color:'#8892b0',fontSize:'0.8rem'}}>· {topic}</span>}
+          {mode.id==='chat'&&msgs.length>0&&(
+            <button onClick={expRTF} style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.15)',borderRadius:9,padding:'5px 12px',color:'#8892b0',fontSize:'0.8rem',fontWeight:600,cursor:'pointer'}}>⬇ RTF</button>
+          )}
+          {mode.id==='chat'&&!nadOn&&(
+            <div style={{display:'flex',gap:5}}>
+              {[{k:'t',v:showTxt,s:setShowTxt,ic:'👁',lb:'Текст'},{k:'c',v:showCor,s:setShowCor,ic:'✏',lb:'Корекція'},{k:'r',v:showRem,s:setShowRem,ic:'💬',lb:'Ремарки'}].map(({k,v,s,ic,lb})=>(
+                <button key={k} onClick={()=>s(x=>!x)} aria-pressed={v} aria-label={lb}
+                  style={{display:'flex',alignItems:'center',gap:4,background:v?mode.color+'22':'rgba(255,255,255,0.06)',border:'1px solid '+(v?mode.color+'66':'rgba(255,255,255,0.12)'),borderRadius:9,padding:'5px 8px',cursor:'pointer',transition:'all .2s'}}>
+                  <span style={{fontSize:'0.85rem'}}>{ic}</span>
+                  <span style={{color:v?mode.color:'#8892b0',fontSize:'0.7rem',fontWeight:700}}>{lb}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>}
+      />
+
+      {/* Чат */}
+      <div style={{flex:1,overflowY:'auto',padding:'16px 14px',display:'flex',flexDirection:'column',gap:11}} role="log" aria-label="Розмова" aria-live="polite">
+        {msgs.map((msg,i)=>(
+          <div key={i} style={{display:'flex',flexDirection:'column',alignItems:msg.role==='user'?'flex-end':'flex-start',gap:6,animation:'fadeIn .25s ease'}}>
+            <div style={{display:'flex',alignItems:'flex-end',gap:5,flexDirection:msg.role==='user'?'row-reverse':'row'}}>
+              <div style={{maxWidth:'min(84%,540px)',
+                background: msg.isHint ? 'rgba(251,191,36,0.08)' : msg.role==='user'?'linear-gradient(135deg,'+mode.color+'cc,'+mode.color+'88)':'rgba(255,255,255,0.07)',
+                border: msg.isHint ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.07)',
+                borderRadius:msg.role==='user'?'18px 18px 4px 18px':'18px 18px 18px 4px',
+                padding:'12px 15px',
+                color: msg.isHint ? '#fbbf24' : '#e8edf3',
+                fontSize:'0.95rem',lineHeight:1.7,whiteSpace:'pre-wrap'}}>
+                {mode.id==='chat'&&msg.role==='ai'
+                  ?(msg.nad
+                    ?(nadShowText
+                      ? <>{msg.isHint&&<span style={{fontSize:'0.8rem',marginRight:6,opacity:.7}}>💡</span>}{msg.content}{msg.streaming&&<span style={{display:'inline-block',width:'2px',height:'1em',background: msg.isHint?'#fbbf24':'#4a9ede',marginLeft:2,verticalAlign:'text-bottom',animation:'dot 0.8s infinite'}}/>}</>
+                      : <span style={{color:'#8892b0',fontSize:'0.88rem',fontStyle:'italic'}}>🔊 AI говорить… (увімкніть 👁 для тексту)</span>)
+                    :(showTxt?msg.content:<span style={{color:'#8892b0',fontSize:'0.88rem',fontStyle:'italic'}}>🔊 Аудіо відтворюється…</span>))
+                  :msg.content}
+              </div>
+              {/* 🔁 для звичайного TTS */}
+              {msg.role==='ai'&&msg.ttsText&&!msg.error&&!nadOn&&(
+                <button onClick={()=>speak(msg.ttsText)} aria-label="Прослухати знову" title="Повторити"
+                  style={{flexShrink:0,width:28,height:28,minWidth:28,minHeight:28,borderRadius:'50%',border:'1px solid rgba(255,255,255,0.13)',background:'rgba(255,255,255,0.06)',color:'#8892b0',cursor:'pointer',fontSize:'0.78rem',display:'flex',alignItems:'center',justifyContent:'center',alignSelf:'flex-end',marginBottom:2,transition:'background .15s'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(255,255,255,0.13)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(255,255,255,0.06)'}>
+                  🔁
+                </button>
+              )}
+              {/* 🔁 для NAD — просить Gemini повторити фразу голосом */}
+              {msg.role==='ai'&&msg.nad&&msg.content&&msg.final&&(
+                <button onClick={repeatLast} aria-label="Повторити" title="Попросити AI повторити"
+                  style={{flexShrink:0,width:28,height:28,minWidth:28,minHeight:28,borderRadius:'50%',border:'1px solid rgba(74,158,222,0.35)',background:'rgba(74,158,222,0.1)',color:'#4a9ede',cursor:'pointer',fontSize:'0.78rem',display:'flex',alignItems:'center',justifyContent:'center',alignSelf:'flex-end',marginBottom:2,transition:'background .15s'}}
+                  onMouseEnter={e=>e.currentTarget.style.background='rgba(74,158,222,0.22)'}
+                  onMouseLeave={e=>e.currentTarget.style.background='rgba(74,158,222,0.1)'}>
+                  🔁
+                </button>
+              )}
+            </div>
+            {msg.correction&&msg.role==='user'&&(showCor||showRem)&&(
+              <div style={{maxWidth:'min(84%,540px)',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.09)',borderRadius:12,padding:'10px 14px',fontSize:'0.88rem'}}>
+                {msg.correction.has_errors?(
+                  <>
+                    {showCor&&(msg.correction.corrections||[]).map((c,ci)=>(
+                      <div key={ci} style={{marginBottom:4,lineHeight:1.55}}>
+                        <span style={{color:'#f87171',textDecoration:'line-through'}}>{c.wrong}</span>
+                        <span style={{color:'#8892b0',margin:'0 6px'}}>→</span>
+                        <span style={{color:'#4ade80'}}>{c.right}</span>
+                        {showRem&&c.note&&<span style={{color:'#8892b0',marginLeft:8,fontSize:'0.8rem'}}>({c.note})</span>}
+                      </div>
+                    ))}
+                    {showRem&&msg.correction.overall&&(
+                      <p style={{color:'#8892b0',marginTop:6,paddingTop:6,borderTop:'1px solid rgba(255,255,255,0.07)',fontSize:'0.85rem'}}>{msg.correction.overall}</p>
+                    )}
+                  </>
+                ):(showRem&&<p style={{color:'#4ade80',fontSize:'0.88rem'}}>{msg.correction.overall||'✓ Без помилок!'}</p>)}
+              </div>
+            )}
+          </div>
+        ))}
+        {loading&&(
+          <div style={{display:'flex'}} role="status" aria-label="AI відповідає">
+            <div style={{background:'rgba(255,255,255,0.07)',borderRadius:'18px 18px 18px 4px',padding:'13px 16px',display:'flex',gap:6,alignItems:'center'}}>
+              {[0,1,2].map(n=><div key={n} style={{width:7,height:7,borderRadius:'50%',background:mode.color,animation:'dot 1.2s infinite',animationDelay:(n*.2)+'s'}}/>)}
+            </div>
+          </div>
+        )}
+        <div ref={botRef}/>
+      </div>
+
+      {/* Введення */}
+      <div style={{padding:'10px 12px 14px',borderTop:'1px solid rgba(255,255,255,0.08)',background:'rgba(0,0,0,0.5)',flexShrink:0,backdropFilter:'blur(8px)'}}>
+        {/* NAD режим — Push-and-Hold кнопка по центру */}
+        {mode.id==='chat'&&nadOn?(
+          <div style={{maxWidth:720,margin:'0 auto',display:'flex',flexDirection:'column',alignItems:'center',gap:10}}>
+
+            {/* Рядок статусу */}
+            <div style={{fontSize:'0.8rem',color:nadState==='listening'?'#4ade80':nadState==='speaking'?'#4a9ede':nadState==='connecting'?'#fbbf24':nadState==='error'?'#f87171':'#4b5563',fontWeight:600,letterSpacing:'0.03em'}}>
+              {nadState==='connecting'?'⏳ Підключення…':nadState==='ready'?'● Утримуйте кнопку і говоріть іспанською':nadState==='listening'?'🎙 Запис… відпустіть коли закінчите':nadState==='speaking'?'🔊 AI відповідає…':nadState==='error'?'❌ Помилка':'●'}
+            </div>
+
+            {/* Push-and-Hold кнопка по центру */}
+            <div style={{display:'flex',alignItems:'center',gap:14}}>
+              <button
+                onMouseDown={pttStart} onMouseUp={pttStop} onMouseLeave={pttStop}
+                onTouchStart={e=>{e.preventDefault();pttStart();}} onTouchEnd={pttStop}
+                disabled={nadState!=='ready'&&nadState!=='listening'}
+                aria-pressed={nadState==='listening'}
+                title="Утримуйте і говоріть іспанською"
+                style={{
+                  position:'relative',
+                  width:80,height:80,borderRadius:'50%',
+                  border: nadState==='listening'
+                    ? '3px solid #4ade80'
+                    : nadState==='speaking'
+                      ? '3px solid #4a9ede'
+                      : '3px solid rgba(255,255,255,0.2)',
+                  background: nadState==='listening'
+                    ? 'rgba(74,222,128,0.18)'
+                    : nadState==='speaking'
+                      ? 'rgba(74,158,222,0.12)'
+                      : 'rgba(255,255,255,0.06)',
+                  color: nadState==='listening'?'#4ade80':nadState==='speaking'?'#4a9ede':'#6b7280',
+                  fontSize:'2rem',
+                  cursor:(nadState!=='ready'&&nadState!=='listening')?'default':'pointer',
+                  transition:'all .15s',
+                  boxShadow: nadState==='listening'?'0 0 24px rgba(74,222,128,0.35)':'none',
+                  userSelect:'none', WebkitUserSelect:'none',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                }}>
+                {/* Пульсуюче кільце під час запису */}
+                {nadState==='listening'&&(
+                  <div style={{position:'absolute',inset:-4,borderRadius:'50%',border:'2px solid rgba(74,222,128,0.4)',animation:'dot 1.2s ease-in-out infinite'}}/>
+                )}
+                {nadState==='speaking'?'🔊':nadState==='connecting'?'⏳':nadState==='error'?'❌':'🎙'}
+              </button>
+
+              {/* Кнопка запису — окремо справа */}
+              {(()=>{ const m=(typeof CHAT_CONFIG!=='undefined'?CHAT_CONFIG.nad?.recordingMode:'off'); return m!=='button'||true; })()&&(
+                <button
+                  onClick={(typeof CHAT_CONFIG!=='undefined'&&CHAT_CONFIG.nad?.recordingMode)==='auto' ? undefined : toggleRecording}
+                  aria-pressed={nadRecording}
+                  title={
+                    (typeof CHAT_CONFIG!=='undefined'&&CHAT_CONFIG.nad?.recordingMode)==='auto'
+                      ? (nadRecording?'Запис іде…':'Запис вимкнено')
+                      : (nadRecording?'Зупинити запис і зберегти':'Почати запис діалогу')
+                  }
+                  style={{
+                    display:'flex',flexDirection:'column',alignItems:'center',gap:4,
+                    padding:'8px 12px',borderRadius:10,
+                    border:'1px solid '+(nadRecording?'rgba(239,68,68,0.5)':'rgba(255,255,255,0.12)'),
+                    background:nadRecording?'rgba(239,68,68,0.1)':'rgba(255,255,255,0.04)',
+                    color:nadRecording?'#ef4444':'#4b5563',
+                    fontSize:'0.75rem',fontWeight:700,
+                    cursor:(typeof CHAT_CONFIG!=='undefined'&&CHAT_CONFIG.nad?.recordingMode)==='auto'?'default':'pointer',
+                    transition:'all .2s',
+                  }}>
+                  <span style={{width:10,height:10,borderRadius:'50%',background:nadRecording?'#ef4444':'#4b5563',display:'block',outline:nadRecording?'3px solid rgba(239,68,68,0.25)':'none',outlineOffset:2,animation:nadRecording?'nadRecPulse 1.2s ease-in-out infinite':'none'}}/>
+                  {(typeof CHAT_CONFIG!=='undefined'&&CHAT_CONFIG.nad?.recordingMode)==='auto'
+                    ? (nadRecording?'REC':'rec')
+                    : (nadRecording?'Стоп':'Rec')}
+                </button>
+              )}
+            </div>
+
+            {nadErr&&<p role="alert" style={{color:'#f87171',fontSize:'0.8rem',textAlign:'center',marginTop:2}}>Помилка підключення. Перевірте API ключ.</p>}
+          </div>
+        ):(
+          /* Стандартне введення (без змін) */
+          <div style={{display:'flex',gap:8,alignItems:'flex-end',maxWidth:720,margin:'0 auto'}}>
+            {mode.id==='chat'&&(
+              <button onClick={chatRec?stopCRec:startCRec} disabled={loading} aria-pressed={chatRec}
+                aria-label={chatRec?'Зупинити запис':'Голосовий ввід'}
+                style={{width:46,height:46,borderRadius:12,border:'2px solid '+(chatRec?'#ec4899':chatErr?'#f87171':'rgba(255,255,255,0.16)'),background:chatRec?'rgba(236,72,153,.2)':chatErr?'rgba(248,113,113,.1)':'rgba(255,255,255,0.06)',color:chatRec?'#ec4899':chatErr?'#f87171':'#8892b0',fontSize:'1.15rem',cursor:loading?'default':'pointer',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {chatRec?'⏹':'🎤'}
+              </button>
+            )}
+            <textarea ref={inpRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={onKey}
+              placeholder={mode.id==='chat'?'Пиши іспанською…':'Твоя відповідь…'}
+              aria-label={mode.id==='chat'?'Повідомлення іспанською':'Відповідь'}
+              rows={1}
+              style={{flex:1,background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'12px 14px',color:'#fff',fontSize:'0.95rem',resize:'none',outline:'none',lineHeight:1.55,minHeight:46}}/>
+            <button onClick={sendMsg} disabled={loading||!input.trim()} aria-label="Надіслати"
+              style={{background:input.trim()&&!loading?mode.color:'rgba(255,255,255,0.08)',border:'none',borderRadius:12,width:46,height:46,color:'#fff',fontSize:'1.2rem',cursor:input.trim()&&!loading?'pointer':'default',flexShrink:0}}>↑</button>
+          </div>
+        )}
+        {!nadOn&&chatRec&&(
+          <div style={{display:'flex',alignItems:'center',gap:7,marginTop:7,justifyContent:'center'}} aria-live="assertive">
+            {[0,1,2].map(n=><div key={n} style={{width:6,height:6,borderRadius:'50%',background:'#ec4899',animation:'dot .8s infinite',animationDelay:(n*.15)+'s'}}/>)}
+            <span style={{color:'#ec4899',fontSize:'0.82rem'}}>Запис іспанської…</span>
+          </div>
+        )}
+        {!nadOn&&chatErr&&<p role="alert" style={{color:'#f87171',fontSize:'0.82rem',marginTop:5,textAlign:'center'}}>Мікрофон недоступний — введіть текст вручну</p>}
+        {!nadOn&&<p style={{color:'#374151',fontSize:'0.75rem',marginTop:6,textAlign:'center'}} aria-hidden="true">Enter — надіслати · Shift+Enter — новий рядок</p>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

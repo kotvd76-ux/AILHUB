@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Граматичні вправи — Spanish AI Hub</title>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!--
+  ЗАЛЕЖНОСТІ:
+    sett_set.js  — глобальні налаштування AI/TTS/логування
+    verb_set.js  — конфіг модуля граматики
+    logger.js    — логування
+-->
+<script src="sett_set.js"></script>
+<script src="verb_set.js"></script>
+<script src="logger.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Noto+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+/* ── DESIGN TOKENS ───────────────────────────── */
+:root {
+  --bg:      #0b0c11;
+  --surface: #14161f;
+  --card:    #1a1d2a;
+  --border:  #30354d;
+  --accent:  #f5ca3a;
+  --accent2: #ff6b4a;
+  --accent3: #3dfaaa;
+  --text:    #f0f2fa;
+  --muted:   #8890b0;
+  --correct: #3dfaaa;
+  --wrong:   #ff6b4a;
+  --radius:  18px;
+  --focus-ring: 0 0 0 4px rgba(245,202,58,.45);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 18px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 55% 35% at 5% 15%, rgba(245,202,58,.07) 0%, transparent 65%),
+    radial-gradient(ellipse 50% 50% at 95% 85%, rgba(61,250,170,.05) 0%, transparent 65%);
+}
+
+.app {
+  position: relative; z-index: 1;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 28px 20px 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ── HEADER ──────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.5px;
+}
+.header-title span { color: var(--accent); }
+
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--muted); font-size: 16px; text-decoration: none;
+  padding: 10px 16px; border-radius: 10px; border: 2px solid var(--border);
+  transition: color .2s, border-color .2s; font-family: 'DM Mono', monospace;
+}
+.back-btn:hover { color: var(--text); border-color: var(--muted); }
+.back-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── EXERCISE SELECTOR (dropdown) ───────────── */
+.selector-block {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  overflow: visible;
+  position: relative;
+}
+
+.selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  cursor: pointer;
+  user-select: none;
+  gap: 16px;
+  border-radius: var(--radius);
+  transition: background .2s;
+}
+.selector-header:hover { background: rgba(245,202,58,.05); }
+.selector-header:focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: var(--radius); }
+
+.selector-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.selector-badge {
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0b0c11;
+  background: var(--accent);
+  padding: 5px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.selector-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.selector-chevron {
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--muted);
+  transition: transform .25s;
+}
+.selector-block.open .selector-chevron { transform: rotate(180deg); }
+
+/* Dropdown panel */
+.selector-dropdown {
+  display: none;
+  flex-direction: column;
+  gap: 0;
+  border-top: 2px solid var(--border);
+}
+.selector-block.open .selector-dropdown { display: flex; }
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 24px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 500;
+  text-align: left;
+  width: 100%;
+  transition: background .15s, color .15s;
+  border-bottom: 1px solid var(--border);
+}
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:hover { background: rgba(245,202,58,.06); color: var(--text); }
+.dropdown-item:focus-visible { outline: none; box-shadow: inset var(--focus-ring); }
+
+.dropdown-item .item-num {
+  flex-shrink: 0;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(245,202,58,.12);
+  padding: 4px 10px;
+  border-radius: 6px;
+  min-width: 36px;
+  text-align: center;
+}
+.dropdown-item.active {
+  background: rgba(245,202,58,.1);
+  color: var(--text);
+}
+.dropdown-item.active .item-num {
+  background: var(--accent);
+  color: #0b0c11;
+}
+.dropdown-item .item-check {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 16px;
+  opacity: 0;
+}
+.dropdown-item.active .item-check { opacity: 1; }
+
+/* ── EXERCISE PANELS ─────────────────────────── */
+.exercise-wrap { display: none; animation: fadeUp .3s ease; }
+.exercise-wrap.active { display: flex; flex-direction: column; gap: 16px; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+/* ── SCORE BAR ───────────────────────────────── */
+.score-bar {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.score-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.score-top-left  { display: flex; gap: 18px; align-items: baseline; }
+.score-label { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.score-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 24px; color: var(--accent); }
+.progress-track { height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; }
+.progress-fill  { height: 100%; background: var(--accent); border-radius: 10px; transition: width .4s ease; }
+
+/* ── GO BUTTON ───────────────────────────────── */
+.go-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+  white-space: nowrap;
+}
+.go-btn:hover:not(:disabled) {
+  background: rgba(245,202,58,.15);
+  transform: translateY(-1px);
+}
+.go-btn:disabled {
+  opacity: .4;
+  cursor: default;
+  transform: none;
+}
+.go-btn.loading {
+  opacity: .6;
+  cursor: default;
+}
+.go-spinner {
+  width: 13px; height: 13px;
+  border: 2px solid rgba(245,202,58,.3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  display: none;
+}
+.go-btn.loading .go-spinner { display: inline-block; }
+.go-btn.loading .go-icon    { display: none; }
+
+/* ── CARD ────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.exercise-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px; color: var(--accent); letter-spacing: 1.5px; text-transform: uppercase;
+}
+.exercise-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; line-height: 1.2; }
+.exercise-desc  { font-size: 17px; color: var(--muted); line-height: 1.65; }
+
+/* ── CONTEXT BOX ─────────────────────────────── */
+.context-box {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-left: 5px solid var(--accent);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.flag-row { display: flex; align-items: flex-start; gap: 12px; font-size: 18px; line-height: 1.5; }
+.flag-row .flag { font-size: 24px; flex-shrink: 0; }
+
+/* ── SENTENCE BUILDER (Ex 1) ─────────────────── */
+.sentence-builder { display: flex; flex-direction: column; gap: 14px; }
+.builder-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
+}
+.builder-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.word-fixed {
+  font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
+  color: var(--text); padding: 16px 20px; background: var(--surface);
+  border: 2px solid var(--border); border-radius: 12px;
+}
+.word-select-wrap { position: relative; display: inline-flex; align-items: center; }
+.word-select-wrap::after {
+  content: '▾'; position: absolute; right: 16px;
+  color: var(--accent); font-size: 15px; pointer-events: none;
+}
+.word-select {
+  font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500;
+  color: var(--text); padding: 16px 48px 16px 20px; background: var(--surface);
+  border: 2px solid var(--accent); border-radius: 12px;
+  cursor: pointer; appearance: none; outline: none;
+  transition: border-color .2s, box-shadow .2s; min-width: 140px;
+}
+.word-select:focus { box-shadow: var(--focus-ring); border-color: var(--accent2); }
+.word-select.correct { border-color: var(--correct); background: rgba(61,250,170,.08); color: var(--correct); }
+.word-select.wrong   { border-color: var(--wrong);   background: rgba(255,107,74,.08); color: var(--wrong); }
+.word-select option  { background: var(--card); color: var(--text); font-size: 18px; }
+
+/* ── OPTIONS LIST ────────────────────────────── */
+.options-list { display: flex; flex-direction: column; gap: 12px; }
+
+.option-btn {
+  width: 100%; padding: 20px 22px;
+  background: var(--surface); border: 2px solid var(--border); border-radius: 14px;
+  color: var(--text); font-size: 20px; font-family: 'DM Mono', monospace; font-weight: 500;
+  cursor: pointer; transition: border-color .15s, background .15s, transform .1s;
+  text-align: left; display: flex; align-items: center; gap: 16px; line-height: 1.4;
+}
+.option-btn .opt-letter {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+  background: rgba(245,202,58,.12); color: var(--accent);
+  font-size: 15px; display: flex; align-items: center; justify-content: center;
+  font-family: 'Syne', sans-serif; font-weight: 800; transition: background .15s;
+}
+.option-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(245,202,58,.06); transform: translateY(-2px); }
+.option-btn:hover:not(:disabled) .opt-letter { background: var(--accent); color: #0b0c11; }
+.option-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.option-btn.correct-ans { border-color: var(--correct); background: rgba(61,250,170,.1); color: var(--correct); }
+.option-btn.correct-ans .opt-letter { background: var(--correct); color: #0b0c11; }
+.option-btn.wrong-ans   { border-color: var(--wrong); background: rgba(255,107,74,.1); color: var(--wrong); }
+.option-btn.wrong-ans .opt-letter { background: var(--wrong); color: #0b0c11; }
+.option-btn:disabled { cursor: default; transform: none; }
+
+/* ── SWIPE (Ex 4) ────────────────────────────── */
+.swipe-area { position: relative; }
+.swipe-card {
+  background: var(--surface); border: 2px solid var(--border); border-radius: 18px;
+  padding: 44px 28px; text-align: center; user-select: none; cursor: grab;
+  position: relative; overflow: hidden; touch-action: pan-y;
+}
+.swipe-card:active { cursor: grabbing; }
+.swipe-card.swipe-right { animation: swipeRight .3s forwards; }
+.swipe-card.swipe-left  { animation: swipeLeft  .3s forwards; }
+@keyframes swipeRight { to { transform:translateX(120%) rotate(15deg); opacity:0; } }
+@keyframes swipeLeft  { to { transform:translateX(-120%) rotate(-15deg); opacity:0; } }
+
+.swipe-sentence { font-family:'DM Mono',monospace; font-size:24px; color:var(--text); line-height:1.7; margin-bottom:10px; }
+.swipe-blank { display:inline-block; width:100px; height:30px; border-bottom:3px solid var(--accent); vertical-align:bottom; margin:0 6px; }
+.swipe-hint  { font-size:16px; color:var(--muted); font-style:italic; }
+
+.swipe-label-overlay {
+  position:absolute; top:18px; font-family:'Syne',sans-serif; font-size:28px; font-weight:800;
+  opacity:0; transition:opacity .1s; pointer-events:none; padding:6px 14px; border-radius:8px;
+}
+.swipe-label-overlay.left  { left:16px;  color:var(--accent3); background:rgba(61,250,170,.12); }
+.swipe-label-overlay.right { right:16px; color:var(--accent2); background:rgba(255,107,74,.12); }
+
+.swipe-btns { display:flex; gap:14px; margin-top:4px; }
+.swipe-btn {
+  flex:1; padding:22px 16px; border-radius:14px; border:2px solid var(--border); background:var(--surface);
+  cursor:pointer; font-family:'Syne',sans-serif; font-weight:700; font-size:19px;
+  transition:border-color .2s, background .2s, transform .1s;
+  display:flex; align-items:center; justify-content:center; gap:10px;
+}
+.swipe-btn:hover:not(:disabled) { transform:translateY(-2px); }
+.swipe-btn:focus-visible { outline:none; box-shadow:var(--focus-ring); }
+.swipe-btn.left-btn  { color:var(--accent3); }
+.swipe-btn.right-btn { color:var(--accent2); }
+.swipe-btn.left-btn:hover:not(:disabled)  { border-color:var(--accent3); background:rgba(61,250,170,.08); }
+.swipe-btn.right-btn:hover:not(:disabled) { border-color:var(--accent2); background:rgba(255,107,74,.08); }
+.swipe-btn:disabled { opacity:.45; cursor:default; transform:none; }
+
+/* ── YES/NO (Ex 5) ───────────────────────────── */
+.yn-sentence {
+  font-family:'DM Mono',monospace; font-size:24px; color:var(--text); text-align:center;
+  padding:32px 12px; line-height:1.6; background:var(--surface); border-radius:14px; border:2px solid var(--border);
+}
+.yn-translation {
+  background:var(--surface); border:2px solid var(--border); border-left:5px solid var(--muted);
+  border-radius:12px; padding:18px 20px; display:flex; flex-direction:column; gap:12px;
+}
+.yn-btns { display:flex; flex-direction:column; gap:14px; }
+.yn-btn {
+  width:100%; padding:24px 20px; border-radius:14px; border:2px solid var(--border); background:var(--surface);
+  cursor:pointer; font-family:'Syne',sans-serif; font-weight:700; font-size:20px;
+  transition:border-color .2s, background .2s, transform .1s; color:var(--text);
+  display:flex; align-items:center; justify-content:center; gap:12px;
+}
+.yn-btn:hover:not(:disabled) { transform:translateY(-2px); }
+.yn-btn:focus-visible { outline:none; box-shadow:var(--focus-ring); }
+.yn-btn.yes:hover:not(:disabled) { border-color:var(--correct); background:rgba(61,250,170,.08); color:var(--correct); }
+.yn-btn.no:hover:not(:disabled)  { border-color:var(--wrong);   background:rgba(255,107,74,.08); color:var(--wrong); }
+.yn-btn.correct-ans { border-color:var(--correct); background:rgba(61,250,170,.1); color:var(--correct); }
+.yn-btn.wrong-ans   { border-color:var(--wrong);   background:rgba(255,107,74,.1); color:var(--wrong); }
+.yn-btn:disabled { cursor:default; transform:none; }
+
+/* ── FEEDBACK ────────────────────────────────── */
+.feedback-box {
+  display:none; border-radius:14px; padding:20px 22px;
+  font-size:17px; line-height:1.6; animation:fadeUp .2s ease; gap:16px; align-items:flex-start;
+}
+.feedback-box.show { display:flex; }
+.feedback-box.correct { background:rgba(61,250,170,.1); border:2px solid rgba(61,250,170,.4); }
+.feedback-box.wrong   { background:rgba(255,107,74,.1); border:2px solid rgba(255,107,74,.4); }
+.fb-icon {
+  font-size:24px; flex-shrink:0; width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center; font-weight:700;
+}
+.feedback-box.correct .fb-icon { background:rgba(61,250,170,.2); color:var(--correct); }
+.feedback-box.wrong   .fb-icon { background:rgba(255,107,74,.2); color:var(--wrong); }
+.fb-text { display:flex; flex-direction:column; gap:6px; }
+.fb-main { font-weight:700; font-size:19px; }
+.feedback-box.correct .fb-main { color:var(--correct); }
+.feedback-box.wrong   .fb-main { color:var(--wrong); }
+.fb-explain { font-size:17px; color:var(--text); line-height:1.65; }
+
+/* ── FIB (Ex 3) ──────────────────────────────── */
+.fib-sentence {
+  font-family:'DM Mono',monospace; font-size:22px; text-align:center;
+  padding:30px 14px; background:var(--surface); border:2px solid var(--border);
+  border-radius:14px; line-height:1.9;
+}
+.fib-blank {
+  display:inline-block; min-width:90px; border-bottom:3px solid var(--accent);
+  text-align:center; font-weight:500; padding:0 10px; color:var(--accent);
+  transition:border-color .2s, color .2s;
+}
+.fib-blank.filled-correct { border-color:var(--correct); color:var(--correct); }
+.fib-blank.filled-wrong   { border-color:var(--wrong);   color:var(--wrong); }
+
+.translations {
+  background:var(--surface); border:2px solid var(--border);
+  border-left:5px solid var(--muted); border-radius:12px; overflow:hidden;
+}
+.trans-row {
+  display:flex; align-items:flex-start; gap:14px;
+  padding:16px 20px; font-size:18px; line-height:1.5;
+  border-bottom:1px solid var(--border);
+}
+.trans-row:last-child { border-bottom:none; }
+.trans-row .flag { font-size:24px; flex-shrink:0; }
+
+/* ── ACTION BUTTONS ──────────────────────────── */
+.action-row { display:flex; flex-direction:column; gap:12px; }
+
+.check-btn {
+  width:100%; padding:22px; background:var(--accent); border:none; border-radius:14px;
+  color:#0b0c11; font-family:'Syne',sans-serif; font-weight:800; font-size:20px;
+  cursor:pointer; transition:background .2s, transform .1s;
+}
+.check-btn:hover:not(:disabled) { background:#ffd84a; transform:translateY(-2px); }
+.check-btn:focus-visible { outline:none; box-shadow:var(--focus-ring); }
+.check-btn:disabled { opacity:.4; cursor:default; transform:none; }
+
+.next-btn {
+  width:100%; padding:22px; background:transparent;
+  border:2px solid var(--border); border-radius:14px;
+  color:var(--muted); font-family:'Syne',sans-serif; font-weight:700; font-size:20px;
+  cursor:pointer; transition:border-color .2s, color .2s, transform .1s; display:none;
+}
+.next-btn.show { display:block; }
+.next-btn:hover { border-color:var(--text); color:var(--text); transform:translateY(-1px); }
+.next-btn:focus-visible { outline:none; box-shadow:var(--focus-ring); }
+
+/* ── RESULT ──────────────────────────────────── */
+.result-card {
+  background:var(--card); border:2px solid var(--border); border-radius:var(--radius);
+  padding:56px 28px; display:flex; flex-direction:column; align-items:center; gap:18px; text-align:center;
+}
+.result-emoji { font-size:72px; }
+.result-title { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; }
+.result-sub   { font-size:18px; color:var(--muted); }
+.result-pct   { font-family:'Syne',sans-serif; font-size:80px; font-weight:800; color:var(--accent); line-height:1; }
+.result-btn {
+  margin-top:8px; width:100%; padding:22px;
+  background:var(--accent); border:none; border-radius:14px;
+  color:#0b0c11; font-family:'Syne',sans-serif; font-weight:800; font-size:20px;
+  cursor:pointer; transition:background .2s;
+}
+.result-btn:hover { background:#ffd84a; }
+.result-btn:focus-visible { outline:none; box-shadow:var(--focus-ring); }
+
+@media (max-width:420px) {
+  body { font-size:16px; }
+  .swipe-sentence,.fib-sentence,.yn-sentence { font-size:19px; }
+}
+
+/* ── AI EXERCISE PANEL ───────────────────────── */
+.ai-controls {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ai-controls-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ai-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ai-row label {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+}
+.ai-select {
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  font-size: 16px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .2s;
+  appearance: none;
+}
+.ai-select:focus { border-color: var(--accent); box-shadow: var(--focus-ring); }
+
+.ai-btn-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ai-type-btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 12px 8px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .15s;
+  text-align: center;
+}
+.ai-type-btn:hover { border-color: var(--accent); color: var(--text); }
+.ai-type-btn.active {
+  border-color: var(--accent);
+  background: rgba(245,202,58,.12);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.generate-btn {
+  width: 100%;
+  padding: 20px;
+  background: var(--accent);
+  border: none;
+  border-radius: 14px;
+  color: #0b0c11;
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background .2s, transform .1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.generate-btn:hover:not(:disabled) { background: #ffd84a; transform: translateY(-2px); }
+.generate-btn:disabled { opacity: .5; cursor: default; transform: none; }
+
+/* Loading state */
+.ai-loading {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 24px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  text-align: center;
+}
+.ai-loading.show { display: flex; }
+.ai-spinner {
+  width: 48px; height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-loading-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* AI badge on generated tasks */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(245,202,58,.12);
+  padding: 3px 8px;
+  border-radius: 6px;
+  margin-left: auto;
+}
+
+/* Error state */
+.ai-error {
+  display: none;
+  background: rgba(255,107,74,.08);
+  border: 2px solid rgba(255,107,74,.3);
+  border-radius: 12px;
+  padding: 16px 20px;
+  color: var(--wrong);
+  font-size: 15px;
+  line-height: 1.5;
+}
+.ai-error.show { display: block; }
+
+/* ── CARD LOADING STATE ──────────────────────── */
+.card-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 220px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 24px;
+}
+.card-spinner {
+  width: 44px; height: 44px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+.card-loading-text {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ── CARD ERROR STATE ────────────────────────── */
+.card-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-height: 180px;
+  justify-content: center;
+  background: var(--card);
+  border: 2px solid rgba(255,107,74,.3);
+  border-radius: var(--radius);
+  padding: 32px 24px;
+  text-align: center;
+}
+.card-error-icon { font-size: 36px; }
+.card-error-msg  { font-size: 15px; color: var(--wrong); line-height: 1.5; }
+.card-error-btn  {
+  margin-top: 4px;
+  padding: 12px 28px;
+  background: transparent;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  color: var(--accent);
+  font-family: 'Syne', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.card-error-btn:hover { background: rgba(245,202,58,.12); }
+#debug-console {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 42vh;
+  background: #000;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 11px;
+  padding: 10px;
+  overflow-y: auto;
+  z-index: 100;
+  border-top: 2px solid #333;
+  display: none;
+}
+#debug-console.active { display: block; }
+
+/* ── HEADER ACTIONS ──────────────────────────── */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hdr-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'DM Mono', monospace;
+  font-size: 14px; font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.hdr-btn-settings { color: #58a6ff; }
+.hdr-btn-settings:hover { border-color: #58a6ff; color: #7ec8ff; }
+.hdr-btn-debug    { color: var(--muted); }
+.hdr-btn-debug:hover { border-color: var(--muted); color: var(--text); }
+.hdr-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* ── SPOTFIX — вправа «Знайди помилку» ───────── */
+.spotfix-sentence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 24px 16px;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  justify-content: center;
+}
+
+/* Слово-кнопка (фаза 1: пошук помилки) */
+.word-token {
+  font-family: 'DM Mono', monospace;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 10px 16px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .1s, color .15s;
+  line-height: 1.2;
+}
+.word-token:hover:not(:disabled):not(.word-wrong-pick) {
+  border-color: var(--accent);
+  background: rgba(245,202,58,.08);
+  transform: translateY(-2px);
+}
+.word-token:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.word-token:disabled { cursor: default; transform: none; }
+
+/* Слово позначене як хибний вибір (не та позиція) */
+.word-token.word-wrong-pick {
+  border-color: var(--wrong);
+  background: rgba(255,107,74,.1);
+  color: var(--wrong);
+  animation: shake .35s ease;
+}
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  60%      { transform: translateX(6px); }
+}
+
+/* Правильне слово підсвічене після успіху */
+.word-token.word-correct {
+  border-color: var(--correct);
+  background: rgba(61,250,170,.12);
+  color: var(--correct);
+}
+
+/* Слово яке виправляємо (фаза 2: обрати правильний варіант) */
+.word-token.word-fixing {
+  border-color: var(--accent);
+  background: rgba(245,202,58,.15);
+  color: var(--accent);
+  cursor: default;
+}
+
+/* ── Inline select (з'являється замість слова у фазі 2) ── */
+.word-fix-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  animation: fadeUp .2s ease;
+}
+
+/* Кнопки варіантів у фазі 2 (замість select) */
+.word-fix-btn {
+  font-family: 'DM Mono', monospace;
+  font-size: 19px;
+  font-weight: 500;
+  color: var(--text);
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background .15s, border-color .15s, transform .1s;
+  width: 100%;
+}
+.word-fix-btn:hover:not(:disabled) {
+  background: rgba(245,202,58,.1);
+  transform: translateY(-1px);
+}
+.word-fix-btn:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.word-fix-btn:disabled { cursor: default; transform: none; }
+.word-fix-btn.fix-btn-correct { border-color: var(--correct); background: rgba(61,250,170,.1); color: var(--correct); }
+.word-fix-btn.fix-btn-wrong   { border-color: var(--wrong);   background: rgba(255,107,74,.1); color: var(--wrong); }
+
+/* ── PHONE-STYLE SELECTION SCREEN ────────────── */
+.glass-card-ph {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(249, 115, 22, 0.15);
+}
+.ph-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1.5em;
+  background-color: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(249, 115, 22, 0.15);
+  backdrop-filter: blur(12px);
+  color: #f1f5f9;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  width: 100%;
+  padding: 1.25rem 3rem 1.25rem 1.5rem;
+  border-radius: 1.5rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.ph-select:focus { border-color: rgba(249,115,22,.5); }
+.ph-select option { background: #0f172a; color: #f1f5f9; }
+.btn-glow-ph {
+  box-shadow: 0 0 24px rgba(249, 115, 22, 0.35);
+}
+#selection-screen { font-family: 'Plus Jakarta Sans', sans-serif; }
+</style>
+</head>
+<body style="background:#020617; color:#fff; min-height:100vh; overflow-x:hidden; -webkit-tap-highlight-color:transparent;">
+
+<!-- ════════════ Debug console (як у listening.html) ════════════ -->
+<div id="debug-console" role="log" aria-label="Журнал системи">
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:6px;">
+    <strong>System Log — grammar.html</strong>
+    <button onclick="toggleDebug()" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:13px;">[Закрити]</button>
+  </div>
+  <div id="log-content"></div>
+</div>
+
+<!-- ════════════ SELECTION SCREEN (phone-style) ════════════ -->
+<div id="selection-screen" style="max-width:42rem; margin:0 auto; padding:1rem; min-height:100vh; display:flex; flex-direction:column;">
+
+  <!-- Header -->
+  <header style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; margin-top:0.5rem;">
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <a id="sel-back-link" href="index.html"
+         style="width:2.5rem; height:2.5rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; color:#f97316; text-decoration:none;"
+         class="glass-card-ph">
+        <i class="fa-solid fa-chevron-left"></i>
+      </a>
+      <div>
+        <div style="font-size:1.1rem; font-weight:800; color:#f97316; font-family:'Plus Jakarta Sans',sans-serif;">Граматика ES</div>
+        <div style="font-size:0.6rem; text-transform:uppercase; letter-spacing:.1em; color:#475569; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif;">Налаштування сесії</div>
+      </div>
+    </div>
+    <a id="sel-settings-link" href="settings.html"
+       style="width:2.5rem; height:2.5rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; color:#94a3b8; text-decoration:none;"
+       class="glass-card-ph">
+      <i class="fa-solid fa-cog"></i>
+    </a>
+  </header>
+
+  <!-- Selectors -->
+  <div style="flex:1; display:flex; flex-direction:column; justify-content:center; gap:2rem;">
+    <div style="display:flex; flex-direction:column; gap:1.5rem;">
+
+      <!-- Level -->
+      <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        <label style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.1em; padding-left:1rem; font-family:'Plus Jakarta Sans',sans-serif;">
+          Рівень знань
+        </label>
+        <select id="sel-level" class="ph-select">
+          <option value="A2">Рівень A2 — Елементарний</option>
+          <option value="B1" selected>Рівень B1 — Середній</option>
+          <option value="B2">Рівень B2 — Просунутий</option>
+        </select>
+      </div>
+
+      <!-- Exercise type -->
+      <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        <label style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.1em; padding-left:1rem; font-family:'Plus Jakarta Sans',sans-serif;">
+          Тип вправи
+        </label>
+        <select id="sel-exercise" class="ph-select">
+          <!-- Filled by JS from GRAMMAR_CONFIG.exercises -->
+        </select>
+      </div>
+
+    </div>
+
+    <!-- Start button -->
+    <div style="padding-top:1rem;">
+      <button onclick="handleSelectionStart()"
+              style="width:100%; padding:1.5rem; background:#ea580c; color:#fff; border:none; border-radius:2rem; font-family:'Plus Jakarta Sans',sans-serif; font-weight:800; font-size:1.4rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.75rem; transition:background .2s, transform .1s;"
+              class="btn-glow-ph"
+              onmouseover="this.style.background='#f97316'"
+              onmouseout="this.style.background='#ea580c'"
+              onmousedown="this.style.transform='scale(.98)'"
+              onmouseup="this.style.transform='scale(1)'">
+        <i class="fa-solid fa-play"></i>
+        ПОЧАТИ
+      </button>
+      <button onclick="toggleDebug()"
+              style="width:100%; margin-top:1.25rem; background:none; border:none; color:#475569; font-size:0.65rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; text-decoration:underline; text-decoration-color:rgba(249,115,22,.3); cursor:pointer; font-family:'Plus Jakarta Sans',sans-serif;">
+        Логи налагодження
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ════════════ MAIN APP (hidden until Start) ════════════ -->
+<div id="main-app" style="display:none;">
+
+<div class="app" role="main">
+
+  <!-- HEADER -->
+  <header class="header">
+    <a id="back-link" href="index.html" class="back-btn" aria-label="Назад на головну">
+      <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+    </a>
+    <div class="header-title" aria-label="Граматика — Spanish AI Hub">Граматика <span>ES</span></div>
+    <div class="header-actions">
+      <button id="settings-btn" class="hdr-btn hdr-btn-settings" aria-label="Глобальні налаштування AI">
+        <i class="fa-solid fa-gear" aria-hidden="true"></i> Налаштування
+      </button>
+      <button onclick="toggleDebug()" class="hdr-btn hdr-btn-debug" aria-label="Відкрити журнал діагностики">
+        <i class="fa-solid fa-bug" aria-hidden="true"></i> Діагностика
+      </button>
+    </div>
+  </header>
+
+  <!-- ── DROPDOWN SELECTOR ─────────────────────── -->
+  <div class="selector-block" id="selector" role="navigation" aria-label="Вибір вправи">
+
+    <div class="selector-header"
+         tabindex="0"
+         role="button"
+         aria-haspopup="listbox"
+         aria-expanded="false"
+         aria-label="Відкрити список вправ"
+         id="selector-trigger"
+         onclick="toggleSelector()"
+         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleSelector();}">
+      <div class="selector-left">
+        <span class="selector-badge" id="sel-badge">01</span>
+        <span class="selector-name"  id="sel-name">Дієслівне доміно</span>
+      </div>
+      <span class="selector-chevron" aria-hidden="true">▼</span>
+    </div>
+
+    <div class="selector-dropdown" role="listbox" aria-label="Список вправ" id="selector-dropdown">
+      <!-- filled by JS from GRAMMAR_CONFIG.exercises -->
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════
+       EX 1 — ДІЄСЛІВНЕ ДОМІНО
+  ══════════════════════════════════ -->
+  <div class="exercise-wrap active" id="ex-0" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e1-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e1-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-1" onclick="goGenerateEx(1)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e1-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 1</div>
+      <div class="exercise-title">Дієслівне доміно</div>
+      <div class="exercise-desc">Обери правильну форму дієслова для цього речення.</div>
+      <div class="fib-sentence" id="e1-sentence" aria-live="polite"></div>
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e1-uk"></span></div>
+        <div class="trans-row" id="e1-helper-row" style="display:none"><span class="flag" id="e1-helper-flag" aria-hidden="true"></span><span id="e1-en"></span></div>
+      </div>
+      <div class="options-list" id="e1-options" role="list" aria-label="Варіанти відповіді"></div>
+      <div class="feedback-box" id="e1-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e1-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text"><span class="fb-main" id="e1-fb-msg"></span><span class="fb-explain" id="e1-fb-explain"></span></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e1-next" onclick="nextE1()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
+  <!-- EX 2 -->
+  <div class="exercise-wrap" id="ex-1" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e2-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e2-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-2" onclick="goGenerateEx(2)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e2-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 2</div>
+      <div class="exercise-title">Заверши фразу</div>
+      <div class="exercise-desc">Вибери правильну форму Subjuntivo для завершення речення.</div>
+      <div class="fib-sentence" id="e2-sentence" aria-live="polite"></div>
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e2-uk"></span></div>
+        <div class="trans-row" id="e2-helper-row" style="display:none"><span class="flag" id="e2-helper-flag" aria-hidden="true"></span><span id="e2-en"></span></div>
+      </div>
+      <div class="options-list" id="e2-options" role="list" aria-label="Варіанти відповіді"></div>
+      <div class="feedback-box" id="e2-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e2-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text"><span class="fb-main" id="e2-fb-msg"></span><span class="fb-explain" id="e2-fb-explain"></span></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e2-next" onclick="nextE2()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
+  <!-- EX 3 -->
+  <div class="exercise-wrap" id="ex-2" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e3-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e3-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-3" onclick="goGenerateEx(3)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e3-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 3</div>
+      <div class="exercise-title">Fill-in-the-Blank</div>
+      <div class="exercise-desc">Натисни правильне слово, щоб заповнити пропуск у реченні.</div>
+      <div class="fib-sentence" id="e3-sentence" aria-live="polite"></div>
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e3-uk"></span></div>
+        <div class="trans-row" id="e3-helper-row" style="display:none"><span class="flag" id="e3-helper-flag" aria-hidden="true"></span><span id="e3-en"></span></div>
+      </div>
+      <div class="options-list" id="e3-options" role="list" aria-label="Варіанти відповіді"></div>
+      <div class="feedback-box" id="e3-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e3-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text"><span class="fb-main" id="e3-fb-msg"></span><span class="fb-explain" id="e3-fb-explain"></span></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e3-next" onclick="nextE3()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
+  <!-- EX 4 -->
+  <div class="exercise-wrap" id="ex-3" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e4-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e4-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-4" onclick="goGenerateEx(4)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e4-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 4</div>
+      <div class="exercise-title">Граматичний свайп</div>
+      <div class="exercise-desc">Вибери правильний варіант кнопками або свайпом по картці.</div>
+      <div class="swipe-area">
+        <div class="swipe-card" id="e4-card"
+             onmousedown="startDrag(event)"
+             ontouchstart="startTouchDrag(event)"
+             role="group" aria-label="Картка зі завданням">
+          <span class="swipe-label-overlay left"  id="sw-label-a" aria-hidden="true">A</span>
+          <span class="swipe-label-overlay right" id="sw-label-b" aria-hidden="true">B</span>
+          <div class="swipe-sentence" id="e4-sentence"></div>
+          <div class="swipe-hint"    id="e4-hint"></div>
+        </div>
+      </div>
+      <div class="swipe-btns" role="group" aria-label="Вибір відповіді">
+        <button class="swipe-btn left-btn"  id="sw-btn-a" onclick="swipeChoose('A')">👈 <span id="sw-a-label"></span></button>
+        <button class="swipe-btn right-btn" id="sw-btn-b" onclick="swipeChoose('B')"><span id="sw-b-label"></span> 👉</button>
+      </div>
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e4-uk"></span></div>
+        <div class="trans-row" id="e4-helper-row" style="display:none"><span class="flag" id="e4-helper-flag" aria-hidden="true"></span><span id="e4-en"></span></div>
+      </div>
+      <div class="feedback-box" id="e4-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e4-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text"><span class="fb-main" id="e4-fb-msg"></span><span class="fb-explain" id="e4-fb-explain"></span></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e4-next" onclick="nextE4()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
+  <!-- EX 5 — ЗНАЙДИ ПОМИЛКУ -->
+  <div class="exercise-wrap" id="ex-4" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e5-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e5-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-5" onclick="goGenerateEx(5)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e5-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 5</div>
+      <div class="exercise-title">Знайди помилку</div>
+      <div class="exercise-desc">Натисни на <strong>слово з помилкою</strong>, потім обери правильний варіант.</div>
+
+      <!-- Речення: кожне слово — окрема кнопка -->
+      <div class="spotfix-sentence" id="e5-words" role="group" aria-label="Речення — натисни на слово з помилкою"></div>
+
+      <!-- Переклад (завжди видимий) -->
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e5-uk"></span></div>
+        <div class="trans-row" id="e5-helper-row" style="display:none"><span class="flag" id="e5-helper-flag" aria-hidden="true"></span><span id="e5-en"></span></div>
+      </div>
+
+      <!-- Фідбек -->
+      <div class="feedback-box" id="e5-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e5-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text">
+          <span class="fb-main"    id="e5-fb-msg"></span>
+          <span class="fb-explain" id="e5-fb-explain"></span>
+        </div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e5-next" onclick="nextE5()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+</div><!-- /main-app -->
+
+<script>
+// ══════════════════════════════════════════════
+// SELECTION SCREEN
+// ══════════════════════════════════════════════
+
+// Поточний вибраний рівень — читається при генерації
+let selectedLevel = 'B1';
+
+function buildSelectionDropdown() {
+  const sel = document.getElementById('sel-exercise');
+  if (!sel) return;
+  const exercises = (typeof GRAMMAR_CONFIG !== 'undefined') ? GRAMMAR_CONFIG.exercises : [];
+  sel.innerHTML = exercises.map((ex, i) =>
+    `<option value="${i}">${ex.num}. ${ex.label} · ${ex.level}</option>`
+  ).join('');
+}
+
+function handleSelectionStart() {
+  selectedLevel = document.getElementById('sel-level').value;
+  const exIdx   = parseInt(document.getElementById('sel-exercise').value, 10);
+
+  // Ховаємо selection screen, показуємо app
+  document.getElementById('selection-screen').style.display = 'none';
+  document.getElementById('main-app').style.display = 'block';
+
+  // Переходимо до обраної вправи
+  selectExercise(exIdx);
+
+  log(`Старт: рівень ${selectedLevel}, вправа ${exIdx + 1}`, 'info');
+}
+
+// ══════════════════════════════════════════════
+// DEBUG LOG (точно як у listening.html)
+// ══════════════════════════════════════════════
+function log(msg, type = 'info') {
+  const content = document.getElementById('log-content');
+  const time    = new Date().toLocaleTimeString();
+  const colors  = { error:'#f87171', success:'#4ade80', info:'#60a5fa', warn:'#fbbf24' };
+  content.innerHTML += `<div style="color:${colors[type]||'#fff'}">[${time}] ${msg}</div>`;
+  content.scrollTop = content.scrollHeight;
+}
+function toggleDebug() {
+  document.getElementById('debug-console').classList.toggle('active');
+}
+
+// ══════════════════════════════════════════════
+// CONFIG BRIDGE
+// Читаємо з verb_set.js та sett_set.js якщо вони підключені.
+// Якщо файли ще не підключені — використовуємо дефолти нижче.
+// ══════════════════════════════════════════════
+
+const CFG = (typeof GRAMMAR_CONFIG !== 'undefined') ? GRAMMAR_CONFIG : {
+  // Дефолтні значення — замінюються verb_set.js
+  tasksPerSession: 5,
+  speechLang: 'es-ES',
+  uiLanguage: 'uk',
+  exercises: [
+    { id:'domino',    num:'01', label:'Дієслівне доміно' },
+    { id:'subjuntivo',num:'02', label:'Subjuntivo — завершення фрази' },
+    { id:'fill',      num:'03', label:'Fill-in-the-Blank' },
+    { id:'swipe',     num:'04', label:'Граматичний свайп' },
+    { id:'translate', num:'05', label:'Перевір переклад' },
+  ]
+};
+
+/**
+ * Показує або ховає рядок допоміжного перекладу (helper-row).
+ * Прапорець встановлюється динамічно з getLangConfig().helper.
+ * Якщо допоміжна мова не обрана (none) або текст порожній — рядок прихований.
+ *
+ * @param {string} exId  — 'e1' | 'e3' | 'e5'
+ * @param {string} text  — текст перекладу допоміжною мовою від AI
+ */
+function _showHelperRow(exId, text) {
+    const row  = document.getElementById(`${exId}-helper-row`);
+    const flag = document.getElementById(`${exId}-helper-flag`);
+    if (!row || !flag) return;
+
+    const lang = (typeof getLangConfig === 'function') ? getLangConfig() : null;
+    const hasHelper = lang && lang.helper.id !== 'none' && lang.helper.nameEn;
+
+    if (hasHelper && text) {
+        flag.textContent = lang.helper.flag || '🌐';
+        row.style.display = '';
+    } else {
+        row.style.display = 'none';
+    }
+}
+
+// Читаємо глобальні налаштування з sett_set.js
+// Читає значення з localStorage через ключі sett_set.js
+// Параметр key — назва поля з SETTINGS_CONFIG.storageKeys
+function getGlobalSetting(key) {
+  if (typeof SETTINGS_CONFIG !== 'undefined' && SETTINGS_CONFIG.storageKeys) {
+    const storageKey = SETTINGS_CONFIG.storageKeys[key];
+    if (storageKey) return localStorage.getItem(storageKey);
+  }
+  // Fallback-ключі — точно відповідають sett_set.js
+  const fallbackKeys = {
+    provider:        'sp_provider',
+    model:           'sp_model',
+    apiKeyOpenai:    'sp_api_key_openai',
+    apiKeyGoogle:    'sp_api_key_google',
+    apiKeyAnthro:    'sp_api_key_anthropic',
+    speed:           'sp_speed',
+    ttsMode:         'sp_tts_mode',
+    voice:           'sp_voice',
+    voiceNative:     'sp_voice_native',
+    techLogEnabled:  'sp_techlog_enabled',
+    studyLogEnabled: 'sp_studylog_enabled',
+    logServerUrl:    'sp_log_server_url',
+  };
+  return localStorage.getItem(fallbackKeys[key] ?? key);
+}
+
+// ══════════════════════════════════════════════
+// TTS — озвучення іспанських фраз
+// Читає налаштування з localStorage (sp_tts_mode, sp_voice, sp_speed)
+// speakSpanish(text, onEnd?) — onEnd викликається після закінчення
+// ══════════════════════════════════════════════
+let _ttsAudio = null; // активний Audio-об'єкт (online)
+
+async function speakSpanish(text, onEnd) {
+  if (!text) { if (onEnd) onEnd(); return; }
+
+  const mode   = getGlobalSetting('ttsMode') || 'offline';
+  const speed  = parseFloat(getGlobalSetting('speed') || '0.9');
+  const voice  = getGlobalSetting('voice') || 'alloy';
+  const apiKey = getGlobalSetting('apiKeyOpenai');
+  const lang   = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : ((typeof CFG !== 'undefined' && CFG.speechLang) ? CFG.speechLang : 'es-ES');
+
+  // Зупинити попереднє відтворення
+  window.speechSynthesis.cancel();
+  if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
+
+  if (mode === 'online' && apiKey) {
+    // ── Online: OpenAI TTS ──────────────────────
+    try {
+      const res = await fetch('https://api.openai.com/v1/audio/speech', {
+        method:  'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ model: 'tts-1', input: text, voice, speed })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const url = URL.createObjectURL(await res.blob());
+      _ttsAudio = new Audio(url);
+      _ttsAudio.onended = () => { _ttsAudio = null; if (onEnd) onEnd(); };
+      _ttsAudio.onerror = () => { _ttsAudio = null; speakOffline(text, speed, lang, onEnd); };
+      _ttsAudio.play();
+      log(`TTS online: "${text.slice(0,40)}"`, 'info');
+      return;
+    } catch(e) {
+      log(`TTS online error: ${e.message} → offline`, 'warn');
+    }
+  }
+
+  // ── Offline: Web Speech API ──────────────────
+  speakOffline(text, speed, lang, onEnd);
+}
+
+function speakOffline(text, speed, lang, onEnd) {
+  const nativeVoiceName = getGlobalSetting('voiceNative') || '';
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang  = lang || 'es-ES';
+  utt.rate  = speed || 0.9;
+  if (nativeVoiceName) {
+    const found = window.speechSynthesis.getVoices().find(v => v.name === nativeVoiceName);
+    if (found) utt.voice = found;
+  }
+  utt.onend   = () => { if (onEnd) onEnd(); };
+  utt.onerror = () => { if (onEnd) onEnd(); };
+  window.speechSynthesis.speak(utt);
+  log(`TTS offline: "${text.slice(0,40)}"`, 'info');
+}
+
+// ── Хелпер: витягнути текст для TTS з даних вправи ──────────
+// Кожна вправа знає свій "правильний текст" для озвучення
+function getTTSTextForExercise(px) {
+  try {
+    if (px === 'e1') {
+      const d = E1_DATA[e1State.idx];
+      if (!d) return null;
+      return `${d.before || ''} ${d.correct || ''} ${d.after || ''}`.trim();
+    }
+    if (px === 'e2') {
+      const d = E2_DATA[e2State.idx];
+      if (!d) return null;
+      // Підставляємо правильну форму на місце пропуску
+      return `${d.before || ''} ${d.correct || ''} ${d.after || ''}`.trim();
+    }
+    if (px === 'e3') {
+      const d = E3_DATA[e3State.idx];
+      if (!d) return null;
+      return `${d.before || ''} ${d.correct || ''} ${d.after || ''}`.trim();
+    }
+    if (px === 'e4') {
+      const d = E4_DATA[e4State.idx];
+      if (!d) return null;
+      // sentence містить ___, замінюємо на правильний варіант
+      const correct = d.correct === 'A' ? d.optA : d.optB;
+      return (d.sentence || '').replace('___', correct);
+    }
+    if (px === 'e5') {
+      const d = E5_DATA[e5State.idx];
+      if (!d) return null;
+      // Повне речення з правильним словом
+      const words = [...(d.words || [])];
+      if (d.errorIdx != null) words[d.errorIdx] = d.correctWord;
+      return words.join(' ');
+    }
+  } catch(e) {}
+  return null;
+}
+
+// Збереження стану останньої вправи
+function saveLastExercise(idx) {
+  try { localStorage.setItem('sp_grammar_last_ex', idx); } catch(e){}
+}
+function loadLastExercise() {
+  try { return parseInt(localStorage.getItem('sp_grammar_last_ex') ?? '0', 10) || 0; } catch(e){ return 0; }
+}
+
+// ══════════════════════════════════════════════
+// EXERCISE DATA — заповнюється AI при відкритті
+// ══════════════════════════════════════════════
+const LETTERS = ['A','B','C'];
+
+let E1_DATA = [];
+let E2_DATA = [];
+let E3_DATA = [];
+let E4_DATA = [];
+let E5_DATA = [];
+
+// ══════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════
+let e1State={idx:0,score:0,answered:false};
+let e2State={idx:0,score:0};
+let e3State={idx:0,score:0};
+let e4State={idx:0,score:0};
+let e5State={idx:0,score:0,phase:1,wrongClicks:0};
+let currentEx = 0;
+
+// ══════════════════════════════════════════════
+// DROPDOWN SELECTOR
+// ══════════════════════════════════════════════
+function buildDropdown() {
+  const exercises = CFG.exercises;
+  const dropdown = document.getElementById('selector-dropdown');
+  dropdown.innerHTML = exercises.map((ex, i) => `
+    <button class="dropdown-item ${i===currentEx?'active':''}"
+            role="option"
+            aria-selected="${i===currentEx}"
+            onclick="selectExercise(${i})"
+            aria-label="Вправа ${ex.num}: ${ex.label}">
+      <span class="item-num">${ex.num}</span>
+      <span>${ex.label}</span>
+      <span class="item-check" aria-hidden="true">✓</span>
+    </button>
+  `).join('');
+}
+
+function toggleSelector() {
+  const block = document.getElementById('selector');
+  const trigger = document.getElementById('selector-trigger');
+  const isOpen = block.classList.toggle('open');
+  trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+
+  if (isOpen) {
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', closeOnOutside, { once: true });
+    }, 0);
+  }
+}
+
+function closeOnOutside(e) {
+  const block = document.getElementById('selector');
+  if (!block.contains(e.target)) {
+    block.classList.remove('open');
+    document.getElementById('selector-trigger').setAttribute('aria-expanded','false');
+  }
+}
+
+function selectExercise(n) {
+  currentEx = n;
+  saveLastExercise(n);
+
+  // Update header display
+  const ex = CFG.exercises[n];
+  document.getElementById('sel-badge').textContent = ex.num;
+  document.getElementById('sel-name').textContent  = ex.label;
+
+  // Update active states in dropdown
+  document.querySelectorAll('.dropdown-item').forEach((item, i) => {
+    item.classList.toggle('active', i===n);
+    item.setAttribute('aria-selected', i===n ? 'true' : 'false');
+  });
+
+  // Close dropdown
+  document.getElementById('selector').classList.remove('open');
+  document.getElementById('selector-trigger').setAttribute('aria-expanded','false');
+
+  // Show correct exercise panel
+  document.querySelectorAll('.exercise-wrap').forEach((el, i) => {
+    el.classList.toggle('active', i===n);
+  });
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // Автозавантаження якщо дані ще не згенеровані
+  autoLoadExercise(n);
+}
+
+// ══════════════════════════════════════════════
+
+// ══════════════════════════════════════════════
+// EXERCISE 1 — Вибери правильну форму дієслова
+// Структура завдання від AI:
+//   before   — частина речення ДО дієслова
+//   blank    — помилкова/пропущена форма (показуємо як ___  перед відповіддю)
+//   after    — частина речення ПІСЛЯ дієслова
+//   opts     — масив 3 варіантів (правильний + 2 хибних, перемішані)
+//   correct  — правильний варіант
+//   uk / en  — переклади правильного речення
+//   explain  — пояснення 7-12 слів
+// ══════════════════════════════════════════════
+function renderE1() {
+  const d = E1_DATA[e1State.idx];
+  if (!d) return;
+
+  // Речення з пропуском
+  const sentEl = document.getElementById('e1-sentence');
+  sentEl.innerHTML = `${d.before || ''} <span class="fib-blank" id="e1-blank">___</span> ${d.after || ''}`;
+
+  // Переклад
+  document.getElementById('e1-uk').textContent = d.uk || '';
+  document.getElementById('e1-en').textContent = d.en || '';
+  _showHelperRow('e1', d.en);
+
+  // Варіанти кнопками (перемішані)
+  const opts = (d.opts || [d.correct]).sort(() => Math.random() - .5);
+  document.getElementById('e1-options').innerHTML = opts.map((o, i) => `
+    <button class="option-btn" onclick="answerE1(this)" data-val="${o}" role="listitem"
+            aria-label="Варіант ${LETTERS[i]}: ${o}">
+      <span class="opt-letter" aria-hidden="true">${LETTERS[i]}</span>${o}
+    </button>`).join('');
+
+  document.getElementById('e1-fb').className = 'feedback-box';
+  document.getElementById('e1-next').style.display = 'none';
+  e1State.answered = false;
+  updateBar('e1', e1State.idx, e1State.score);
+}
+function answerE1(btn) {
+  if (e1State.answered) return;
+  e1State.answered = true;
+  const d = E1_DATA[e1State.idx];
+  const chosen = btn.getAttribute('data-val');
+  const ok = chosen === d.correct;
+  if (ok) e1State.score++;
+
+  // Підсвічуємо пропуск
+  const bl = document.getElementById('e1-blank');
+  if (bl) { bl.textContent = chosen; bl.className = 'fib-blank ' + (ok ? 'filled-correct' : 'filled-wrong'); }
+
+  // Підсвічуємо кнопки
+  document.querySelectorAll('#e1-options .option-btn').forEach(b => {
+    b.disabled = true;
+    if (b.getAttribute('data-val') === d.correct) b.classList.add('correct-ans');
+    else if (b === btn && !ok) b.classList.add('wrong-ans');
+  });
+
+  showFB('e1', ok,
+    ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`,
+    d.explain || `«${d.correct}» — правильна форма для цього речення`);
+}
+function nextE1() { e1State.idx++; if(e1State.idx>=E1_DATA.length){showResult('e1',e1State.score,E1_DATA.length);return;} renderE1(); }
+
+// EXERCISE 2
+// ══════════════════════════════════════════════
+function renderE2() {
+  const d = E2_DATA[e2State.idx];
+  document.getElementById('e2-sentence').innerHTML = `${d.before} <span class="fib-blank" id="e2-blank">___</span> ${d.after}`;
+  document.getElementById('e2-uk').textContent = d.uk || '';
+  document.getElementById('e2-en').textContent = d.en || '';
+  _showHelperRow('e2', d.en);
+  document.getElementById('e2-options').innerHTML = d.opts.map((o,i)=>`
+    <button class="option-btn" onclick="answerE2(this)" data-val="${o}" role="listitem">
+      <span class="opt-letter" aria-hidden="true">${LETTERS[i]}</span>${o}
+    </button>`).join('');
+  document.getElementById('e2-fb').className = 'feedback-box';
+  document.getElementById('e2-next').style.display = 'none';
+  updateBar('e2', e2State.idx, e2State.score);
+}
+function answerE2(btn) {
+  const d = E2_DATA[e2State.idx];
+  const chosen = btn.getAttribute('data-val');
+  const ok = chosen===d.correct;
+  if (ok) e2State.score++;
+  const bl = document.getElementById('e2-blank');
+  if (bl) { bl.textContent = chosen; bl.className = 'fib-blank ' + (ok ? 'filled-correct' : 'filled-wrong'); }
+  document.querySelectorAll('#e2-options .option-btn').forEach(b => {
+    b.disabled = true;
+    if(b.getAttribute('data-val')===d.correct) b.classList.add('correct-ans');
+    else if(b===btn && !ok) b.classList.add('wrong-ans');
+  });
+  showFB('e2', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain||`Правильна форма: ${d.correct}`);
+}
+function nextE2() { e2State.idx++; if(e2State.idx>=E2_DATA.length){showResult('e2',e2State.score,E2_DATA.length);return;} renderE2(); }
+
+// ══════════════════════════════════════════════
+// EXERCISE 3
+// ══════════════════════════════════════════════
+function renderE3() {
+  const d = E3_DATA[e3State.idx];
+  document.getElementById('e3-sentence').innerHTML = `${d.before} <span class="fib-blank" id="e3-blank">${d.blank}</span> ${d.after}`;
+  document.getElementById('e3-uk').textContent = d.uk;
+  document.getElementById('e3-en').textContent = d.en;
+  _showHelperRow('e3', d.en);
+  document.getElementById('e3-options').innerHTML = d.opts.map((o,i)=>`
+    <button class="option-btn" onclick="answerE3(this)" data-val="${o}" role="listitem">
+      <span class="opt-letter" aria-hidden="true">${LETTERS[i]}</span>${o}
+    </button>`).join('');
+  document.getElementById('e3-fb').className = 'feedback-box';
+  document.getElementById('e3-next').style.display = 'none';
+  updateBar('e3', e3State.idx, e3State.score);
+}
+function answerE3(btn) {
+  const d = E3_DATA[e3State.idx];
+  const chosen = btn.getAttribute('data-val');
+  const ok = chosen===d.correct;
+  if (ok) e3State.score++;
+  const bl = document.getElementById('e3-blank');
+  bl.textContent = chosen; bl.className = 'fib-blank '+(ok?'filled-correct':'filled-wrong');
+  document.querySelectorAll('#e3-options .option-btn').forEach(b => {
+    b.disabled = true;
+    if(b.getAttribute('data-val')===d.correct) b.classList.add('correct-ans');
+    else if(b===btn && !ok) b.classList.add('wrong-ans');
+  });
+  showFB('e3', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain||`Правильна форма для цього речення: ${d.correct}`);
+}
+function nextE3() { e3State.idx++; if(e3State.idx>=E3_DATA.length){showResult('e3',e3State.score,E3_DATA.length);return;} renderE3(); }
+
+// ══════════════════════════════════════════════
+// EXERCISE 4
+// ══════════════════════════════════════════════
+function renderE4() {
+  const d = E4_DATA[e4State.idx];
+  document.getElementById('e4-sentence').innerHTML = d.sentence.replace('___','<span class="swipe-blank"></span>');
+  document.getElementById('e4-hint').textContent = '💡 '+d.hint;
+  document.getElementById('sw-a-label').textContent = d.optA;
+  document.getElementById('sw-b-label').textContent = d.optB;
+  document.getElementById('sw-btn-a').disabled = false; document.getElementById('sw-btn-a').setAttribute('aria-label',`Варіант A: ${d.optA}`);
+  document.getElementById('sw-btn-b').disabled = false; document.getElementById('sw-btn-b').setAttribute('aria-label',`Варіант B: ${d.optB}`);
+  document.getElementById('e4-uk').textContent = d.uk || '';
+  document.getElementById('e4-en').textContent = d.en || '';
+  _showHelperRow('e4', d.en);
+  document.getElementById('e4-fb').className = 'feedback-box';
+  document.getElementById('e4-next').style.display = 'none';
+  const c = document.getElementById('e4-card'); c.className='swipe-card'; c.style.transform='';
+  document.getElementById('sw-label-a').style.opacity = 0;
+  document.getElementById('sw-label-b').style.opacity = 0;
+  updateBar('e4', e4State.idx, e4State.score);
+}
+function swipeChoose(ch) {
+  const d = E4_DATA[e4State.idx];
+  const ok = ch===d.correct; if(ok) e4State.score++;
+  document.getElementById('e4-card').classList.add(ch==='A'?'swipe-left':'swipe-right');
+  document.getElementById('sw-btn-a').disabled = true; document.getElementById('sw-btn-b').disabled = true;
+  const ct = d.correct==='A'?d.optA:d.optB; const cht = ch==='A'?d.optA:d.optB;
+  showFB('e4', ok, ok?`✓ Правильно! ${cht}`:`✗ Правильна відповідь: ${ct}`, d.explain||`${ct} — правильний вибір для цього речення`);
+}
+function nextE4() { e4State.idx++; if(e4State.idx>=E4_DATA.length){showResult('e4',e4State.score,E4_DATA.length);return;} renderE4(); }
+
+let dragStartX=0;
+function startDrag(e) {
+  dragStartX=e.clientX;
+  const mv=ev=>{const dx=ev.clientX-dragStartX; document.getElementById('e4-card').style.transform=`translateX(${dx}px) rotate(${dx*.04}deg)`; document.getElementById('sw-label-a').style.opacity=Math.min(1,Math.max(0,-dx/70)); document.getElementById('sw-label-b').style.opacity=Math.min(1,Math.max(0,dx/70));};
+  const up=ev=>{const dx=ev.clientX-dragStartX; document.getElementById('e4-card').style.transform=''; document.getElementById('sw-label-a').style.opacity=0; document.getElementById('sw-label-b').style.opacity=0; if(Math.abs(dx)>80)swipeChoose(dx<0?'A':'B'); document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);};
+  document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
+}
+function startTouchDrag(e) {
+  dragStartX=e.touches[0].clientX;
+  const mv=ev=>{const dx=ev.touches[0].clientX-dragStartX; document.getElementById('e4-card').style.transform=`translateX(${dx}px) rotate(${dx*.04}deg)`; document.getElementById('sw-label-a').style.opacity=Math.min(1,Math.max(0,-dx/70)); document.getElementById('sw-label-b').style.opacity=Math.min(1,Math.max(0,dx/70));};
+  const up=ev=>{const dx=ev.changedTouches[0].clientX-dragStartX; document.getElementById('e4-card').style.transform=''; if(Math.abs(dx)>60)swipeChoose(dx<0?'A':'B'); document.removeEventListener('touchmove',mv); document.removeEventListener('touchend',up);};
+  document.addEventListener('touchmove',mv,{passive:true}); document.addEventListener('touchend',up);
+}
+
+// ══════════════════════════════════════════════
+// EXERCISE 5 — ЗНАЙДИ ПОМИЛКУ + ВИПРАВ
+// Фаза 1: клік по слову → якщо не те, shake + підказка
+// Фаза 2: клік по правильному → inline select з 3 варіантів
+// ══════════════════════════════════════════════
+function renderE5() {
+  const d = E5_DATA[e5State.idx];
+  if (!d) return;
+
+  // Переклад
+  document.getElementById('e5-uk').textContent = d.uk;
+  document.getElementById('e5-en').textContent = d.en;
+  _showHelperRow('e5', d.en);
+
+  // Скидаємо фідбек і кнопку
+  document.getElementById('e5-fb').className = 'feedback-box';
+  document.getElementById('e5-next').style.display = 'none';
+  e5State.phase = 1;          // 1 = шукаємо помилку, 2 = виправляємо
+  e5State.wrongClicks = 0;    // кількість хибних кліків у фазі 1
+
+  // Будуємо слова-кнопки
+  const wordsEl = document.getElementById('e5-words');
+  wordsEl.innerHTML = '';
+  d.words.forEach((word, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'word-token';
+    btn.textContent = word;
+    btn.setAttribute('aria-label', `Слово: ${word}`);
+    btn.dataset.idx = i;
+    btn.onclick = () => onWordClick(i);
+    wordsEl.appendChild(btn);
+  });
+
+  updateBar('e5', e5State.idx, e5State.score);
+}
+
+function onWordClick(clickedIdx) {
+  if (e5State.phase !== 1) return;
+  const d = E5_DATA[e5State.idx];
+  const tokens = document.querySelectorAll('#e5-words .word-token');
+
+  if (clickedIdx === d.errorIdx) {
+    // ✓ Правильне слово знайдено → перехід до фази 2
+    e5State.phase = 2;
+
+    // Блокуємо всі токени
+    tokens.forEach(t => { t.disabled = true; });
+
+    // Заміняємо помилкове слово на inline select
+    const errToken = tokens[d.errorIdx];
+    errToken.style.display = 'none';
+
+    const wrap = document.createElement('span');
+    wrap.className = 'word-fix-wrap';
+
+    // Перемішуємо варіанти і будуємо кнопки (не select — щоб перший варіант теж клікався)
+    const shuffled = [...d.fixOptions].sort(() => Math.random() - .5);
+    shuffled.forEach((opt, fi) => {
+      const btn = document.createElement('button');
+      btn.className = 'word-fix-btn';
+      btn.textContent = opt;
+      btn.setAttribute('aria-label', `Варіант: ${opt}`);
+      btn.dataset.val = opt;
+      btn.onclick = () => onFixSelect(opt);
+      wrap.appendChild(btn);
+    });
+
+    errToken.parentNode.insertBefore(wrap, errToken.nextSibling);
+
+    // Підказка — виправ слово
+    showFB5hint('🔍 Знайшов! Тепер обери правильний варіант.', 'info');
+
+  } else {
+    // ✗ Не те слово — shake + лічильник
+    e5State.wrongClicks++;
+    const btn = tokens[clickedIdx];
+    btn.classList.add('word-wrong-pick');
+    setTimeout(() => btn.classList.remove('word-wrong-pick'), 400);
+
+    if (e5State.wrongClicks === 1) {
+      showFB5hint('💡 Не те слово. Шукай граматичну помилку.', 'warn');
+    } else if (e5State.wrongClicks === 2) {
+      // Підказка: позиція в реченні
+      showFB5hint(`💡 Підказка: помилка на позиції ${d.errorIdx + 1} у реченні.`, 'warn');
+    }
+    // 3-й хибний клік — підсвічуємо правильне
+    if (e5State.wrongClicks >= 3) {
+      tokens[d.errorIdx].style.borderColor = 'var(--accent)';
+      tokens[d.errorIdx].style.background  = 'rgba(245,202,58,.15)';
+    }
+  }
+}
+
+function onFixSelect(chosen) {
+  const d = E5_DATA[e5State.idx];
+  const ok = chosen === d.correctWord;
+
+  // Блокуємо всі кнопки варіантів
+  const fixBtns = document.querySelectorAll('.word-fix-btn');
+  fixBtns.forEach(b => {
+    b.disabled = true;
+    if (b.dataset.val === d.correctWord) {
+      b.classList.add('fix-btn-correct');
+    } else if (b.dataset.val === chosen && !ok) {
+      b.classList.add('fix-btn-wrong');
+    }
+  });
+
+  if (ok) {
+    e5State.score++;
+    const tokens = document.querySelectorAll('#e5-words .word-token');
+    if (tokens[d.errorIdx]) tokens[d.errorIdx].classList.add('word-correct');
+    showFB('e5', true,
+      `✓ Правильно! «${d.words[d.errorIdx]}» → «${d.correctWord}»`,
+      d.explain || '');
+  } else {
+    showFB('e5', false,
+      `✗ Не вірно. Правильно: «${d.correctWord}»`,
+      d.explain || '');
+  }
+}
+
+// Показати підказку у fb-боксі без авто-переходу
+function showFB5hint(msg, type) {
+  const fb = document.getElementById('e5-fb');
+  const colors = { info: 'var(--accent)', warn: 'var(--accent2)' };
+  fb.className = 'feedback-box show ' + (type === 'warn' ? 'wrong' : 'correct');
+  document.getElementById('e5-fb-icon').textContent = type === 'warn' ? '💡' : '🔍';
+  document.getElementById('e5-fb-msg').textContent = msg;
+  document.getElementById('e5-fb-explain').textContent = '';
+}
+
+function nextE5() {
+  e5State.idx++;
+  if (e5State.idx >= E5_DATA.length) { showResult('e5', e5State.score, E5_DATA.length); return; }
+  renderE5();
+}
+
+// ══════════════════════════════════════════════
+// SHARED HELPERS
+// ══════════════════════════════════════════════
+function showFB(px, ok, msg, expl) {
+  const fb = document.getElementById(`${px}-fb`);
+  fb.className = 'feedback-box show '+(ok?'correct':'wrong');
+  document.getElementById(`${px}-fb-icon`).textContent = ok?'✓':'✗';
+  document.getElementById(`${px}-fb-msg`).textContent = msg;
+  const ex = document.getElementById(`${px}-fb-explain`); if(ex) ex.textContent = expl||'';
+
+  // Отримуємо текст для озвучення
+  const ttsText = getTTSTextForExercise(px);
+
+  if (ok) {
+    // Вірно: озвучуємо речення → після завершення переходимо далі
+    // Показуємо іконку гучності поки грає
+    const iconEl = document.getElementById(`${px}-fb-icon`);
+    if (iconEl) iconEl.textContent = '🔊';
+    speakSpanish(ttsText, () => {
+      if (iconEl) iconEl.textContent = '✓';
+      const delay = 400; // невелика пауза після аудіо перед переходом
+      setTimeout(() => autoNext(px), delay);
+    });
+  } else {
+    // Невірно: озвучуємо правильне речення + показуємо кнопку «Далі»
+    fb.scrollIntoView({behavior:'smooth',block:'nearest'});
+    const nextBtn = document.getElementById(`${px}-next`);
+    if (nextBtn) { nextBtn.style.display = 'block'; nextBtn.classList.add('show'); }
+    // Озвучуємо з невеликою затримкою щоб користувач встиг прочитати фідбек
+    setTimeout(() => speakSpanish(ttsText), 600);
+  }
+}
+
+function autoNext(px) {
+  if      (px==='e1') nextE1();
+  else if (px==='e2') nextE2();
+  else if (px==='e3') nextE3();
+  else if (px==='e4') nextE4();
+  else if (px==='e5') nextE5();
+}
+
+function updateBar(px, idx, score) {
+  const t = (typeof CFG.tasksPerSession !== 'undefined') ? CFG.tasksPerSession : 5;
+  document.getElementById(`${px}-q-num`).textContent = `${idx+1} / ${t}`;
+  document.getElementById(`${px}-score`).textContent = score;
+  const p = (idx+1)/t*100;
+  const f = document.getElementById(`${px}-progress`);
+  f.style.width = p+'%'; f.parentElement.setAttribute('aria-valuenow', p);
+}
+
+function showResult(px, score, total) {
+  const pct   = Math.round(score/total*100);
+  const emoji = pct>=80?'🏆':pct>=60?'👍':'💪';
+  const msg   = pct>=80?'Відмінно!':pct>=60?'Добре!':'Тренуйся ще!';
+  const idx   = ['e1','e2','e3','e4','e5'].indexOf(px);
+  const wrap  = document.getElementById(`ex-${idx}`);
+
+  // Ховаємо поточний вміст вправи (не видаляємо — щоб можна було відновити)
+  wrap.querySelectorAll(':scope > *').forEach(el => el.style.display = 'none');
+
+  // Додаємо картку результату поверх
+  const card = document.createElement('div');
+  card.className = 'result-card';
+  card.setAttribute('role', 'region');
+  card.setAttribute('aria-label', 'Результат вправи');
+  card.dataset.resultCard = '1';
+  card.innerHTML = `
+    <div class="result-emoji" aria-hidden="true">${emoji}</div>
+    <div class="result-title">${msg}</div>
+    <div class="result-sub">Результат: ${score} з ${total} правильних</div>
+    <div class="result-pct" aria-label="${pct} відсотків">${pct}%</div>
+    <button class="result-btn" onclick="resetEx('${px}')">Пройти ще раз</button>`;
+  wrap.appendChild(card);
+}
+
+function resetEx(px) {
+  const m = {e1:0, e2:1, e3:2, e4:3, e5:4};
+  const idx  = m[px];
+  const wrap = document.getElementById(`ex-${idx}`);
+
+  // Видаляємо result-card
+  wrap.querySelectorAll('[data-result-card]').forEach(el => el.remove());
+
+  // Відновлюємо схований вміст
+  wrap.querySelectorAll(':scope > *').forEach(el => el.style.display = '');
+
+  // Скидаємо стан і рендеримо
+  if(px==='e1'){e1State={idx:0,score:0,answered:false}; renderE1();}
+  if(px==='e2'){e2State={idx:0,score:0}; renderE2();}
+  if(px==='e3'){e3State={idx:0,score:0}; renderE3();}
+  if(px==='e4'){e4State={idx:0,score:0}; renderE4();}
+  if(px==='e5'){e5State={idx:0,score:0,phase:1,wrongClicks:0}; renderE5();}
+
+  // selectExercise оновлює dropdown і скролить вгору
+  selectExercise(idx);
+}
+
+// Індекс вправи (0-based) → префікс px
+const EX_PX = ['e1','e2','e3','e4','e5'];
+
+// ══════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════
+(function init() {
+  // Wire settings/back for main app header
+  const settingsPage = (typeof GRAMMAR_CONFIG !== 'undefined' && GRAMMAR_CONFIG.settingsPage)
+    ? GRAMMAR_CONFIG.settingsPage : 'settings.html';
+  const homePage = (typeof GRAMMAR_CONFIG !== 'undefined' && GRAMMAR_CONFIG.homePage)
+    ? GRAMMAR_CONFIG.homePage : 'index.html';
+
+  const settBtn  = document.getElementById('settings-btn');
+  const backLink = document.getElementById('back-link');
+  if (settBtn)  settBtn.onclick = () => location.href = settingsPage;
+  if (backLink) backLink.href = homePage;
+
+  // Wire selection screen header links
+  const selBack = document.getElementById('sel-back-link');
+  const selSett = document.getElementById('sel-settings-link');
+  if (selBack) selBack.href = homePage;
+  if (selSett) selSett.href = settingsPage;
+
+  // Tech log visibility
+  const SK = (typeof SETTINGS_CONFIG !== 'undefined' && SETTINGS_CONFIG.storageKeys) ? SETTINGS_CONFIG.storageKeys : {};
+  const techLogEnabled = localStorage.getItem(SK.techLogEnabled || 'sp_techlog_enabled') === '1';
+  if (!techLogEnabled) {
+    document.querySelectorAll('.hdr-btn-debug').forEach(b => b.style.display = 'none');
+  }
+
+  // Build dropdown in selection screen
+  buildSelectionDropdown();
+
+  // Build main app dropdown (hidden until Start)
+  buildDropdown();
+
+  log('grammar.html ініціалізовано');
+  log(`Провайдер: ${getGlobalSetting('provider')||'—'} | Модель: ${getGlobalSetting('model')||'—'}`);
+})();
+// ══════════════════════════════════════════════
+// GO BUTTON — AI ГЕНЕРАЦІЯ ДЛЯ ПОТОЧНОЇ ВПРАВИ
+// ══════════════════════════════════════════════
+
+// Показати спінер замість карточки
+function showCardLoading(exIdx) {
+  const wrap = document.getElementById(`ex-${exIdx}`);
+  if (!wrap) return;
+  // Ховаємо карточку та action-row, показуємо лоадер
+  const card      = wrap.querySelector('.card');
+  const actionRow = wrap.querySelector('.action-row');
+  if (card)      card.style.display      = 'none';
+  if (actionRow) actionRow.style.display = 'none';
+  // Вставляємо або оновлюємо лоадер
+  let loader = wrap.querySelector('.card-loading');
+  if (!loader) {
+    loader = document.createElement('div');
+    loader.className = 'card-loading';
+    loader.innerHTML = `
+      <div class="card-spinner"></div>
+      <div class="card-loading-text">AI генерує завдання…</div>`;
+    wrap.insertBefore(loader, actionRow || null);
+  }
+  loader.style.display = 'flex';
+}
+
+// Показати помилку замість карточки
+function showCardError(exIdx, msg) {
+  const wrap = document.getElementById(`ex-${exIdx}`);
+  if (!wrap) return;
+  const card      = wrap.querySelector('.card');
+  const actionRow = wrap.querySelector('.action-row');
+  const loader    = wrap.querySelector('.card-loading');
+  if (card)      card.style.display      = 'none';
+  if (actionRow) actionRow.style.display = 'none';
+  if (loader)    loader.style.display    = 'none';
+  let errBox = wrap.querySelector('.card-error');
+  if (!errBox) {
+    errBox = document.createElement('div');
+    errBox.className = 'card-error';
+    wrap.insertBefore(errBox, actionRow || null);
+  }
+  errBox.innerHTML = `
+    <div class="card-error-icon">⚠️</div>
+    <div class="card-error-msg">${msg}</div>
+    <button class="card-error-btn" onclick="goGenerateEx(${exIdx + 1})">
+      <i class="fa-solid fa-rotate-right"></i> Спробувати знову
+    </button>`;
+  errBox.style.display = 'flex';
+}
+
+// Відновити карточку після успішної генерації
+function restoreCard(exIdx) {
+  const wrap = document.getElementById(`ex-${exIdx}`);
+  if (!wrap) return;
+  const card      = wrap.querySelector('.card');
+  const actionRow = wrap.querySelector('.action-row');
+  const loader    = wrap.querySelector('.card-loading');
+  const errBox    = wrap.querySelector('.card-error');
+  if (loader) loader.style.display = 'none';
+  if (errBox) errBox.style.display = 'none';
+  if (card)      card.style.display      = '';
+  if (actionRow) actionRow.style.display = '';
+}
+
+// Автозапуск генерації при першому відкритті вправи
+function autoLoadExercise(exIdx) {
+  const px   = EX_PX[exIdx];
+  const data = [E1_DATA, E2_DATA, E3_DATA, E4_DATA, E5_DATA][exIdx];
+  if (!data || data.length === 0) {
+    goGenerateEx(exIdx + 1); // exNum = 1-based
+  }
+}
+
+// ── Рандомізатор контексту ────────────────────────────────────
+// Глобальний fallback-пул (якщо вправа не має власного)
+const RANDOM_SEEDS_FALLBACK = [
+  'під час пожежі у будинку', 'на концерті рок-гурту', 'в черзі до стоматолога',
+  'у застряглому ліфті', 'на нічному ринку', 'під час грози в горах',
+  'на першому побаченні', 'під час марафону', 'у ветеринарній клініці',
+  'під час автомобільної поломки', 'в готелі без бронювання', 'на фермерському ринку',
+];
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// Антишаблонна інструкція
+const ANTI_TEMPLATE =
+  '\n\nВАЖЛИВО — РІЗНОМАНІТНІСТЬ: НЕ використовуй банальні приклади ' +
+  '(hablar, comer, vivir, ir al trabajo, me llamo, Buenos días, ' +
+  'tener hambre, ir al mercado, la casa grande). ' +
+  'Кожне речення — несподіване, конкретне, з живими деталями.';
+
+// ══════════════════════════════════════════════
+// СТАТИСТИКА SEEDS — інтерфейс із двома бекендами
+//
+// statsPath у verb_set.js:
+//   ''   → localStorage (тимчасово, один пристрій)
+//   URL  → Keenetic-сервер (GET/POST, всі пристрої)
+//
+// Щоб підключити сервер — вписати URL у GRAMMAR_CONFIG.statsPath
+// і реалізувати на сервері:
+//   GET  <statsPath>?ex=domino  → { seeds: ["...", "..."] }
+//   POST <statsPath>            → body: { ex: "domino", seed: "..." }
+// ══════════════════════════════════════════════
+
+const STATS_LS_KEY = 'sp_grammar_seeds'; // { exId: ["seed1","seed2",...] }
+const STATS_MAX    = 20;                 // скільки останніх seeds зберігати
+
+async function getUsedSeeds(exId) {
+  const statsPath = (typeof GRAMMAR_CONFIG !== 'undefined' && GRAMMAR_CONFIG.statsPath) || '';
+
+  if (statsPath) {
+    // ── Бекенд: Keenetic-сервер ──────────────────
+    try {
+      const res = await fetch(`${statsPath}?ex=${encodeURIComponent(exId)}`,
+        { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        const data = await res.json();
+        return Array.isArray(data.seeds) ? data.seeds : [];
+      }
+    } catch (e) {
+      log(`Stats GET failed (${e.message}) → fallback localStorage`, 'warn');
+    }
+  }
+
+  // ── Fallback: localStorage ───────────────────
+  try {
+    const all = JSON.parse(localStorage.getItem(STATS_LS_KEY) || '{}');
+    return Array.isArray(all[exId]) ? all[exId] : [];
+  } catch { return []; }
+}
+
+async function saveUsedSeed(exId, seed) {
+  const statsPath = (typeof GRAMMAR_CONFIG !== 'undefined' && GRAMMAR_CONFIG.statsPath) || '';
+
+  if (statsPath) {
+    // ── Бекенд: Keenetic-сервер (тихий фейл) ────
+    try {
+      await fetch(statsPath, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ex: exId, seed }),
+        signal: AbortSignal.timeout(2000),
+      });
+    } catch (e) {
+      log(`Stats POST failed (${e.message}) → fallback localStorage`, 'warn');
+    }
+  }
+
+  // ── Завжди пишемо в localStorage як кеш ─────
+  try {
+    const all  = JSON.parse(localStorage.getItem(STATS_LS_KEY) || '{}');
+    const list = Array.isArray(all[exId]) ? all[exId] : [];
+    if (!list.includes(seed)) {
+      list.push(seed);
+      if (list.length > STATS_MAX) list.splice(0, list.length - STATS_MAX);
+      all[exId] = list;
+      localStorage.setItem(STATS_LS_KEY, JSON.stringify(all));
+    }
+  } catch (e) {
+    log(`Stats LS write failed: ${e.message}`, 'warn');
+  }
+}
+
+// Вибрати seed якого ще не було (або найменш використаний)
+function pickFreshSeed(pool, usedSeeds) {
+  const unused = pool.filter(s => !usedSeeds.includes(s));
+  if (unused.length > 0) return pickRandom(unused);
+  // Всі вже були — беремо той якого немає серед останніх 5
+  const recent = usedSeeds.slice(-5);
+  const notRecent = pool.filter(s => !recent.includes(s));
+  return notRecent.length > 0 ? pickRandom(notRecent) : pickRandom(pool);
+}
+
+async function goGenerateEx(exNum, retryCount = 0) {
+  const exIdx = exNum - 1;
+  const btn   = document.getElementById(`go-btn-${exNum}`);
+
+  const provider = localStorage.getItem('sp_provider') || 'google';
+  const model    = localStorage.getItem('sp_model')    || 'gemini-2.5-flash';
+  const apiKey   = (typeof getApiKey === 'function') ? getApiKey(provider)
+                 : (localStorage.getItem(`sp_api_key_${provider}`) || '');
+
+  if (!apiKey) {
+    showCardError(exIdx, 'API-ключ не вказано.<br>Перейдіть до <b>Налаштувань</b> та введіть ключ.');
+    return;
+  }
+
+  const exCfg      = CFG.exercises && CFG.exercises[exIdx];
+  const basePrompt = exCfg && exCfg.aiPrompt;
+  if (!basePrompt) {
+    showCardError(exIdx, 'Промпт для цієї вправи не знайдено у verb_set.js.');
+    return;
+  }
+
+  // ── Seed: беремо свіжий, якого ще не було ────
+  const seedPool  = (exCfg.seeds   && exCfg.seeds.length)   ? exCfg.seeds   : RANDOM_SEEDS_FALLBACK;
+  const focusPool = (exCfg.focuses && exCfg.focuses.length) ? exCfg.focuses : null;
+  const usedSeeds = await getUsedSeeds(exCfg.id);
+  const seed      = pickFreshSeed(seedPool, usedSeeds);
+  const focus     = focusPool ? pickRandom(focusPool) : null;
+  const level     = selectedLevel || 'B1';
+  const token     = Date.now();
+
+  // ── Формуємо заборону повторів для AI ────────
+  const recentSeeds = usedSeeds.slice(-8); // показуємо AI останні 8
+  const forbidBlock = recentSeeds.length > 0
+    ? `\n\nЗАБОРОНЕНО — ці контексти вже були в попередніх сесіях, не повторюй:\n` +
+      recentSeeds.map(s => `  • «${s}»`).join('\n')
+    : '';
+
+  const prompt = basePrompt + ANTI_TEMPLATE +
+    `\n\nРІВЕНЬ УЧНЯ: ${level}. Суворо дотримуйся — лексика, часи і довжина речень ` +
+    `мають відповідати рівню ${level}. Не виходь за межі рівня.` +
+    (focus     ? `\n\nГРАМАТИЧНИЙ ФОКУС СЕСІЇ: ${focus}` : '') +
+    forbidBlock +
+    `\n\nКОНТЕКСТ СЕСІЇ: Прив'яжи всі 5 речень до ситуації «${seed}». ` +
+    `Session-token: ${token}`;
+
+  const retryLabel = retryCount > 0 ? ` (спроба ${retryCount + 1})` : '';
+  log(`ex${exNum}${retryLabel} | ${level} | seed: «${seed}»${focus ? ` | «${focus}»` : ''} | ${provider}`, 'info');
+
+  if (btn) { btn.disabled = true; btn.classList.add('loading'); }
+  if (retryCount === 0) showCardLoading(exIdx);
+
+  try {
+    let responseText = '';
+
+    if (provider === 'openai') {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model, temperature: 0.9,
+          response_format: { type: 'json_object' },
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
+      if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
+      responseText = (await res.json()).choices[0].message.content;
+
+    } else if (provider === 'google') {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 1.0 }
+          })
+        }
+      );
+      if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
+      if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
+      responseText = (await res.json()).candidates[0].content.parts[0].text;
+
+    } else if (provider === 'anthropic') {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model, max_tokens: 2000, temperature: 0.8,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
+      if (!res.ok) throw new Error(`Anthropic HTTP ${res.status}`);
+      responseText = (await res.json()).content[0].text;
+    }
+
+    const clean  = responseText.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    const tasks  = parsed.tasks || parsed;
+    if (!Array.isArray(tasks) || tasks.length === 0) throw new Error('AI повернув порожній масив');
+
+    // ── Зберігаємо seed у статистику ─────────
+    await saveUsedSeed(exCfg.id, seed);
+
+    restoreCard(exIdx);
+    applyAiData(exNum, tasks);
+    log(`✓ вправа ${exNum}: ${tasks.length} завдань (${level}, ${provider})`, 'success');
+
+  } catch (err) {
+    // ── Авторетрай на 503/529 (макс 2 спроби) ─
+    if (err.message.startsWith('RETRY:') && retryCount < 2) {
+      const delay = (retryCount + 1) * 3000;
+      log(`Сервер перевантажений, повтор через ${delay/1000}с…`, 'warn');
+      setTimeout(() => goGenerateEx(exNum, retryCount + 1), delay);
+      return;
+    }
+    showCardError(exIdx, `Помилка генерації:<br><span style="opacity:.7">${err.message.replace('RETRY:','HTTP ')}</span>`);
+    log(`Помилка ex${exNum}: ${err.message}`, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+  }
+}
+
+
+
+function applyAiData(exNum, tasks) {
+  if (exNum === 1) {
+    E1_DATA.length = 0; tasks.forEach(t => E1_DATA.push(t));
+    e1State = { idx: 0, score: 0, answered: false }; renderE1();
+  } else if (exNum === 2) {
+    E2_DATA.length = 0; tasks.forEach(t => E2_DATA.push(t));
+    e2State = { idx: 0, score: 0 }; renderE2();
+  } else if (exNum === 3) {
+    E3_DATA.length = 0; tasks.forEach(t => E3_DATA.push(t));
+    e3State = { idx: 0, score: 0 }; renderE3();
+  } else if (exNum === 4) {
+    E4_DATA.length = 0; tasks.forEach(t => E4_DATA.push(t));
+    e4State = { idx: 0, score: 0 }; renderE4();
+  } else if (exNum === 5) {
+    E5_DATA.length = 0; tasks.forEach(t => E5_DATA.push(t));
+    e5State = { idx: 0, score: 0 }; renderE5();
+  }
+}
+
+</script>
+</body>
+</html>
