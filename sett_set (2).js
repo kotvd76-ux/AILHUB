@@ -10,7 +10,7 @@
 // Якщо поле порожнє — береться ключ з localStorage (як раніше).
 const HARDCODED_KEYS = {
     openai:    '',   // напр. 'sk-proj-...'
-    google:    'AIzaSyDw8tLc5pEexLDp0MtHJ-KN96N6OLvfwn4',   // напр. 'AIzaSy...'
+    google:    '',   // напр. 'AIzaSy...'
     anthropic: '',   // напр. 'sk-ant-...'
 };
 
