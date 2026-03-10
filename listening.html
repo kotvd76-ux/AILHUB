@@ -664,9 +664,15 @@
             const opt = document.createElement('option');
             opt.value = l.value;
             opt.textContent = l.label;
-            if (l.default) opt.selected = true;
             levelSelect.appendChild(opt);
         });
+
+        const defaultLevel = (typeof LISTEN_CONFIG.defaultExerciseLevel === 'string' && LISTEN_CONFIG.defaultExerciseLevel)
+            ? LISTEN_CONFIG.defaultExerciseLevel
+            : 'B1';
+        if (LISTEN_CONFIG.levels.some(l => l.value === defaultLevel)) {
+            levelSelect.value = defaultLevel;
+        }
     }
 
     // ── Отримуємо налаштування з sett_set.js / localStorage ──────────────────

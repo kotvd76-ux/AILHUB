@@ -186,7 +186,10 @@
 
     <script>
         // --- State Management ---
-        let currentLevel = 'A1';
+        const PHONE_ALLOWED_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
+        let currentLevel = (typeof getDefaultExerciseLevel === 'function')
+            ? getDefaultExerciseLevel(PHONE_ALLOWED_LEVELS)
+            : 'B1';
         let currentType = '';
         let isRecording = false;
         let conversation = [];
@@ -523,8 +526,17 @@
         }
 
         window.onload = () => {
+            const levelSelect = document.getElementById('level-select');
+            const defaultLevel = (typeof getDefaultExerciseLevel === 'function')
+                ? getDefaultExerciseLevel(PHONE_ALLOWED_LEVELS)
+                : 'B1';
+            if (levelSelect && PHONE_ALLOWED_LEVELS.includes(defaultLevel)) {
+                levelSelect.value = defaultLevel;
+                currentLevel = defaultLevel;
+            }
+
             updateGameOptions();
-            addLog("Тренажер готовий до роботи");
+            addLog(`Тренажер готовий до роботи (дефолтний рівень: ${currentLevel})`);
         };
     </script>
 </body>
