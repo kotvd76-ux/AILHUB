@@ -13,16 +13,12 @@
 const LISTEN_CONFIG = {
 
     // ─── ТЕМИ ────────────────────────────────────────────────────────────────────
-    themes: [
-        { value: 'Travel',      label: '✈️ Подорожі'             },
-        { value: 'Office',      label: '💼 Офіс'                 },
-        { value: 'Restaurant',  label: '🍽️ Ресторан'             },
-        { value: 'SmallTalk',   label: '💬 Small Talk'           },
-        { value: 'Family',      label: "👨‍👩‍👧 Сім'я"             },
-        { value: 'Shopping',    label: '🛍️ Шопінг'              },
-        { value: 'Health',      label: "🏥 Здоров'я"            },
-        { value: 'Emergencies', label: '🚨 Надзвичайні ситуації' },
-    ],
+    // Беремо з глобальних налаштувань (sett_set.js), щоб усі модулі
+    // працювали з єдиним списком пріоритетних тем.
+    get themes() {
+        if (typeof getPriorityThemes === 'function') return getPriorityThemes();
+        return SETTINGS_CONFIG?.priorityThemes || [];
+    },
 
     // ─── РІВНІ ───────────────────────────────────────────────────────────────────
     levels: [
