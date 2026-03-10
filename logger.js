@@ -64,7 +64,7 @@ const Logger = (() => {
      * module      — ім'я модуля (phone, listening, settings...)
      * line        — готовий рядок лог-запису
      */
-    function appendToBuffer(bufferKey, module, line) {
+    function appendToBuffer(bufferKey, module, line, logType = 'tech') {
         const lcfg   = LCFG();
         const maxLen = lcfg.bufferMaxLines ?? 500;
 
@@ -85,11 +85,11 @@ const Logger = (() => {
         ls.set(bufferKey, JSON.stringify(buf));
 
         // Спроба відправки на сервер (якщо налаштований)
-        trySendToServer(lcfg, module, line);
+        trySendToServer(lcfg, module, line, logType);
     }
 
     // ── Відправка на локальний сервер ──────────────────────
-    async function trySendToServer(lcfg, module, line) {
+    async function trySendToServer(lcfg, module, line, logType = 'tech') {
         const serverUrl = ls.get(SK().logServerUrl ?? 'sp_log_server_url', '').trim();
         if (!serverUrl) return;
 
@@ -97,7 +97,7 @@ const Logger = (() => {
             await fetch(`${serverUrl}/log`, {
                 method:  'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ module, line }),
+                body:    JSON.stringify({ module, line, type: logType }),
                 // Тихий фейл — не блокуємо UI
                 signal: AbortSignal.timeout(2000),
             });
@@ -125,7 +125,7 @@ const Logger = (() => {
         ].join(sep);
 
         const bufKey = LCFG().techLog?.storageKey ?? 'sp_techlog_buffer';
-        appendToBuffer(bufKey, module, line);
+        appendToBuffer(bufKey, module, line, 'tech');
     }
 
     /**
@@ -145,7 +145,7 @@ const Logger = (() => {
         ].join(sep);
 
         const bufKey = LCFG().techLog?.storageKey ?? 'sp_techlog_buffer';
-        appendToBuffer(bufKey, module, line);
+        appendToBuffer(bufKey, module, line, 'tech');
     }
 
     // ── PUBLIC: Навчальний лог ─────────────────────────────
@@ -196,7 +196,7 @@ const Logger = (() => {
         ].join(sep);
 
         const bufKey = LCFG().studyLog?.storageKey ?? 'sp_studylog_buffer';
-        appendToBuffer(bufKey, module, line);
+        appendToBuffer(bufKey, module, line, 'study');
     }
 
     // ── PUBLIC: Експорт (завантажити файл) ─────────────────

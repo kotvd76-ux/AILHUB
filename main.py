@@ -15,7 +15,7 @@ if len(sys.argv) < 3:
 USER_DIR = sys.argv[1]                                        # kvd | kgd | kov | tst
 PORT     = int(sys.argv[2])                                   # 8080 | 8085 | 8095 | 8100
 BASE_DIR = f'/opt/share/nginx/html/{USER_DIR}'
-LOG_DIR  = os.path.join(BASE_DIR, 'logs')
+LOG_DIR  = os.environ.get('HUB_LOG_DIR', '').strip() or os.path.join(BASE_DIR, 'logs')
 
 # ── Головна сторінка ───────────────────────────────────────────
 @route('/')
