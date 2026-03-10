@@ -939,6 +939,16 @@ body::before {
         </select>
       </div>
 
+      <!-- Theme -->
+      <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        <label style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.1em; padding-left:1rem; font-family:'Plus Jakarta Sans',sans-serif;">
+          Тема
+        </label>
+        <select id="sel-theme" class="ph-select" aria-label="Оберіть тему вправи">
+          <!-- Filled by JS from getPriorityThemes -->
+        </select>
+      </div>
+
       <!-- Exercise type -->
       <div style="display:flex; flex-direction:column; gap:0.5rem;">
         <label style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.1em; padding-left:1rem; font-family:'Plus Jakarta Sans',sans-serif;">
@@ -1279,7 +1289,7 @@ body::before {
     <div class="card">
       <div class="exercise-label">Вправа 7</div>
       <div class="exercise-title">Словник</div>
-      <div class="exercise-desc">Обери правильний переклад або відповідне слово за контекстом.</div>
+      <div class="exercise-desc">Дано слово рідною мовою — обери правильний варіант мовою навчання.</div>
       <div class="fib-sentence" id="e7-sentence" aria-live="polite"></div>
       <div class="translations">
         <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e7-uk"></span></div>
@@ -1306,6 +1316,22 @@ body::before {
 
 // Поточний вибраний рівень — читається при генерації
 let selectedLevel = 'B1';
+let selectedTheme = ''; // '' => авто (випадкова з sett_set)
+
+
+function buildSelectionThemeDropdown() {
+  const sel = document.getElementById('sel-theme');
+  if (!sel) return;
+
+  const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+  const autoLabel = '🎲 Автовибір теми';
+
+  sel.innerHTML = `<option value="">${autoLabel}</option>` + themes.map(t =>
+    `<option value="${t.value}">${t.label}</option>`
+  ).join('');
+
+  sel.value = '';
+}
 
 function buildSelectionDropdown() {
   const sel = document.getElementById('sel-exercise');
@@ -1318,6 +1344,7 @@ function buildSelectionDropdown() {
 
 function handleSelectionStart() {
   selectedLevel = document.getElementById('sel-level').value;
+  selectedTheme = document.getElementById('sel-theme')?.value || '';
   const exIdx   = parseInt(document.getElementById('sel-exercise').value, 10);
 
   // Ховаємо selection screen, показуємо app
@@ -1327,7 +1354,7 @@ function handleSelectionStart() {
   // Переходимо до обраної вправи
   selectExercise(exIdx);
 
-  log(`Старт: рівень ${selectedLevel}, вправа ${exIdx + 1}`, 'info');
+  log(`Старт: рівень ${selectedLevel}, вправа ${exIdx + 1}${selectedTheme ? `, тема ${selectedTheme}` : ', тема авто'}`, 'info');
 }
 
 // ══════════════════════════════════════════════
@@ -1519,7 +1546,7 @@ function getTTSTextForExercise(px) {
     if (px === 'e7') {
       const d = E7_DATA[e7State.idx];
       if (!d) return null;
-      return d.example || d.sentence || `${d.word || ''} — ${d.correct || ''}`;
+      return d.correct || d.example || d.sentence || `${d.nativeWord || d.word || ''}`;
     }
   } catch(e) {}
   return null;
@@ -1997,8 +2024,9 @@ function renderE7() {
   const d = E7_DATA[e7State.idx];
   if (!d) return;
   e7State.answered = false;
-  document.getElementById('e7-sentence').innerHTML = d.sentence || `<strong>${d.word || ''}</strong>`;
-  document.getElementById('e7-uk').textContent = d.uk || '';
+  const nativePrompt = d.nativeWord || d.word || d.sentence || '';
+  document.getElementById('e7-sentence').innerHTML = `<strong>${nativePrompt}</strong>`;
+  document.getElementById('e7-uk').textContent = d.uk || d.example || '';
   document.getElementById('e7-en').textContent = d.en || '';
   _showHelperRow('e7', d.en);
 
@@ -2162,7 +2190,8 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
     document.querySelectorAll('.hdr-btn-debug').forEach(b => b.style.display = 'none');
   }
 
-  // Build dropdown in selection screen
+  // Build dropdowns in selection screen
+  buildSelectionThemeDropdown();
   buildSelectionDropdown();
 
   // Build main app dropdown (hidden until Start)
@@ -2372,10 +2401,15 @@ async function goGenerateEx(exNum, retryCount = 0) {
   const seedPool  = (exCfg.seeds   && exCfg.seeds.length)   ? exCfg.seeds   : RANDOM_SEEDS_FALLBACK;
   const focusPool = (exCfg.focuses && exCfg.focuses.length) ? exCfg.focuses : null;
   const themes    = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+  const themeMode = (typeof getGrammarThemeDefaultMode === 'function') ? getGrammarThemeDefaultMode() : 'random';
   const usedSeeds = await getUsedSeeds(exCfg.id);
   const seed      = pickFreshSeed(seedPool, usedSeeds);
   const focus     = focusPool ? pickRandom(focusPool) : null;
-  const theme     = themes.length ? pickRandom(themes) : null;
+  const chosenTheme = selectedTheme
+    ? (themes.find(t => t.value === selectedTheme) || { value: selectedTheme, label: selectedTheme })
+    : null;
+  const randomTheme = themes.length ? pickRandom(themes) : null;
+  const theme = chosenTheme || (themeMode === 'random' ? randomTheme : null);
   const level     = selectedLevel || 'B1';
   const token     = Date.now();
 
@@ -2479,27 +2513,96 @@ async function goGenerateEx(exNum, retryCount = 0) {
 
 
 
+function normalizeTasksByExercise(exNum, tasks) {
+  const arr = Array.isArray(tasks) ? tasks : [];
+  if (exNum === 5) {
+    return arr.map((t) => {
+      const words = Array.isArray(t.words) ? [...t.words] : [];
+      let errorIdx = Number.isInteger(t.errorIdx) ? t.errorIdx : 0;
+      if (errorIdx < 0 || errorIdx >= words.length) errorIdx = 0;
+      const correctWord = String(t.correctWord || '').trim();
+      let wrongWord = (words[errorIdx] || '').trim();
+
+      const wrongCandidates = (Array.isArray(t.fixOptions) ? t.fixOptions : [])
+        .map(v => String(v || '').trim())
+        .filter(v => v && v !== correctWord);
+
+      if (!wrongWord || wrongWord === correctWord) {
+        wrongWord = wrongCandidates[0] || (correctWord ? `${correctWord}*` : '___');
+        words[errorIdx] = wrongWord;
+      }
+
+      const options = Array.from(new Set([correctWord, wrongWord, ...wrongCandidates].filter(Boolean))).slice(0, 3);
+      while (options.length < 3) options.push(`opt${options.length + 1}`);
+
+      return {
+        ...t,
+        words,
+        errorIdx,
+        correctWord,
+        fixOptions: options.sort(() => Math.random() - 0.5),
+      };
+    });
+  }
+
+  if (exNum === 6) {
+    return arr.map((t) => {
+      const parts = String(t.correctSentence || '').trim().split(/\s+/).filter(Boolean).slice(0, 5);
+      const correctSentence = parts.join(' ');
+      const tokens = Array.isArray(t.tokens) && t.tokens.length
+        ? t.tokens.map(v => String(v || '').trim()).filter(Boolean).slice(0, 5)
+        : [...parts];
+      return {
+        ...t,
+        correctSentence,
+        tokens: tokens.sort(() => Math.random() - 0.5),
+      };
+    }).filter(t => t.correctSentence);
+  }
+
+  if (exNum === 7) {
+    return arr.map((t) => {
+      const nativeWord = String(t.nativeWord || t.word || t.sentence || '').trim();
+      const correct = String(t.correct || '').trim();
+      let opts = Array.isArray(t.opts) ? t.opts.map(v => String(v || '').trim()).filter(Boolean) : [];
+      if (!opts.includes(correct) && correct) opts.unshift(correct);
+      opts = Array.from(new Set(opts)).slice(0, 3);
+      while (opts.length < 3) opts.push(`варіант ${opts.length + 1}`);
+      return {
+        ...t,
+        nativeWord,
+        correct,
+        opts,
+      };
+    }).filter(t => t.nativeWord && t.correct);
+  }
+
+  return arr;
+}
+
 function applyAiData(exNum, tasks) {
+  const normalizedTasks = normalizeTasksByExercise(exNum, tasks);
+
   if (exNum === 1) {
-    E1_DATA.length = 0; tasks.forEach(t => E1_DATA.push(t));
+    E1_DATA.length = 0; normalizedTasks.forEach(t => E1_DATA.push(t));
     e1State = { idx: 0, score: 0, answered: false }; renderE1();
   } else if (exNum === 2) {
-    E2_DATA.length = 0; tasks.forEach(t => E2_DATA.push(t));
+    E2_DATA.length = 0; normalizedTasks.forEach(t => E2_DATA.push(t));
     e2State = { idx: 0, score: 0 }; renderE2();
   } else if (exNum === 3) {
-    E3_DATA.length = 0; tasks.forEach(t => E3_DATA.push(t));
+    E3_DATA.length = 0; normalizedTasks.forEach(t => E3_DATA.push(t));
     e3State = { idx: 0, score: 0 }; renderE3();
   } else if (exNum === 4) {
-    E4_DATA.length = 0; tasks.forEach(t => E4_DATA.push(t));
+    E4_DATA.length = 0; normalizedTasks.forEach(t => E4_DATA.push(t));
     e4State = { idx: 0, score: 0 }; renderE4();
   } else if (exNum === 5) {
-    E5_DATA.length = 0; tasks.forEach(t => E5_DATA.push(t));
+    E5_DATA.length = 0; normalizedTasks.forEach(t => E5_DATA.push(t));
     e5State = { idx: 0, score: 0, phase: 1, wrongClicks: 0 }; renderE5();
   } else if (exNum === 6) {
-    E6_DATA.length = 0; tasks.forEach(t => E6_DATA.push(t));
+    E6_DATA.length = 0; normalizedTasks.forEach(t => E6_DATA.push(t));
     e6State = { idx: 0, score: 0, picked: [], answered: false }; renderE6();
   } else if (exNum === 7) {
-    E7_DATA.length = 0; tasks.forEach(t => E7_DATA.push(t));
+    E7_DATA.length = 0; normalizedTasks.forEach(t => E7_DATA.push(t));
     e7State = { idx: 0, score: 0, answered: false }; renderE7();
   }
 }

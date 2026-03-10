@@ -326,6 +326,7 @@ const GRAMMAR_CONFIG = {
         'correctWord, fixOptions (рівно 3: correctWord + 2 хибних),\n' +
         `uk — ТІЛЬКИ переклад мовою ${L.uiLanguage}, без жодних інших мов у дужках.\n` +
         (L.helper.id !== 'none' ? `en — ТІЛЬКИ переклад мовою ${L.helper.nameEn}, ОКРЕМО від поля uk.\n` : '') +
+        'ВАЖЛИВО: words[errorIdx] має бути ПОМИЛКОВИМ словом і НЕ дорівнювати correctWord.\n' +
         'ВАЖЛИВО: correctWord ОБОВ\'ЯЗКОВО присутній серед fixOptions.\n' +
         'Відповідай ТІЛЬКИ валідним JSON без markdown:\n' +
         (L.helper.id !== 'none'
@@ -353,6 +354,7 @@ const GRAMMAR_CONFIG = {
       get aiPrompt() { const L = _vLang(); return (
         `Ти вчитель ${L.targetName}. Згенеруй 5 завдань формату Tap-order transform.\n` +
         'Кожне завдання містить: instruction, source, tokens (перемішані слова), correctSentence, uk, explain.\n' +
+        'ОБОВ\'ЯЗКОВО: correctSentence коротке — максимум 5 слів.\n' +
         'tokens мають складати correctSentence без зайвих слів.\n' +
         (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
         'JSON only:\n' +
@@ -377,13 +379,15 @@ const GRAMMAR_CONFIG = {
       ],
       get aiPrompt() { const L = _vLang(); return (
         `Ти вчитель ${L.targetName}. Згенеруй 5 словникових завдань для смартфона.\n` +
-        'Формат: sentence (контекст), word (цільове слово/фраза), opts (3 варіанти), correct, uk, explain, example.\n' +
+        `Формат: nativeWord (одне слово або усталений вираз мовою ${L.uiLanguage}), opts (рівно 3 варіанти мовою ${L.targetName}), correct, uk, explain, example.\n` +
+        'ВАРІАНТИ opts мають бути близькі за темою/сенсом, але лише один правильний.\n' +
+        'Дозволено використовувати усталені вирази (напр. ввічливі формули), не лише одиничні слова.\n' +
         'Використовуй лексику з теми сесії, яку передано нижче в промпті.\n' +
         (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
         'JSON only:\n' +
         (L.helper.id !== 'none'
-          ? '{"tasks":[{"sentence":"...","word":"...","opts":["...","...","..."],"correct":"...","uk":"...","en":"...","example":"...","explain":"7–12 слів"}]}'
-          : '{"tasks":[{"sentence":"...","word":"...","opts":["...","...","..."],"correct":"...","uk":"...","example":"...","explain":"7–12 слів"}]}'
+          ? '{"tasks":[{"nativeWord":"...","opts":["...","...","..."],"correct":"...","uk":"...","en":"...","example":"...","explain":"7–12 слів"}]}'
+          : '{"tasks":[{"nativeWord":"...","opts":["...","...","..."],"correct":"...","uk":"...","example":"...","explain":"7–12 слів"}]}'
         )
       ); },
     },
