@@ -30,6 +30,10 @@ const SETTINGS_CONFIG = {
         { value: 'Emergencies', label: '🚨 Надзвичайні ситуації' },
     ],
 
+    // Режим теми для модуля граматики за замовчуванням:
+    // 'random' — випадкова тема, якщо користувач не обрав вручну.
+    grammarThemeDefaultMode: 'random',
+
     // ── Провайдери ШІ ────────────────────────────────────────
     providers: [
         { id: 'openai',    label: 'OpenAI (ChatGPT)',   icon: 'fa-robot' },
@@ -282,4 +286,11 @@ function getLangConfig() {
         helperClause,                       // ' When needed, add brief hints in English.'
         speechLang:   target.bcp47,         // 'es-ES'
     };
+}
+
+
+// ── Глобальна функція режиму теми для grammar-модуля ─────────
+function getGrammarThemeDefaultMode() {
+    const mode = (SETTINGS_CONFIG && SETTINGS_CONFIG.grammarThemeDefaultMode) || 'random';
+    return mode === 'manual' ? 'manual' : 'random';
 }

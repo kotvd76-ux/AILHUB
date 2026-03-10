@@ -939,6 +939,16 @@ body::before {
         </select>
       </div>
 
+      <!-- Theme -->
+      <div style="display:flex; flex-direction:column; gap:0.5rem;">
+        <label style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.1em; padding-left:1rem; font-family:'Plus Jakarta Sans',sans-serif;">
+          Тема
+        </label>
+        <select id="sel-theme" class="ph-select" aria-label="Оберіть тему вправи">
+          <!-- Filled by JS from getPriorityThemes -->
+        </select>
+      </div>
+
       <!-- Exercise type -->
       <div style="display:flex; flex-direction:column; gap:0.5rem;">
         <label style="font-size:0.6rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.1em; padding-left:1rem; font-family:'Plus Jakarta Sans',sans-serif;">
@@ -1154,23 +1164,11 @@ body::before {
     </div>
     <div class="card">
       <div class="exercise-label">Вправа 4</div>
-      <div class="exercise-title">Граматичний свайп</div>
-      <div class="exercise-desc">Вибери правильний варіант кнопками або свайпом по картці.</div>
-      <div class="swipe-area">
-        <div class="swipe-card" id="e4-card"
-             onmousedown="startDrag(event)"
-             ontouchstart="startTouchDrag(event)"
-             role="group" aria-label="Картка зі завданням">
-          <span class="swipe-label-overlay left"  id="sw-label-a" aria-hidden="true">A</span>
-          <span class="swipe-label-overlay right" id="sw-label-b" aria-hidden="true">B</span>
-          <div class="swipe-sentence" id="e4-sentence"></div>
-          <div class="swipe-hint"    id="e4-hint"></div>
-        </div>
-      </div>
-      <div class="swipe-btns" role="group" aria-label="Вибір відповіді">
-        <button class="swipe-btn left-btn"  id="sw-btn-a" onclick="swipeChoose('A')">👈 <span id="sw-a-label"></span></button>
-        <button class="swipe-btn right-btn" id="sw-btn-b" onclick="swipeChoose('B')"><span id="sw-b-label"></span> 👉</button>
-      </div>
+      <div class="exercise-title">Ser / Estar — контекст (3 варіанти)</div>
+      <div class="exercise-desc">Обери правильну форму ser/estar із 3 варіантів у контексті.</div>
+      <div class="fib-sentence" id="e4-sentence"></div>
+      <div class="swipe-hint" id="e4-hint"></div>
+      <div class="options-list" id="e4-options" role="list" aria-label="Вибір відповіді"></div>
       <div class="translations">
         <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e4-uk"></span></div>
         <div class="trans-row" id="e4-helper-row" style="display:none"><span class="flag" id="e4-helper-flag" aria-hidden="true"></span><span id="e4-en"></span></div>
@@ -1231,6 +1229,83 @@ body::before {
     </div>
   </div>
 
+  <!-- EX 6 -->
+  <div class="exercise-wrap" id="ex-5" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e6-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e6-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-6" onclick="goGenerateEx(6)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e6-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 6</div>
+      <div class="exercise-title">Tap-order: усталені вирази</div>
+      <div class="exercise-desc">Збери усталений вираз або коротку фразу (до 5 слів) у правильному порядку.</div>
+      <div class="fib-sentence" id="e6-instruction" aria-live="polite"></div>
+      <div class="fib-sentence" id="e6-built" aria-live="polite"><span class="fib-blank">___</span></div>
+      <div class="options-list" id="e6-options" role="list" aria-label="Слова для складання"></div>
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e6-uk"></span></div>
+        <div class="trans-row" id="e6-helper-row" style="display:none"><span class="flag" id="e6-helper-flag" aria-hidden="true"></span><span id="e6-en"></span></div>
+      </div>
+      <div class="feedback-box" id="e6-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e6-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text"><span class="fb-main" id="e6-fb-msg"></span><span class="fb-explain" id="e6-fb-explain"></span></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e6-next" onclick="nextE6()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
+  <!-- EX 7 -->
+  <div class="exercise-wrap" id="ex-6" role="tabpanel">
+    <div class="score-bar" aria-live="polite">
+      <div class="score-top">
+        <div class="score-top-left">
+          <div><div class="score-label">Питання</div><div class="score-val" id="e7-q-num">1 / 5</div></div>
+          <div><div class="score-label">Правильних</div><div class="score-val" id="e7-score">0</div></div>
+        </div>
+        <button class="go-btn" id="go-btn-7" onclick="goGenerateEx(7)" title="Згенерувати нові завдання через AI">
+          <span class="go-spinner"></span>
+          <i class="fa-solid fa-wand-magic-sparkles go-icon" aria-hidden="true"></i>
+          Go
+        </button>
+      </div>
+      <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20">
+        <div class="progress-fill" id="e7-progress" style="width:20%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="exercise-label">Вправа 7</div>
+      <div class="exercise-title">Словник</div>
+      <div class="exercise-desc">Дано слово рідною мовою — обери правильний варіант мовою навчання.</div>
+      <div class="fib-sentence" id="e7-sentence" aria-live="polite"></div>
+      <div class="translations">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e7-uk"></span></div>
+        <div class="trans-row" id="e7-helper-row" style="display:none"><span class="flag" id="e7-helper-flag" aria-hidden="true"></span><span id="e7-en"></span></div>
+      </div>
+      <div class="options-list" id="e7-options" role="list" aria-label="Варіанти відповіді"></div>
+      <div class="feedback-box" id="e7-fb" role="alert" aria-live="assertive">
+        <div class="fb-icon" id="e7-fb-icon" aria-hidden="true"></div>
+        <div class="fb-text"><span class="fb-main" id="e7-fb-msg"></span><span class="fb-explain" id="e7-fb-explain"></span></div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="next-btn" id="e7-next" onclick="nextE7()" style="display:none">Далі →</button>
+    </div>
+  </div>
+
 </div><!-- /app -->
 </div><!-- /main-app -->
 
@@ -1241,6 +1316,24 @@ body::before {
 
 // Поточний вибраний рівень — читається при генерації
 let selectedLevel = 'B1';
+let selectedTheme = ''; // '' => авто (випадкова з sett_set)
+const AUTO_THEME_ROTATE_MS = 60 * 1000;
+let autoThemeState = { value: '', ts: 0 };
+
+
+function buildSelectionThemeDropdown() {
+  const sel = document.getElementById('sel-theme');
+  if (!sel) return;
+
+  const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+  const autoLabel = '🎲 Автовибір теми';
+
+  sel.innerHTML = `<option value="">${autoLabel}</option>` + themes.map(t =>
+    `<option value="${t.value}">${t.label}</option>`
+  ).join('');
+
+  sel.value = '';
+}
 
 function buildSelectionDropdown() {
   const sel = document.getElementById('sel-exercise');
@@ -1253,6 +1346,7 @@ function buildSelectionDropdown() {
 
 function handleSelectionStart() {
   selectedLevel = document.getElementById('sel-level').value;
+  selectedTheme = document.getElementById('sel-theme')?.value || '';
   const exIdx   = parseInt(document.getElementById('sel-exercise').value, 10);
 
   // Ховаємо selection screen, показуємо app
@@ -1262,7 +1356,7 @@ function handleSelectionStart() {
   // Переходимо до обраної вправи
   selectExercise(exIdx);
 
-  log(`Старт: рівень ${selectedLevel}, вправа ${exIdx + 1}`, 'info');
+  log(`Старт: рівень ${selectedLevel}, вправа ${exIdx + 1}${selectedTheme ? `, тема ${selectedTheme}` : ', тема авто'}`, 'info');
 }
 
 // ══════════════════════════════════════════════
@@ -1292,10 +1386,12 @@ const CFG = (typeof GRAMMAR_CONFIG !== 'undefined') ? GRAMMAR_CONFIG : {
   uiLanguage: 'uk',
   exercises: [
     { id:'domino',    num:'01', label:'Дієслівне доміно' },
-    { id:'subjuntivo',num:'02', label:'Subjuntivo — завершення фрази' },
+    { id:'contrast',  num:'02', label:'Контраст форм (мовозалежна)' },
     { id:'fill',      num:'03', label:'Fill-in-the-Blank' },
-    { id:'swipe',     num:'04', label:'Граматичний свайп' },
-    { id:'translate', num:'05', label:'Перевір переклад' },
+    { id:'context3',  num:'04', label:'Ser / Estar — контекст (3 варіанти)' },
+    { id:'spotfix',   num:'05', label:'Знайди помилку' },
+    { id:'transform', num:'06', label:'Tap-order: усталені вирази' },
+    { id:'vocab',     num:'07', label:'Словник' },
   ]
 };
 
@@ -1433,7 +1529,7 @@ function getTTSTextForExercise(px) {
       const d = E4_DATA[e4State.idx];
       if (!d) return null;
       // sentence містить ___, замінюємо на правильний варіант
-      const correct = d.correct === 'A' ? d.optA : d.optB;
+      const correct = d.correct || '';
       return (d.sentence || '').replace('___', correct);
     }
     if (px === 'e5') {
@@ -1443,6 +1539,16 @@ function getTTSTextForExercise(px) {
       const words = [...(d.words || [])];
       if (d.errorIdx != null) words[d.errorIdx] = d.correctWord;
       return words.join(' ');
+    }
+    if (px === 'e6') {
+      const d = E6_DATA[e6State.idx];
+      if (!d) return null;
+      return d.correctSentence || '';
+    }
+    if (px === 'e7') {
+      const d = E7_DATA[e7State.idx];
+      if (!d) return null;
+      return d.correct || d.example || d.sentence || `${d.nativeWord || d.word || ''}`;
     }
   } catch(e) {}
   return null;
@@ -1466,6 +1572,8 @@ let E2_DATA = [];
 let E3_DATA = [];
 let E4_DATA = [];
 let E5_DATA = [];
+let E6_DATA = [];
+let E7_DATA = [];
 
 // ══════════════════════════════════════════════
 // STATE
@@ -1475,6 +1583,8 @@ let e2State={idx:0,score:0};
 let e3State={idx:0,score:0};
 let e4State={idx:0,score:0};
 let e5State={idx:0,score:0,phase:1,wrongClicks:0};
+let e6State={idx:0,score:0,picked:[],answered:false};
+let e7State={idx:0,score:0,answered:false};
 let currentEx = 0;
 
 // ══════════════════════════════════════════════
@@ -1682,45 +1792,35 @@ function nextE3() { e3State.idx++; if(e3State.idx>=E3_DATA.length){showResult('e
 // ══════════════════════════════════════════════
 function renderE4() {
   const d = E4_DATA[e4State.idx];
-  document.getElementById('e4-sentence').innerHTML = d.sentence.replace('___','<span class="swipe-blank"></span>');
-  document.getElementById('e4-hint').textContent = '💡 '+d.hint;
-  document.getElementById('sw-a-label').textContent = d.optA;
-  document.getElementById('sw-b-label').textContent = d.optB;
-  document.getElementById('sw-btn-a').disabled = false; document.getElementById('sw-btn-a').setAttribute('aria-label',`Варіант A: ${d.optA}`);
-  document.getElementById('sw-btn-b').disabled = false; document.getElementById('sw-btn-b').setAttribute('aria-label',`Варіант B: ${d.optB}`);
+  document.getElementById('e4-sentence').innerHTML = (d.sentence || '').replace('___','<span class="fib-blank">___</span>');
+  document.getElementById('e4-hint').textContent = d.hint ? ('💡 ' + d.hint) : '';
+  const opts = Array.isArray(d.opts)
+    ? d.opts
+    : [d.optA, d.optB, d.correct].filter(Boolean).filter((v, i, arr) => arr.indexOf(v) === i).slice(0, 3);
+  document.getElementById('e4-options').innerHTML = opts.map((o, i) => `
+    <button class="option-btn" onclick="answerE4(this)" data-val="${o}" role="listitem">
+      <span class="opt-letter" aria-hidden="true">${LETTERS[i]}</span>${o}
+    </button>`).join('');
   document.getElementById('e4-uk').textContent = d.uk || '';
   document.getElementById('e4-en').textContent = d.en || '';
   _showHelperRow('e4', d.en);
   document.getElementById('e4-fb').className = 'feedback-box';
   document.getElementById('e4-next').style.display = 'none';
-  const c = document.getElementById('e4-card'); c.className='swipe-card'; c.style.transform='';
-  document.getElementById('sw-label-a').style.opacity = 0;
-  document.getElementById('sw-label-b').style.opacity = 0;
   updateBar('e4', e4State.idx, e4State.score);
 }
-function swipeChoose(ch) {
+function answerE4(btn) {
   const d = E4_DATA[e4State.idx];
-  const ok = ch===d.correct; if(ok) e4State.score++;
-  document.getElementById('e4-card').classList.add(ch==='A'?'swipe-left':'swipe-right');
-  document.getElementById('sw-btn-a').disabled = true; document.getElementById('sw-btn-b').disabled = true;
-  const ct = d.correct==='A'?d.optA:d.optB; const cht = ch==='A'?d.optA:d.optB;
-  showFB('e4', ok, ok?`✓ Правильно! ${cht}`:`✗ Правильна відповідь: ${ct}`, d.explain||`${ct} — правильний вибір для цього речення`);
+  const chosen = btn.getAttribute('data-val');
+  const ok = chosen === d.correct;
+  if (ok) e4State.score++;
+  document.querySelectorAll('#e4-options .option-btn').forEach(b => {
+    b.disabled = true;
+    if (b.getAttribute('data-val') === d.correct) b.classList.add('correct-ans');
+    else if (b === btn && !ok) b.classList.add('wrong-ans');
+  });
+  showFB('e4', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain || d.hint || '');
 }
 function nextE4() { e4State.idx++; if(e4State.idx>=E4_DATA.length){showResult('e4',e4State.score,E4_DATA.length);return;} renderE4(); }
-
-let dragStartX=0;
-function startDrag(e) {
-  dragStartX=e.clientX;
-  const mv=ev=>{const dx=ev.clientX-dragStartX; document.getElementById('e4-card').style.transform=`translateX(${dx}px) rotate(${dx*.04}deg)`; document.getElementById('sw-label-a').style.opacity=Math.min(1,Math.max(0,-dx/70)); document.getElementById('sw-label-b').style.opacity=Math.min(1,Math.max(0,dx/70));};
-  const up=ev=>{const dx=ev.clientX-dragStartX; document.getElementById('e4-card').style.transform=''; document.getElementById('sw-label-a').style.opacity=0; document.getElementById('sw-label-b').style.opacity=0; if(Math.abs(dx)>80)swipeChoose(dx<0?'A':'B'); document.removeEventListener('mousemove',mv); document.removeEventListener('mouseup',up);};
-  document.addEventListener('mousemove',mv); document.addEventListener('mouseup',up);
-}
-function startTouchDrag(e) {
-  dragStartX=e.touches[0].clientX;
-  const mv=ev=>{const dx=ev.touches[0].clientX-dragStartX; document.getElementById('e4-card').style.transform=`translateX(${dx}px) rotate(${dx*.04}deg)`; document.getElementById('sw-label-a').style.opacity=Math.min(1,Math.max(0,-dx/70)); document.getElementById('sw-label-b').style.opacity=Math.min(1,Math.max(0,dx/70));};
-  const up=ev=>{const dx=ev.changedTouches[0].clientX-dragStartX; document.getElementById('e4-card').style.transform=''; if(Math.abs(dx)>60)swipeChoose(dx<0?'A':'B'); document.removeEventListener('touchmove',mv); document.removeEventListener('touchend',up);};
-  document.addEventListener('touchmove',mv,{passive:true}); document.addEventListener('touchend',up);
-}
 
 // ══════════════════════════════════════════════
 // EXERCISE 5 — ЗНАЙДИ ПОМИЛКУ + ВИПРАВ
@@ -1861,6 +1961,106 @@ function nextE5() {
 }
 
 // ══════════════════════════════════════════════
+// EXERCISE 6 — TAP-ORDER TRANSFORM
+// ══════════════════════════════════════════════
+function renderE6() {
+  const d = E6_DATA[e6State.idx];
+  if (!d) return;
+  e6State.picked = [];
+  e6State.answered = false;
+
+  document.getElementById('e6-instruction').innerHTML = `<strong>${d.instruction || 'Збери усталений вираз'}</strong><br>${d.source || ''}`;
+  document.getElementById('e6-built').innerHTML = '<span class="fib-blank">___</span>';
+  document.getElementById('e6-uk').textContent = d.uk || '';
+  document.getElementById('e6-en').textContent = d.en || '';
+  _showHelperRow('e6', d.en);
+
+  const tokens = Array.isArray(d.tokens) ? d.tokens : String(d.correctSentence || '').split(' ');
+  document.getElementById('e6-options').innerHTML = tokens.map((tok, i) => `
+    <button class="option-btn" id="e6-opt-${i}" onclick="pickE6(${i})" data-val="${tok}">${tok}</button>
+  `).join('') + '<button class="option-btn" onclick="undoE6()">↩️ Назад</button>';
+
+  document.getElementById('e6-fb').className = 'feedback-box';
+  document.getElementById('e6-next').style.display = 'none';
+  updateBar('e6', e6State.idx, e6State.score);
+}
+
+function pickE6(i) {
+  if (e6State.answered) return;
+  const btn = document.getElementById(`e6-opt-${i}`);
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  e6State.picked.push(btn.getAttribute('data-val'));
+  document.getElementById('e6-built').textContent = e6State.picked.join(' ');
+
+  const d = E6_DATA[e6State.idx];
+  const target = String(d.correctSentence || '').trim();
+  if (!target) return;
+  if (e6State.picked.length === target.split(' ').length) {
+    e6State.answered = true;
+    const chosen = e6State.picked.join(' ').trim();
+    const ok = chosen === target;
+    if (ok) e6State.score++;
+    showFB('e6', ok, ok ? '✓ Правильно зібрано!' : `✗ Правильно: ${target}`, d.explain || 'Зверни увагу на порядок слів і форму.');
+    if (!ok) {
+      document.getElementById('e6-built').textContent = target;
+    }
+  }
+}
+
+function undoE6() {
+  if (e6State.answered || e6State.picked.length === 0) return;
+  const last = e6State.picked.pop();
+  const btns = Array.from(document.querySelectorAll('#e6-options .option-btn[id^="e6-opt-"]'));
+  const found = btns.reverse().find(b => b.getAttribute('data-val') === last && b.disabled);
+  if (found) found.disabled = false;
+  document.getElementById('e6-built').innerHTML = e6State.picked.length ? e6State.picked.join(' ') : '<span class="fib-blank">___</span>';
+}
+
+function nextE6() { e6State.idx++; if(e6State.idx>=E6_DATA.length){showResult('e6',e6State.score,E6_DATA.length);return;} renderE6(); }
+
+// ══════════════════════════════════════════════
+// EXERCISE 7 — VOCAB
+// ══════════════════════════════════════════════
+function renderE7() {
+  const d = E7_DATA[e7State.idx];
+  if (!d) return;
+  e7State.answered = false;
+  const nativePrompt = d.nativeWord || d.word || d.sentence || '';
+  document.getElementById('e7-sentence').innerHTML = `<strong>${nativePrompt}</strong>`;
+  document.getElementById('e7-uk').textContent = d.uk || d.example || '';
+  document.getElementById('e7-en').textContent = d.en || '';
+  _showHelperRow('e7', d.en);
+
+  const opts = (d.opts || [d.correct]).sort(() => Math.random() - .5);
+  document.getElementById('e7-options').innerHTML = opts.map((o, i) => `
+    <button class="option-btn" onclick="answerE7(this)" data-val="${o}" role="listitem">
+      <span class="opt-letter" aria-hidden="true">${LETTERS[i]}</span>${o}
+    </button>`).join('');
+  document.getElementById('e7-fb').className = 'feedback-box';
+  document.getElementById('e7-next').style.display = 'none';
+  updateBar('e7', e7State.idx, e7State.score);
+}
+
+function answerE7(btn) {
+  if (e7State.answered) return;
+  e7State.answered = true;
+  const d = E7_DATA[e7State.idx];
+  const chosen = btn.getAttribute('data-val');
+  const ok = chosen === d.correct;
+  if (ok) e7State.score++;
+
+  document.querySelectorAll('#e7-options .option-btn').forEach(b => {
+    b.disabled = true;
+    if (b.getAttribute('data-val') === d.correct) b.classList.add('correct-ans');
+    else if (b === btn && !ok) b.classList.add('wrong-ans');
+  });
+  showFB('e7', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain || 'Повтори слово в контексті.');
+}
+
+function nextE7() { e7State.idx++; if(e7State.idx>=E7_DATA.length){showResult('e7',e7State.score,E7_DATA.length);return;} renderE7(); }
+
+// ══════════════════════════════════════════════
 // SHARED HELPERS
 // ══════════════════════════════════════════════
 function showFB(px, ok, msg, expl) {
@@ -1899,6 +2099,8 @@ function autoNext(px) {
   else if (px==='e3') nextE3();
   else if (px==='e4') nextE4();
   else if (px==='e5') nextE5();
+  else if (px==='e6') nextE6();
+  else if (px==='e7') nextE7();
 }
 
 function updateBar(px, idx, score) {
@@ -1914,7 +2116,7 @@ function showResult(px, score, total) {
   const pct   = Math.round(score/total*100);
   const emoji = pct>=80?'🏆':pct>=60?'👍':'💪';
   const msg   = pct>=80?'Відмінно!':pct>=60?'Добре!':'Тренуйся ще!';
-  const idx   = ['e1','e2','e3','e4','e5'].indexOf(px);
+  const idx   = ['e1','e2','e3','e4','e5','e6','e7'].indexOf(px);
   const wrap  = document.getElementById(`ex-${idx}`);
 
   // Ховаємо поточний вміст вправи (не видаляємо — щоб можна було відновити)
@@ -1936,7 +2138,7 @@ function showResult(px, score, total) {
 }
 
 function resetEx(px) {
-  const m = {e1:0, e2:1, e3:2, e4:3, e5:4};
+  const m = {e1:0, e2:1, e3:2, e4:3, e5:4, e6:5, e7:6};
   const idx  = m[px];
   const wrap = document.getElementById(`ex-${idx}`);
 
@@ -1952,13 +2154,15 @@ function resetEx(px) {
   if(px==='e3'){e3State={idx:0,score:0}; renderE3();}
   if(px==='e4'){e4State={idx:0,score:0}; renderE4();}
   if(px==='e5'){e5State={idx:0,score:0,phase:1,wrongClicks:0}; renderE5();}
+  if(px==='e6'){e6State={idx:0,score:0,picked:[],answered:false}; renderE6();}
+  if(px==='e7'){e7State={idx:0,score:0,answered:false}; renderE7();}
 
   // selectExercise оновлює dropdown і скролить вгору
   selectExercise(idx);
 }
 
 // Індекс вправи (0-based) → префікс px
-const EX_PX = ['e1','e2','e3','e4','e5'];
+const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
 
 // ══════════════════════════════════════════════
 // INIT
@@ -1988,7 +2192,8 @@ const EX_PX = ['e1','e2','e3','e4','e5'];
     document.querySelectorAll('.hdr-btn-debug').forEach(b => b.style.display = 'none');
   }
 
-  // Build dropdown in selection screen
+  // Build dropdowns in selection screen
+  buildSelectionThemeDropdown();
   buildSelectionDropdown();
 
   // Build main app dropdown (hidden until Start)
@@ -2065,7 +2270,7 @@ function restoreCard(exIdx) {
 // Автозапуск генерації при першому відкритті вправи
 function autoLoadExercise(exIdx) {
   const px   = EX_PX[exIdx];
-  const data = [E1_DATA, E2_DATA, E3_DATA, E4_DATA, E5_DATA][exIdx];
+  const data = [E1_DATA, E2_DATA, E3_DATA, E4_DATA, E5_DATA, E6_DATA, E7_DATA][exIdx];
   if (!data || data.length === 0) {
     goGenerateEx(exIdx + 1); // exNum = 1-based
   }
@@ -2197,9 +2402,28 @@ async function goGenerateEx(exNum, retryCount = 0) {
   // ── Seed: беремо свіжий, якого ще не було ────
   const seedPool  = (exCfg.seeds   && exCfg.seeds.length)   ? exCfg.seeds   : RANDOM_SEEDS_FALLBACK;
   const focusPool = (exCfg.focuses && exCfg.focuses.length) ? exCfg.focuses : null;
+  const themes    = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+  const themeMode = (typeof getGrammarThemeDefaultMode === 'function') ? getGrammarThemeDefaultMode() : 'random';
   const usedSeeds = await getUsedSeeds(exCfg.id);
   const seed      = pickFreshSeed(seedPool, usedSeeds);
   const focus     = focusPool ? pickRandom(focusPool) : null;
+  const chosenTheme = selectedTheme
+    ? (themes.find(t => t.value === selectedTheme) || { value: selectedTheme, label: selectedTheme })
+    : null;
+
+  let randomTheme = null;
+  if (!chosenTheme && themeMode === 'random' && themes.length) {
+    const now = Date.now();
+    const cacheValid = autoThemeState.value && (now - autoThemeState.ts) < AUTO_THEME_ROTATE_MS;
+    if (cacheValid) {
+      randomTheme = themes.find(t => t.value === autoThemeState.value) || { value: autoThemeState.value, label: autoThemeState.value };
+    } else {
+      randomTheme = pickRandom(themes);
+      autoThemeState = { value: randomTheme.value, ts: now };
+    }
+  }
+
+  const theme = chosenTheme || randomTheme;
   const level     = selectedLevel || 'B1';
   const token     = Date.now();
 
@@ -2214,12 +2438,13 @@ async function goGenerateEx(exNum, retryCount = 0) {
     `\n\nРІВЕНЬ УЧНЯ: ${level}. Суворо дотримуйся — лексика, часи і довжина речень ` +
     `мають відповідати рівню ${level}. Не виходь за межі рівня.` +
     (focus     ? `\n\nГРАМАТИЧНИЙ ФОКУС СЕСІЇ: ${focus}` : '') +
+    (theme     ? `\n\nТЕМА СЕСІЇ (обов'язково для словника і лексики): ${theme.value} — ${theme.label}` : '') +
     forbidBlock +
     `\n\nКОНТЕКСТ СЕСІЇ: Прив'яжи всі 5 речень до ситуації «${seed}». ` +
     `Session-token: ${token}`;
 
   const retryLabel = retryCount > 0 ? ` (спроба ${retryCount + 1})` : '';
-  log(`ex${exNum}${retryLabel} | ${level} | seed: «${seed}»${focus ? ` | «${focus}»` : ''} | ${provider}`, 'info');
+  log(`ex${exNum}${retryLabel} | ${level} | seed: «${seed}»${focus ? ` | «${focus}»` : ''}${theme ? ` | theme: ${theme.value}` : ''} | ${provider}`, 'info');
 
   if (btn) { btn.disabled = true; btn.classList.add('loading'); }
   if (retryCount === 0) showCardLoading(exIdx);
@@ -2302,22 +2527,101 @@ async function goGenerateEx(exNum, retryCount = 0) {
 
 
 
+function normalizeTasksByExercise(exNum, tasks) {
+  const arr = Array.isArray(tasks) ? tasks : [];
+  if (exNum === 5) {
+    return arr.map((t) => {
+      const words = Array.isArray(t.words) ? [...t.words] : [];
+      let errorIdx = Number.isInteger(t.errorIdx) ? t.errorIdx : 0;
+      if (errorIdx < 0 || errorIdx >= words.length) errorIdx = 0;
+      const correctWord = String(t.correctWord || '').trim();
+      let wrongWord = (words[errorIdx] || '').trim();
+
+      const wrongCandidates = (Array.isArray(t.fixOptions) ? t.fixOptions : [])
+        .map(v => String(v || '').trim())
+        .filter(v => v && v !== correctWord);
+
+      if (!wrongWord || wrongWord === correctWord) {
+        wrongWord = wrongCandidates[0] || (correctWord ? `${correctWord}*` : '___');
+        words[errorIdx] = wrongWord;
+      }
+
+      const options = Array.from(new Set([correctWord, wrongWord, ...wrongCandidates].filter(Boolean))).slice(0, 3);
+      while (options.length < 3) options.push(`opt${options.length + 1}`);
+
+      return {
+        ...t,
+        words,
+        errorIdx,
+        correctWord,
+        fixOptions: options.sort(() => Math.random() - 0.5),
+      };
+    });
+  }
+
+  if (exNum === 6) {
+    return arr.map((t) => {
+      const parts = String(t.correctSentence || '').trim().split(/\s+/).filter(Boolean).slice(0, 5);
+      const correctSentence = parts.join(' ');
+      const tokens = Array.isArray(t.tokens) && t.tokens.length
+        ? t.tokens.map(v => String(v || '').trim()).filter(Boolean).slice(0, 5)
+        : [...parts];
+      return {
+        ...t,
+        correctSentence,
+        tokens: tokens.sort(() => Math.random() - 0.5),
+      };
+    }).filter(t => t.correctSentence);
+  }
+
+  if (exNum === 7) {
+    const toTwoWords = (val) => String(val || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).join(' ');
+
+    return arr.map((t) => {
+      const nativeWord = toTwoWords(t.nativeWord || t.word || t.sentence || '');
+      const correct = toTwoWords(t.correct || '');
+      let opts = Array.isArray(t.opts) ? t.opts.map(v => toTwoWords(v)).filter(Boolean) : [];
+
+      if (!opts.includes(correct) && correct) opts.unshift(correct);
+      opts = Array.from(new Set(opts)).filter(v => v.split(/\s+/).length <= 2).slice(0, 3);
+      while (opts.length < 3) opts.push(`варіант ${opts.length + 1}`);
+
+      return {
+        ...t,
+        nativeWord,
+        correct,
+        opts,
+      };
+    }).filter(t => t.nativeWord && t.correct);
+  }
+
+  return arr;
+}
+
 function applyAiData(exNum, tasks) {
+  const normalizedTasks = normalizeTasksByExercise(exNum, tasks);
+
   if (exNum === 1) {
-    E1_DATA.length = 0; tasks.forEach(t => E1_DATA.push(t));
+    E1_DATA.length = 0; normalizedTasks.forEach(t => E1_DATA.push(t));
     e1State = { idx: 0, score: 0, answered: false }; renderE1();
   } else if (exNum === 2) {
-    E2_DATA.length = 0; tasks.forEach(t => E2_DATA.push(t));
+    E2_DATA.length = 0; normalizedTasks.forEach(t => E2_DATA.push(t));
     e2State = { idx: 0, score: 0 }; renderE2();
   } else if (exNum === 3) {
-    E3_DATA.length = 0; tasks.forEach(t => E3_DATA.push(t));
+    E3_DATA.length = 0; normalizedTasks.forEach(t => E3_DATA.push(t));
     e3State = { idx: 0, score: 0 }; renderE3();
   } else if (exNum === 4) {
-    E4_DATA.length = 0; tasks.forEach(t => E4_DATA.push(t));
+    E4_DATA.length = 0; normalizedTasks.forEach(t => E4_DATA.push(t));
     e4State = { idx: 0, score: 0 }; renderE4();
   } else if (exNum === 5) {
-    E5_DATA.length = 0; tasks.forEach(t => E5_DATA.push(t));
-    e5State = { idx: 0, score: 0 }; renderE5();
+    E5_DATA.length = 0; normalizedTasks.forEach(t => E5_DATA.push(t));
+    e5State = { idx: 0, score: 0, phase: 1, wrongClicks: 0 }; renderE5();
+  } else if (exNum === 6) {
+    E6_DATA.length = 0; normalizedTasks.forEach(t => E6_DATA.push(t));
+    e6State = { idx: 0, score: 0, picked: [], answered: false }; renderE6();
+  } else if (exNum === 7) {
+    E7_DATA.length = 0; normalizedTasks.forEach(t => E7_DATA.push(t));
+    e7State = { idx: 0, score: 0, answered: false }; renderE7();
   }
 }
 
