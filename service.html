@@ -221,7 +221,8 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:16px 0}
 <!-- SIDEBAR -->
 <nav class="sb">
   <div class="sb-sec">Логи та статистика</div>
-  <div class="sb-item active" onclick="sw('logs',this)"><i class="fa fa-chart-bar"></i> Аналіз логів <span class="sb-bdg g" id="sb-lc">0</span></div>
+  <div class="sb-item active" onclick="sw('studylogs',this)"><i class="fa fa-graduation-cap"></i> Аналіз стаділогів <span class="sb-bdg g" id="sb-lc">0</span></div>
+  <div class="sb-item" onclick="sw('techlogs',this)"><i class="fa fa-microchip"></i> Аналіз технологів <span class="sb-bdg" id="sb-tlc">0</span></div>
   <div class="sb-item" onclick="sw('sessions',this)"><i class="fa fa-history"></i> Сесії <span class="sb-bdg" id="sb-sc">0</span></div>
 
   <div class="sb-sec">Конфігурація</div>
@@ -230,6 +231,7 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:16px 0}
   <div class="sb-item" onclick="sw('exportimport',this)"><i class="fa fa-file-export"></i> Експорт / Імпорт</div>
 
   <div class="sb-sec">API</div>
+  <div class="sb-item" onclick="sw('apikeys',this)"><i class="fa fa-key"></i> API Ключі</div>
   <div class="sb-item" onclick="sw('apitest',this)"><i class="fa fa-plug"></i> Тестер ключів</div>
   <div class="sb-item" onclick="sw('monitor',this)"><i class="fa fa-signal"></i> Моніторинг доступн.</div>
   <div class="sb-item" onclick="sw('usage',this)"><i class="fa fa-gauge-high"></i> Використання ключів</div>
@@ -237,11 +239,11 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:16px 0}
 
 <main class="main">
 
-<!-- ═══ LOGS ═══ -->
-<div class="panel active" id="panel-logs">
+<!-- ═══ STUDY LOGS ═══ -->
+<div class="panel active" id="panel-studylogs">
   <div class="ph">
-    <div class="ph-icon" style="background:rgba(79,158,255,.12);color:var(--blue)"><i class="fa fa-chart-bar"></i></div>
-    <div><div class="ph-title">Аналіз логів</div><div class="ph-sub">Статистика навчання з studylog / techlog буферів</div></div>
+    <div class="ph-icon" style="background:rgba(45,224,138,.12);color:var(--green)"><i class="fa fa-graduation-cap"></i></div>
+    <div><div class="ph-title">Аналіз стаділогів</div><div class="ph-sub">Статистика навчання з sp_studylog_buffer</div></div>
     <div class="ph-acts">
       <button class="btn btn-blue" onclick="refreshLogs()"><i class="fa fa-rotate"></i> Оновити</button>
       <button class="btn" onclick="exportLog('study')"><i class="fa fa-download"></i> Навчання</button>
@@ -259,6 +261,29 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:16px 0}
   <div class="card"><div class="card-ttl"><i class="fa fa-list"></i> Останні 30 записів</div>
     <table class="tbl"><thead><tr><th>Час</th><th>Модуль</th><th>Тема</th><th>Рівень</th><th>Результат</th><th>Час(с)</th></tr></thead>
     <tbody id="logTbody"><tr><td colspan="6" style="color:var(--dim);text-align:center;padding:20px">Немає даних у буфері</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- ═══ TECH LOGS ═══ -->
+<div class="panel" id="panel-techlogs">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(180,127,255,.12);color:var(--purple)"><i class="fa fa-microchip"></i></div>
+    <div><div class="ph-title">Аналіз технологів</div><div class="ph-sub">Технічні події та помилки з sp_techlog_buffer</div></div>
+    <div class="ph-acts">
+      <button class="btn btn-blue" onclick="refreshTechLogs()"><i class="fa fa-rotate"></i> Оновити</button>
+      <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Експорт</button>
+    </div>
+  </div>
+  <div class="sg">
+    <div class="sbox b"><div class="sval" id="tl-total">0</div><div class="slbl">Всього подій</div></div>
+    <div class="sbox p"><div class="sval" id="tl-errors">0</div><div class="slbl">Помилок</div></div>
+    <div class="sbox g"><div class="sval" id="tl-mods">0</div><div class="slbl">Модулів</div></div>
+    <div class="sbox o"><div class="sval" id="tl-today">0</div><div class="slbl">Подій сьогодні</div></div>
+  </div>
+  <div class="chw"><div class="chtl"><i class="fa fa-layer-group" style="margin-right:6px"></i>Події по модулях</div><div class="bars" id="tlModChart"></div></div>
+  <div class="card"><div class="card-ttl"><i class="fa fa-list"></i> Останні 50 записів</div>
+    <table class="tbl"><thead><tr><th>Час</th><th>Модуль</th><th>Рівень</th><th>Подія</th><th>Опис</th></tr></thead>
+    <tbody id="tlTbody"><tr><td colspan="5" style="color:var(--dim);text-align:center;padding:20px">Немає даних у буфері</td></tr></tbody></table>
   </div>
 </div>
 
@@ -350,6 +375,64 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:16px 0}
   <hr class="sep">
   <div class="card-ttl"><i class="fa fa-clock-rotate-left"></i> Остання резервна копія</div>
   <div id="bkInfo" style="color:var(--dim);font-size:12px">Резервних копій не знайдено</div>
+</div>
+
+<!-- ═══ API KEYS ═══ -->
+<div class="panel" id="panel-apikeys">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(255,213,102,.12);color:var(--yellow)"><i class="fa fa-key"></i></div>
+    <div><div class="ph-title">API Ключі</div><div class="ph-sub">Управління ключами провайдерів — зберігаються у localStorage</div></div>
+    <div class="ph-acts"><button class="btn btn-blue" onclick="loadApiKeys()"><i class="fa fa-rotate"></i> Оновити</button></div>
+  </div>
+  <div style="background:rgba(79,158,255,.07);border:1px solid rgba(79,158,255,.2);border-radius:5px;padding:11px 14px;margin-bottom:20px;font-size:11.5px;color:var(--blue)">
+    <i class="fa fa-circle-info" style="margin-right:8px"></i>
+    Ключі зберігаються локально у вашому браузері (<strong>localStorage</strong>) і ніколи не передаються на сервер.
+  </div>
+
+  <!-- OpenAI -->
+  <div class="apic" style="display:block;padding:18px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="apic-ico">🤖</div>
+      <div><div class="apic-name">OpenAI</div><div class="apic-url">sp_apiKey_openai</div></div>
+      <div style="margin-left:auto" id="akst-openai"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="ak-openai" placeholder="sk-..." style="flex:1;font-size:12px" oninput="markUnsaved('openai')">
+      <button class="btn btn-green" onclick="saveApiKey('openai')" style="padding:6px 14px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn btn-red" onclick="clearApiKey('openai')" style="padding:6px 10px" title="Видалити"><i class="fa fa-trash"></i></button>
+      <button class="btn" onclick="toggleShowKey('openai')" style="padding:6px 10px" title="Показати/сховати"><i class="fa fa-eye" id="eye-openai"></i></button>
+    </div>
+  </div>
+
+  <!-- Gemini -->
+  <div class="apic" style="display:block;padding:18px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="apic-ico">✨</div>
+      <div><div class="apic-name">Google Gemini</div><div class="apic-url">sp_apiKey_gemini</div></div>
+      <div style="margin-left:auto" id="akst-gemini"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="ak-gemini" placeholder="AIza..." style="flex:1;font-size:12px" oninput="markUnsaved('gemini')">
+      <button class="btn btn-green" onclick="saveApiKey('gemini')" style="padding:6px 14px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn btn-red" onclick="clearApiKey('gemini')" style="padding:6px 10px" title="Видалити"><i class="fa fa-trash"></i></button>
+      <button class="btn" onclick="toggleShowKey('gemini')" style="padding:6px 10px" title="Показати/сховати"><i class="fa fa-eye" id="eye-gemini"></i></button>
+    </div>
+  </div>
+
+  <!-- Anthropic -->
+  <div class="apic" style="display:block;padding:18px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="apic-ico">🔮</div>
+      <div><div class="apic-name">Anthropic Claude</div><div class="apic-url">sp_apiKey_anthropic</div></div>
+      <div style="margin-left:auto" id="akst-anthropic"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="ak-anthropic" placeholder="sk-ant-..." style="flex:1;font-size:12px" oninput="markUnsaved('anthropic')">
+      <button class="btn btn-green" onclick="saveApiKey('anthropic')" style="padding:6px 14px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn btn-red" onclick="clearApiKey('anthropic')" style="padding:6px 10px" title="Видалити"><i class="fa fa-trash"></i></button>
+      <button class="btn" onclick="toggleShowKey('anthropic')" style="padding:6px 10px" title="Показати/сховати"><i class="fa fa-eye" id="eye-anthropic"></i></button>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ API TEST ═══ -->
@@ -455,7 +538,7 @@ function sw(id, el) {
   document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
   document.getElementById('panel-' + id).classList.add('active');
   el.classList.add('active');
-  const actions = { logs: refreshLogs, sessions: loadSessions, storage: loadLS, editor: () => loadEd('sett_set', document.querySelector('.edtab.active')), exportimport: loadBkInfo, usage: calcUsage };
+  const actions = { studylogs: refreshLogs, techlogs: refreshTechLogs, sessions: loadSessions, storage: loadLS, editor: () => loadEd('sett_set', document.querySelector('.edtab.active')), exportimport: loadBkInfo, usage: calcUsage, apikeys: loadApiKeys };
   if (actions[id]) actions[id]();
 }
 
@@ -545,6 +628,47 @@ function exportLog(type) {
   const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
   a.download = `${type}log_${new Date().toISOString().slice(0,10)}.txt`; a.click();
+}
+
+// TECH LOGS
+function refreshTechLogs() {
+  const lines = allTechLines();
+  const today = new Date().toISOString().slice(0, 10);
+  let errors = 0, todayCount = 0;
+  const modMap = {};
+  lines.forEach(l => {
+    const p = l.split('\t');
+    const ts = p[0] || '', mod = p[1] || '?', lvl = p[2] || '';
+    if (lvl === 'ERROR') errors++;
+    if (ts.startsWith(today)) todayCount++;
+    modMap[mod] = (modMap[mod] || 0) + 1;
+  });
+  document.getElementById('tl-total').textContent = lines.length;
+  document.getElementById('tl-errors').textContent = errors;
+  document.getElementById('tl-mods').textContent = Object.keys(modMap).length;
+  document.getElementById('tl-today').textContent = todayCount;
+  document.getElementById('sb-tlc').textContent = lines.length;
+  // chart by module
+  const modEl = document.getElementById('tlModChart');
+  if (!Object.keys(modMap).length) { modEl.innerHTML = '<span style="color:var(--dim);font-size:11px">Немає даних</span>'; }
+  else {
+    const colors = ['#4f9eff','#2de08a','#ff8c42','#b47fff','#ffd166','#00e5cc','#ff5566'];
+    const max = Math.max(...Object.values(modMap)) || 1;
+    modEl.innerHTML = Object.entries(modMap).map(([k, cnt], i) => {
+      const h = Math.max(4, Math.round(cnt / max * 55));
+      return `<div class="bc" title="${k}: ${cnt}"><div class="bar" style="height:${h}px;background:${colors[i%colors.length]};opacity:.8"></div><div class="blbl">${k.slice(0,6)}</div></div>`;
+    }).join('');
+  }
+  // table
+  const tbody = document.getElementById('tlTbody');
+  if (!lines.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--dim);text-align:center;padding:20px">Немає даних</td></tr>'; return; }
+  tbody.innerHTML = lines.slice(-50).reverse().map(l => {
+    const p = l.split('\t');
+    const ts = p[0]||'', mod = p[1]||'?', lvl = p[2]||'', evt = p[3]||'', desc = p[4]||'';
+    const lc = lvl === 'ERROR' ? 'var(--red)' : lvl === 'WARN' ? 'var(--yellow)' : 'var(--blue)';
+    const tag = lvl === 'ERROR' ? 'tr' : lvl === 'WARN' ? 'to' : 'tb';
+    return `<tr><td style="color:var(--dim)">${ts.slice(11,19)}</td><td><span class="tag tb">${mod}</span></td><td><span class="tag ${tag}" style="color:${lc}">${lvl||'INFO'}</span></td><td style="color:var(--text2)">${evt}</td><td style="color:var(--dim);max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${desc}</td></tr>`;
+  }).join('');
 }
 
 // SESSIONS
@@ -668,6 +792,47 @@ function doImport(ev) {
   r.readAsText(file); ev.target.value='';
 }
 
+// API KEYS
+const AK_PROVIDERS = ['openai','gemini','anthropic'];
+function loadApiKeys() {
+  AK_PROVIDERS.forEach(p => {
+    const key = localStorage.getItem('sp_apiKey_'+p) || localStorage.getItem('sp_'+p+'_key') || '';
+    const inp = document.getElementById('ak-'+p);
+    inp.value = key;
+    inp.type = 'password';
+    document.getElementById('eye-'+p).className = 'fa fa-eye';
+    setAkStatus(p, key ? 'saved' : 'empty');
+  });
+}
+function setAkStatus(p, state) {
+  const el = document.getElementById('akst-'+p);
+  if (state === 'saved') { el.className = 'ast ok'; el.textContent = '✓ збережено'; }
+  else if (state === 'empty') { el.className = 'ast idle'; el.textContent = '— не задано'; }
+  else if (state === 'unsaved') { el.className = 'ast chk'; el.textContent = '● не збережено'; }
+}
+function markUnsaved(p) { setAkStatus(p, 'unsaved'); }
+function saveApiKey(p) {
+  const val = document.getElementById('ak-'+p).value.trim();
+  if (!val) { toast('Введіть ключ перед збереженням'); return; }
+  localStorage.setItem('sp_apiKey_'+p, val);
+  setAkStatus(p, 'saved');
+  toast('✓ Ключ збережено: '+p);
+}
+function clearApiKey(p) {
+  if (!confirm(`Видалити ключ ${p}?`)) return;
+  localStorage.removeItem('sp_apiKey_'+p);
+  localStorage.removeItem('sp_'+p+'_key');
+  document.getElementById('ak-'+p).value = '';
+  setAkStatus(p, 'empty');
+  toast('Ключ видалено: '+p);
+}
+function toggleShowKey(p) {
+  const inp = document.getElementById('ak-'+p);
+  const ico = document.getElementById('eye-'+p);
+  if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fa fa-eye-slash'; }
+  else { inp.type = 'password'; ico.className = 'fa fa-eye'; }
+}
+
 // API TEST
 const API_CFGS = {
   openai: { getKey: ()=>localStorage.getItem('sp_apiKey_openai')||localStorage.getItem('sp_openai_key'), test: async k=>{ const t=Date.now(),r=await fetch('https://api.openai.com/v1/models',{headers:{Authorization:'Bearer '+k}}); return{ok:r.ok,ms:Date.now()-t,s:r.status}; } },
@@ -746,7 +911,7 @@ function calcUsage(){
 }
 
 // INIT
-window.addEventListener('DOMContentLoaded', () => { refreshLogs(); loadLS(); loadBkInfo(); loadEd('sett_set', document.querySelector('.edtab.active')); });
+window.addEventListener('DOMContentLoaded', () => { refreshLogs(); refreshTechLogs(); loadLS(); loadBkInfo(); loadApiKeys(); loadEd('sett_set', document.querySelector('.edtab.active')); });
 </script>
 </body>
 </html>
