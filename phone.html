@@ -115,6 +115,14 @@
                 </select>
             </div>
 
+            <!-- Theme Select -->
+            <div class="space-y-2">
+                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Тема</label>
+                <select id="theme-select" class="w-full glass-card p-5 rounded-3xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
+                    <!-- Буде заповнено через JS з getPriorityThemes() -->
+                </select>
+            </div>
+
             <!-- Game Select -->
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Тип вправи</label>
@@ -191,6 +199,9 @@
             ? getDefaultExerciseLevel(PHONE_ALLOWED_LEVELS)
             : 'B1';
         let currentType = '';
+        let currentTheme = ''; // '' => авто (випадкова з sett_set)
+        const PHONE_AUTO_THEME_ROTATE_MS = 60 * 1000;
+        let phoneAutoThemeState = { value: '', ts: 0 };
         let isRecording = false;
         let conversation = [];
         let recognition = null;
@@ -250,7 +261,7 @@
             Logger.study('phone', {
                 exercise_type: currentType || 'speaking',
                 level: currentLevel || '',
-                theme: 'PhoneSpeaking',
+                theme: currentTheme || 'PhoneSpeaking',
                 result,
                 score_total: phoneCompletedTurns,
                 score_max: phoneCompletedTurns,
@@ -302,6 +313,30 @@
             return map;
         }
 
+        function buildThemeDropdown() {
+            const sel = document.getElementById('theme-select');
+            if (!sel) return;
+            const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+            sel.innerHTML = '<option value="">🎲 Автовибір теми</option>' +
+                themes.map(t => `<option value="${t.value}">${t.label}</option>`).join('');
+            sel.value = '';
+        }
+
+        function resolvePhoneTheme() {
+            const sel = document.getElementById('theme-select');
+            const selected = sel ? sel.value : '';
+            if (selected) return selected;
+            // Авто: випадкова тема з кешуванням на PHONE_AUTO_THEME_ROTATE_MS
+            const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+            if (!themes.length) return 'General';
+            const now = Date.now();
+            const cacheValid = phoneAutoThemeState.value && (now - phoneAutoThemeState.ts) < PHONE_AUTO_THEME_ROTATE_MS;
+            if (cacheValid) return phoneAutoThemeState.value;
+            const picked = themes[Math.floor(Math.random() * themes.length)];
+            phoneAutoThemeState = { value: picked.value, ts: now };
+            return picked.value;
+        }
+
         function updateGameOptions() {
             const lvl = document.getElementById('level-select').value;
             const select = document.getElementById('type-select');
@@ -334,6 +369,7 @@
 
             currentLevel = lvl;
             currentType = type;
+            currentTheme = resolvePhoneTheme();
             phoneAttemptStartedAt = 0;
             phoneAttemptNumber = 0;
             phoneCompletedTurns = 0;
@@ -359,7 +395,8 @@
             
             const lvl = document.getElementById("level-select")?.value || "B1";
             const sysRaw = taskSet?.system;
-            const systemInstruction = basePrompt + (typeof sysRaw === "function" ? sysRaw(lvl) : (sysRaw || ""));
+            const themeClause = currentTheme ? `\n\nТЕМА СЕСІЇ (використовуй для контексту та прикладів): ${currentTheme}` : '';
+            const systemInstruction = basePrompt + (typeof sysRaw === "function" ? sysRaw(lvl) : (sysRaw || "")) + themeClause;
             
             conversation = [{ role: 'system', content: systemInstruction }];
             lastTaskText = '';
@@ -594,6 +631,7 @@
                 currentLevel = defaultLevel;
             }
 
+            buildThemeDropdown();
             updateGameOptions();
             addLog(`Тренажер готовий до роботи (дефолтний рівень: ${currentLevel})`);
         };

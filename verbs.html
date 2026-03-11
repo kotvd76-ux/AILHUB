@@ -933,9 +933,7 @@ body::before {
           Рівень знань
         </label>
         <select id="sel-level" class="ph-select">
-          <option value="A2">Рівень A2 — Елементарний</option>
-          <option value="B1">Рівень B1 — Середній</option>
-          <option value="B2">Рівень B2 — Просунутий</option>
+          <!-- Заповнюється JS з getExerciseLevels() (sett_set.js) -->
         </select>
       </div>
 
@@ -1323,6 +1321,17 @@ let selectedTheme = ''; // '' => авто (випадкова з sett_set)
 const AUTO_THEME_ROTATE_MS = 60 * 1000;
 let autoThemeState = { value: '', ts: 0 };
 
+
+function buildSelectionLevelDropdown() {
+  const sel = document.getElementById('sel-level');
+  if (!sel) return;
+  const levels = (typeof getExerciseLevels === 'function')
+    ? getExerciseLevels(grammarAllowedLevels)
+    : grammarAllowedLevels.map(v => ({ value: v, label: v }));
+  sel.innerHTML = levels.map(l =>
+    `<option value="${l.value}">${l.label}</option>`
+  ).join('');
+}
 
 function buildSelectionThemeDropdown() {
   const sel = document.getElementById('sel-theme');
@@ -2290,6 +2299,7 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
   }
 
   // Build dropdowns in selection screen
+  buildSelectionLevelDropdown();
   buildSelectionThemeDropdown();
   buildSelectionDropdown();
 
