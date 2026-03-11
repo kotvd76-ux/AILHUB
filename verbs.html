@@ -1589,6 +1589,72 @@ let e5State={idx:0,score:0,phase:1,wrongClicks:0};
 let e6State={idx:0,score:0,picked:[],answered:false};
 let e7State={idx:0,score:0,answered:false};
 let currentEx = 0;
+const EX_TYPES = {
+  e1: 'verb_form_choice',
+  e2: 'verb_form_context',
+  e3: 'irregular_choice',
+  e4: 'context_gap_choice',
+  e5: 'error_correction',
+  e6: 'word_order_build',
+  e7: 'vocab_choice',
+};
+const exAttemptStartedAt = { e1:0, e2:0, e3:0, e4:0, e5:0, e6:0, e7:0 };
+const exTtsReplays = { e1:0, e2:0, e3:0, e4:0, e5:0, e6:0, e7:0 };
+
+function beginAttempt(px) {
+  exAttemptStartedAt[px] = Date.now();
+  exTtsReplays[px] = 0;
+}
+
+function getExerciseState(px) {
+  if (px === 'e1') return e1State;
+  if (px === 'e2') return e2State;
+  if (px === 'e3') return e3State;
+  if (px === 'e4') return e4State;
+  if (px === 'e5') return e5State;
+  if (px === 'e6') return e6State;
+  if (px === 'e7') return e7State;
+  return null;
+}
+
+function getExerciseTotal(px) {
+  if (px === 'e1') return E1_DATA.length;
+  if (px === 'e2') return E2_DATA.length;
+  if (px === 'e3') return E3_DATA.length;
+  if (px === 'e4') return E4_DATA.length;
+  if (px === 'e5') return E5_DATA.length;
+  if (px === 'e6') return E6_DATA.length;
+  if (px === 'e7') return E7_DATA.length;
+  return 0;
+}
+
+function logGrammarStudy(px, ok, correctAnswer = '', wrongAnswer = '', answerText = '') {
+  if (typeof Logger === 'undefined' || typeof Logger.study !== 'function') return;
+  const st = getExerciseState(px);
+  if (!st) return;
+
+  const elapsedSec = exAttemptStartedAt[px]
+    ? Math.max(1, Math.round((Date.now() - exAttemptStartedAt[px]) / 1000))
+    : '';
+
+  Logger.study('grammar', {
+    exercise_type: EX_TYPES[px] || px,
+    level: selectedLevel || '',
+    theme: selectedTheme || 'random',
+    result: ok ? 'correct' : 'wrong',
+    score_total: st.score,
+    score_max: getExerciseTotal(px),
+    time_spent_sec: elapsedSec,
+    attempt_number: (st.idx || 0) + 1,
+    wrong_answer: ok ? '' : String(wrongAnswer || ''),
+    correct_answer: String(correctAnswer || ''),
+    answer_text: String(answerText || ''),
+    explanation_shown: 1,
+    transcript_shown: 0,
+    slow_mode_used: 0,
+    tts_replays: exTtsReplays[px] || 0,
+  });
+}
 
 // ══════════════════════════════════════════════
 // DROPDOWN SELECTOR
@@ -1677,6 +1743,7 @@ function selectExercise(n) {
 function renderE1() {
   const d = E1_DATA[e1State.idx];
   if (!d) return;
+  beginAttempt('e1');
 
   // Речення з пропуском
   const sentEl = document.getElementById('e1-sentence');
@@ -1721,7 +1788,7 @@ function answerE1(btn) {
 
   showFB('e1', ok,
     ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`,
-    d.explain || `«${d.correct}» — правильна форма для цього речення`);
+    d.explain || `«${d.correct}» — правильна форма для цього речення`, chosen, d.correct);
 }
 function nextE1() { e1State.idx++; if(e1State.idx>=E1_DATA.length){showResult('e1',e1State.score,E1_DATA.length);return;} renderE1(); }
 
@@ -1729,6 +1796,7 @@ function nextE1() { e1State.idx++; if(e1State.idx>=E1_DATA.length){showResult('e
 // ══════════════════════════════════════════════
 function renderE2() {
   const d = E2_DATA[e2State.idx];
+  beginAttempt('e2');
   document.getElementById('e2-sentence').innerHTML = `${d.before} <span class="fib-blank" id="e2-blank">___</span> ${d.after}`;
   document.getElementById('e2-uk').textContent = d.uk || '';
   document.getElementById('e2-en').textContent = d.en || '';
@@ -1753,7 +1821,7 @@ function answerE2(btn) {
     if(b.getAttribute('data-val')===d.correct) b.classList.add('correct-ans');
     else if(b===btn && !ok) b.classList.add('wrong-ans');
   });
-  showFB('e2', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain||`Правильна форма: ${d.correct}`);
+  showFB('e2', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain||`Правильна форма: ${d.correct}`, chosen, d.correct);
 }
 function nextE2() { e2State.idx++; if(e2State.idx>=E2_DATA.length){showResult('e2',e2State.score,E2_DATA.length);return;} renderE2(); }
 
@@ -1762,6 +1830,7 @@ function nextE2() { e2State.idx++; if(e2State.idx>=E2_DATA.length){showResult('e
 // ══════════════════════════════════════════════
 function renderE3() {
   const d = E3_DATA[e3State.idx];
+  beginAttempt('e3');
   document.getElementById('e3-sentence').innerHTML = `${d.before} <span class="fib-blank" id="e3-blank">${d.blank}</span> ${d.after}`;
   document.getElementById('e3-uk').textContent = d.uk;
   document.getElementById('e3-en').textContent = d.en;
@@ -1786,7 +1855,7 @@ function answerE3(btn) {
     if(b.getAttribute('data-val')===d.correct) b.classList.add('correct-ans');
     else if(b===btn && !ok) b.classList.add('wrong-ans');
   });
-  showFB('e3', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain||`Правильна форма для цього речення: ${d.correct}`);
+  showFB('e3', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain||`Правильна форма для цього речення: ${d.correct}`, chosen, d.correct);
 }
 function nextE3() { e3State.idx++; if(e3State.idx>=E3_DATA.length){showResult('e3',e3State.score,E3_DATA.length);return;} renderE3(); }
 
@@ -1795,6 +1864,7 @@ function nextE3() { e3State.idx++; if(e3State.idx>=E3_DATA.length){showResult('e
 // ══════════════════════════════════════════════
 function renderE4() {
   const d = E4_DATA[e4State.idx];
+  beginAttempt('e4');
   document.getElementById('e4-sentence').innerHTML = (d.sentence || '').replace('___','<span class="fib-blank">___</span>');
   document.getElementById('e4-hint').textContent = d.hint ? ('💡 ' + d.hint) : '';
   const opts = Array.isArray(d.opts)
@@ -1821,7 +1891,7 @@ function answerE4(btn) {
     if (b.getAttribute('data-val') === d.correct) b.classList.add('correct-ans');
     else if (b === btn && !ok) b.classList.add('wrong-ans');
   });
-  showFB('e4', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain || d.hint || '');
+  showFB('e4', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain || d.hint || '', chosen, d.correct);
 }
 function nextE4() { e4State.idx++; if(e4State.idx>=E4_DATA.length){showResult('e4',e4State.score,E4_DATA.length);return;} renderE4(); }
 
@@ -1833,6 +1903,7 @@ function nextE4() { e4State.idx++; if(e4State.idx>=E4_DATA.length){showResult('e
 function renderE5() {
   const d = E5_DATA[e5State.idx];
   if (!d) return;
+  beginAttempt('e5');
 
   // Переклад
   document.getElementById('e5-uk').textContent = d.uk;
@@ -1939,11 +2010,11 @@ function onFixSelect(chosen) {
     if (tokens[d.errorIdx]) tokens[d.errorIdx].classList.add('word-correct');
     showFB('e5', true,
       `✓ Правильно! «${d.words[d.errorIdx]}» → «${d.correctWord}»`,
-      d.explain || '');
+      d.explain || '', chosen, d.correctWord);
   } else {
     showFB('e5', false,
       `✗ Не вірно. Правильно: «${d.correctWord}»`,
-      d.explain || '');
+      d.explain || '', chosen, d.correctWord);
   }
 }
 
@@ -1969,6 +2040,7 @@ function nextE5() {
 function renderE6() {
   const d = E6_DATA[e6State.idx];
   if (!d) return;
+  beginAttempt('e6');
   e6State.picked = [];
   e6State.answered = false;
 
@@ -2004,7 +2076,7 @@ function pickE6(i) {
     const chosen = e6State.picked.join(' ').trim();
     const ok = chosen === target;
     if (ok) e6State.score++;
-    showFB('e6', ok, ok ? '✓ Правильно зібрано!' : `✗ Правильно: ${target}`, d.explain || 'Зверни увагу на порядок слів і форму.');
+    showFB('e6', ok, ok ? '✓ Правильно зібрано!' : `✗ Правильно: ${target}`, d.explain || 'Зверни увагу на порядок слів і форму.', chosen, target);
     if (!ok) {
       document.getElementById('e6-built').textContent = target;
     }
@@ -2028,6 +2100,7 @@ function nextE6() { e6State.idx++; if(e6State.idx>=E6_DATA.length){showResult('e
 function renderE7() {
   const d = E7_DATA[e7State.idx];
   if (!d) return;
+  beginAttempt('e7');
   e7State.answered = false;
   const nativePrompt = d.nativeWord || d.word || d.sentence || '';
   document.getElementById('e7-sentence').innerHTML = `<strong>${nativePrompt}</strong>`;
@@ -2058,7 +2131,7 @@ function answerE7(btn) {
     if (b.getAttribute('data-val') === d.correct) b.classList.add('correct-ans');
     else if (b === btn && !ok) b.classList.add('wrong-ans');
   });
-  showFB('e7', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain || 'Повтори слово в контексті.');
+  showFB('e7', ok, ok ? '✓ Правильно!' : `✗ Правильна відповідь: ${d.correct}`, d.explain || 'Повтори слово в контексті.', chosen, d.correct);
 }
 
 function nextE7() { e7State.idx++; if(e7State.idx>=E7_DATA.length){showResult('e7',e7State.score,E7_DATA.length);return;} renderE7(); }
@@ -2066,7 +2139,7 @@ function nextE7() { e7State.idx++; if(e7State.idx>=E7_DATA.length){showResult('e
 // ══════════════════════════════════════════════
 // SHARED HELPERS
 // ══════════════════════════════════════════════
-function showFB(px, ok, msg, expl) {
+function showFB(px, ok, msg, expl, chosen = '', correct = '') {
   const fb = document.getElementById(`${px}-fb`);
   fb.className = 'feedback-box show '+(ok?'correct':'wrong');
   document.getElementById(`${px}-fb-icon`).textContent = ok?'✓':'✗';
@@ -2076,11 +2149,14 @@ function showFB(px, ok, msg, expl) {
   // Отримуємо текст для озвучення
   const ttsText = getTTSTextForExercise(px);
 
+  logGrammarStudy(px, ok, correct || '', chosen, ttsText || '');
+
   if (ok) {
     // Вірно: озвучуємо речення → після завершення переходимо далі
     // Показуємо іконку гучності поки грає
     const iconEl = document.getElementById(`${px}-fb-icon`);
     if (iconEl) iconEl.textContent = '🔊';
+    exTtsReplays[px] = (exTtsReplays[px] || 0) + 1;
     speakSpanish(ttsText, () => {
       if (iconEl) iconEl.textContent = '✓';
       const delay = 400; // невелика пауза після аудіо перед переходом
@@ -2092,7 +2168,7 @@ function showFB(px, ok, msg, expl) {
     const nextBtn = document.getElementById(`${px}-next`);
     if (nextBtn) { nextBtn.style.display = 'block'; nextBtn.classList.add('show'); }
     // Озвучуємо з невеликою затримкою щоб користувач встиг прочитати фідбек
-    setTimeout(() => speakSpanish(ttsText), 600);
+    setTimeout(() => { exTtsReplays[px] = (exTtsReplays[px] || 0) + 1; speakSpanish(ttsText); }, 600);
   }
 }
 
