@@ -1628,7 +1628,7 @@ function getExerciseTotal(px) {
   return 0;
 }
 
-function logGrammarStudy(px, ok, correctAnswer = '', wrongAnswer = '', answerText = '') {
+function logGrammarStudy(px, ok, correctAnswer = '', wrongAnswer = '', answerText = '', taskText = '', aiFeedbackText = '') {
   if (typeof Logger === 'undefined' || typeof Logger.study !== 'function') return;
   const st = getExerciseState(px);
   if (!st) return;
@@ -1648,12 +1648,30 @@ function logGrammarStudy(px, ok, correctAnswer = '', wrongAnswer = '', answerTex
     attempt_number: (st.idx || 0) + 1,
     wrong_answer: ok ? '' : String(wrongAnswer || ''),
     correct_answer: String(correctAnswer || ''),
+    task_text: String(taskText || ''),
     answer_text: String(answerText || ''),
+    ai_feedback_text: String(aiFeedbackText || ''),
     explanation_shown: 1,
     transcript_shown: 0,
     slow_mode_used: 0,
     tts_replays: exTtsReplays[px] || 0,
   });
+}
+
+function getTaskTextForExercise(px) {
+  const id = `${px}-sentence`;
+  const el = document.getElementById(id);
+  const t = (el?.textContent || '').trim();
+  if (t) return t;
+
+  if (px === 'e5') {
+    const words = document.getElementById('e5-words')?.textContent || '';
+    return words.trim();
+  }
+  if (px === 'e6') {
+    return (document.getElementById('e6-instruction')?.textContent || '').trim();
+  }
+  return '';
 }
 
 // ══════════════════════════════════════════════
@@ -2149,7 +2167,7 @@ function showFB(px, ok, msg, expl, chosen = '', correct = '') {
   // Отримуємо текст для озвучення
   const ttsText = getTTSTextForExercise(px);
 
-  logGrammarStudy(px, ok, correct || '', chosen, ttsText || '');
+  logGrammarStudy(px, ok, correct || '', chosen, ttsText || '', getTaskTextForExercise(px), expl || msg || '');
 
   if (ok) {
     // Вірно: озвучуємо речення → після завершення переходимо далі

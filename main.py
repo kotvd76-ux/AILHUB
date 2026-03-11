@@ -22,7 +22,8 @@ base_dir_local = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = base_dir_prod if os.path.isdir(base_dir_prod) else base_dir_local
 
 # Можна явно перевизначити кореневу директорію логів через HUB_LOG_DIR.
-# За замовчуванням — корінь проекту, тому studylog/techlog будуть поруч з іншими файлами.
+# За замовчуванням пишемо прямо в BASE_DIR, тобто папки `techlog/` і `studylog/`
+# будуть у корені проєкту/інстансу.
 LOG_DIR = os.environ.get('HUB_LOG_DIR', '').strip() or BASE_DIR
 
 # ── Головна сторінка ───────────────────────────────────────────
@@ -72,8 +73,9 @@ def receive_log():
         folder = os.path.join(LOG_DIR, logtype + 'log')
         os.makedirs(folder, exist_ok=True)
 
-        today = datetime.now().strftime('%d.%m')
-        fname = os.path.join(folder, f'{module}+{today}.txt')
+        today = datetime.now().strftime('%Y-%m-%d')
+        # Один файл на день для всіх модулів цього типу логу.
+        fname = os.path.join(folder, f'{today}.txt')
 
         with open(fname, 'a', encoding='utf-8') as f:
             f.write(line + '\n')
@@ -92,5 +94,6 @@ def static_files(filename):
     return static_file(filename, root=BASE_DIR)
 
 # ── Запуск ────────────────────────────────────────────────────
+os.makedirs(LOG_DIR, exist_ok=True)
 print(f"[SpanishHub] Starting user={USER_DIR} port={PORT} dir={BASE_DIR} log_dir={LOG_DIR}")
 run(host='0.0.0.0', port=PORT, debug=False, quiet=True)
