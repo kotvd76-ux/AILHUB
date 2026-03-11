@@ -385,7 +385,9 @@
             }
         }
 
+        let _phoneAiRequestCount = 0;
         async function fetchAI(messages, customSystem = null) {
+            _phoneAiRequestCount++;
             const activeKey = config.apiKeys[config.provider];
             if (!activeKey) throw new Error('Немає API ключа для: ' + config.provider);
 
@@ -400,8 +402,10 @@
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeKey}` },
                     body: JSON.stringify({ model: config.model, messages: allMsgs })
                 });
-                if (!res.ok) { const e = await res.json(); addLog(`OpenAI error: ${JSON.stringify(e)}`, 'error'); throw new Error('API error'); }
-                return (await res.json()).choices[0].message.content;
+                const _dOai = await res.json();
+                if (!res.ok) { addLog(`OpenAI error: ${JSON.stringify(_dOai)}`, 'error'); throw new Error('API error'); }
+                Logger.tech('phone', 'ai_response', 'AI response received', { provider: 'openai', model: config.model, tokens_in: _dOai.usage?.prompt_tokens ?? null, tokens_out: _dOai.usage?.completion_tokens ?? null, request_num: _phoneAiRequestCount });
+                return _dOai.choices[0].message.content;
 
             } else if (config.provider === 'google') {
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${activeKey}`;
@@ -410,8 +414,10 @@
                 };
                 if (sys) payload.systemInstruction = { parts: [{ text: sys }] };
                 const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!res.ok) { const e = await res.json(); addLog(`Gemini error: ${JSON.stringify(e)}`, 'error'); throw new Error('API error'); }
-                return (await res.json()).candidates[0].content.parts[0].text;
+                const _dGem = await res.json();
+                if (!res.ok) { addLog(`Gemini error: ${JSON.stringify(_dGem)}`, 'error'); throw new Error('API error'); }
+                Logger.tech('phone', 'ai_response', 'AI response received', { provider: 'google', model: config.model, tokens_in: _dGem.usageMetadata?.promptTokenCount ?? null, tokens_out: _dGem.usageMetadata?.candidatesTokenCount ?? null, request_num: _phoneAiRequestCount });
+                return _dGem.candidates[0].content.parts[0].text;
 
             } else if (config.provider === 'anthropic') {
                 const payload = { model: config.model, max_tokens: 1024, messages: chatMsgs };
@@ -421,8 +427,10 @@
                     headers: { 'Content-Type': 'application/json', 'x-api-key': activeKey, 'anthropic-version': '2023-06-01' },
                     body: JSON.stringify(payload)
                 });
-                if (!res.ok) { const e = await res.json(); addLog(`Claude error: ${JSON.stringify(e)}`, 'error'); throw new Error('API error'); }
-                return (await res.json()).content[0].text;
+                const _dAnth = await res.json();
+                if (!res.ok) { addLog(`Claude error: ${JSON.stringify(_dAnth)}`, 'error'); throw new Error('API error'); }
+                Logger.tech('phone', 'ai_response', 'AI response received', { provider: 'anthropic', model: config.model, tokens_in: _dAnth.usage?.input_tokens ?? null, tokens_out: _dAnth.usage?.output_tokens ?? null, request_num: _phoneAiRequestCount });
+                return _dAnth.content[0].text;
             }
             throw new Error('Невідомий провайдер: ' + config.provider);
         }

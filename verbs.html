@@ -2480,6 +2480,8 @@ function pickFreshSeed(pool, usedSeeds) {
   return notRecent.length > 0 ? pickRandom(notRecent) : pickRandom(pool);
 }
 
+let _verbsAiRequestCount = 0;
+
 async function goGenerateEx(exNum, retryCount = 0) {
   const exIdx = exNum - 1;
   const btn   = document.getElementById(`go-btn-${exNum}`);
@@ -2554,6 +2556,7 @@ async function goGenerateEx(exNum, retryCount = 0) {
   try {
     let responseText = '';
 
+    _verbsAiRequestCount++;
     if (provider === 'openai') {
       const res = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -2566,7 +2569,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
       });
       if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
       if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
-      responseText = (await res.json()).choices[0].message.content;
+      const _dOai = await res.json();
+      Logger.tech('verbs', 'ai_response', 'Exercise generated', { provider: 'openai', model, tokens_in: _dOai.usage?.prompt_tokens ?? null, tokens_out: _dOai.usage?.completion_tokens ?? null, request_num: _verbsAiRequestCount });
+      responseText = _dOai.choices[0].message.content;
 
     } else if (provider === 'google') {
       const res = await fetch(
@@ -2580,7 +2585,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
       );
       if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
       if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
-      responseText = (await res.json()).candidates[0].content.parts[0].text;
+      const _dGem = await res.json();
+      Logger.tech('verbs', 'ai_response', 'Exercise generated', { provider: 'google', model, tokens_in: _dGem.usageMetadata?.promptTokenCount ?? null, tokens_out: _dGem.usageMetadata?.candidatesTokenCount ?? null, request_num: _verbsAiRequestCount });
+      responseText = _dGem.candidates[0].content.parts[0].text;
 
     } else if (provider === 'anthropic') {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2597,7 +2604,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
       });
       if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
       if (!res.ok) throw new Error(`Anthropic HTTP ${res.status}`);
-      responseText = (await res.json()).content[0].text;
+      const _dAnth = await res.json();
+      Logger.tech('verbs', 'ai_response', 'Exercise generated', { provider: 'anthropic', model, tokens_in: _dAnth.usage?.input_tokens ?? null, tokens_out: _dAnth.usage?.output_tokens ?? null, request_num: _verbsAiRequestCount });
+      responseText = _dAnth.content[0].text;
     }
 
     const clean  = responseText.replace(/```json|```/g, '').trim();

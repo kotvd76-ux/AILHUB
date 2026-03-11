@@ -771,6 +771,7 @@
     }
 
     // ── Запит до AI ───────────────────────────────────────────────────────────
+    let _listenAiRequestCount = 0;
     async function fetchAITasks(theme, level, wordCount) {
         const provider = getActiveProvider();
         const apiKey   = getApiKey(provider);
@@ -843,6 +844,7 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
             throw new Error(`Невідомий провайдер: ${provider}`);
         }
 
+        _listenAiRequestCount++;
         log('Надсилання запиту…');
         const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
 
@@ -854,6 +856,12 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
 
         const result = await response.json();
         log(`Відповідь отримана (${response.status})`, 'success');
+        Logger.tech('listening', 'ai_response', 'Tasks received', {
+            provider, model,
+            tokens_in:  provider === 'openai' ? (result.usage?.prompt_tokens ?? null) : provider === 'anthropic' ? (result.usage?.input_tokens ?? null) : (result.usageMetadata?.promptTokenCount ?? null),
+            tokens_out: provider === 'openai' ? (result.usage?.completion_tokens ?? null) : provider === 'anthropic' ? (result.usage?.output_tokens ?? null) : (result.usageMetadata?.candidatesTokenCount ?? null),
+            request_num: _listenAiRequestCount,
+        });
 
         let content;
         try {
