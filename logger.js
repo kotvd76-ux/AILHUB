@@ -167,6 +167,9 @@ const Logger = (() => {
      *     transcript_shown, // 0|1 — чи відкривав текст
      *     slow_mode_used,   // 0|1 — чи використовував "Повільно"
      *     tts_replays,      // кількість повторних прослуховувань
+     *     task_text,        // текст/транскрипт завдання
+     *     answer_text,      // текст/транскрипт відповіді учня
+     *     ai_feedback_text, // текст фідбеку від ШІ
      *   }
      */
     function study(module, data) {
@@ -192,6 +195,9 @@ const Logger = (() => {
             d.transcript_shown  ?? 0,
             d.slow_mode_used    ?? 0,
             d.tts_replays       ?? 0,
+            (d.task_text        ?? '').replace(/\t/g, ' '),
+            (d.answer_text      ?? '').replace(/\t/g, ' '),
+            (d.ai_feedback_text ?? '').replace(/\t/g, ' '),
             SESSION_ID
         ].join(sep);
 

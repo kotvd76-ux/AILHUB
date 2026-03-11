@@ -7,6 +7,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="sett_set.js"></script>
     <script src="listen_set.js"></script>
+    <script src="logger.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
@@ -626,6 +627,10 @@
     let currentIndex = 0;
     let score        = 0;
     let isSlow       = false;
+    let attemptStartedAt = 0;
+    let transcriptShownForAttempt = 0;
+    let slowUsedForAttempt = 0;
+    let ttsReplaysForAttempt = 0;
     let audioPlayer  = null;
 
     // ── Лог / Діагностика ─────────────────────────────────────────────────────
@@ -880,6 +885,11 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
         const task = tasks[currentIndex];
         const pct  = Math.round(((currentIndex + 1) / tasks.length) * 100);
 
+        attemptStartedAt = Date.now();
+        transcriptShownForAttempt = 0;
+        slowUsedForAttempt = 0;
+        ttsReplaysForAttempt = 0;
+
         const fill = document.getElementById('progress-fill');
         fill.style.width = pct + '%';
         fill.parentElement.setAttribute('aria-valuenow', pct);
@@ -914,6 +924,8 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
     // ── TTS ───────────────────────────────────────────────────────────────────
     async function playCurrentAudio() {
         const task     = tasks[currentIndex];
+        if (!task) return;
+        ttsReplaysForAttempt++;
         const provider = getActiveProvider();
         const mode     = getTtsMode();
         const speed    = isSlow ? LISTEN_CONFIG.slowSpeed : getSpeed();
@@ -1003,6 +1015,9 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
     function checkAnswer(v) {
         const task      = tasks[currentIndex];
         const isCorrect = v === task.correctAnswer;
+        const elapsedSec = attemptStartedAt
+            ? Math.max(1, Math.round((Date.now() - attemptStartedAt) / 1000))
+            : '';
 
         document.getElementById('qa-container').classList.add('hidden');
 
@@ -1020,6 +1035,25 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
             score++;
             document.getElementById('score-badge').textContent = score;
         }
+
+        if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
+            Logger.study('listening', {
+                exercise_type: 'qa',
+                level: document.getElementById('level-select')?.value || '',
+                theme: document.getElementById('theme-select')?.value || '',
+                result: isCorrect ? 'correct' : 'wrong',
+                score_total: score,
+                score_max: tasks.length,
+                time_spent_sec: elapsedSec,
+                attempt_number: currentIndex + 1,
+                wrong_answer: isCorrect ? '' : String(v || ''),
+                correct_answer: String(task.correctAnswer || ''),
+                explanation_shown: 1,
+                transcript_shown: transcriptShownForAttempt,
+                slow_mode_used: slowUsedForAttempt,
+                tts_replays: ttsReplaysForAttempt,
+            });
+        }
     }
 
     function nextQuestion() {
@@ -1036,6 +1070,7 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
 
     function toggleSlowMode() {
         isSlow = !isSlow;
+        if (isSlow) slowUsedForAttempt = 1;
         const btn = document.getElementById('btn-slow');
         btn.style.color = isSlow ? 'var(--yellow)' : '';
         btn.setAttribute('aria-pressed', String(isSlow));
@@ -1046,6 +1081,7 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
         const box      = document.getElementById('transcript-box');
         const btn      = document.getElementById('btn-transcript');
         const isHidden = box.classList.toggle('hidden');
+        if (!isHidden) transcriptShownForAttempt = 1;
         btn.setAttribute('aria-expanded', String(!isHidden));
     }
 

@@ -200,6 +200,7 @@ const SETTINGS_CONFIG = {
             // time_spent_sec  attempt_number
             // wrong_answer  correct_answer  explanation_shown(0|1)
             // transcript_shown(0|1)  slow_mode_used(0|1)  tts_replays
+            // task_text  answer_text  ai_feedback_text
             // session_id
             fields: [
                 'timestamp', 'module', 'exercise_type', 'level', 'theme',
@@ -207,6 +208,7 @@ const SETTINGS_CONFIG = {
                 'time_spent_sec', 'attempt_number',
                 'wrong_answer', 'correct_answer',
                 'explanation_shown', 'transcript_shown', 'slow_mode_used', 'tts_replays',
+                'task_text', 'answer_text', 'ai_feedback_text',
                 'session_id'
             ],
             separator: '\t',
