@@ -473,7 +473,29 @@ const allStudyLines = () => Object.values(getStudy()).flat();
 const allTechLines = () => Object.values(getTech()).flat();
 function parseSL(line) {
   const p = line.split('\t');
-  return { timestamp: p[0]||'', module: p[1]||'', exercise_type: p[2]||'', level: p[3]||'', theme: p[4]||'', result: p[5]||'', score_total: p[6]||'0', score_max: p[7]||'0', time_spent: parseInt(p[8])||0, attempt_number: p[9]||'1', wrong_answer: p[10]||'', correct_answer: p[11]||'', explanation_shown: p[12]||'0', transcript_shown: p[13]||'0', slow_mode: p[14]||'0', tts_replays: p[15]||'0', session_id: p[16]||'' };
+  return {
+    timestamp: p[0]||'',
+    module: p[1]||'',
+    exercise_type: p[2]||'',
+    level: p[3]||'',
+    theme: p[4]||'',
+    result: p[5]||'',
+    score_total: p[6]||'0',
+    score_max: p[7]||'0',
+    time_spent: parseInt(p[8])||0,
+    attempt_number: p[9]||'1',
+    wrong_answer: p[10]||'',
+    correct_answer: p[11]||'',
+    explanation_shown: p[12]||'0',
+    transcript_shown: p[13]||'0',
+    slow_mode: p[14]||'0',
+    tts_replays: p[15]||'0',
+    task_text: p[16]||'',
+    answer_text: p[17]||'',
+    ai_feedback_text: p[18]||'',
+    // back-compat: у старому форматі session_id був на [16]
+    session_id: p[p.length - 1] || ''
+  };
 }
 
 // LOGS
