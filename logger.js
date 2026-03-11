@@ -109,9 +109,17 @@ const Logger = (() => {
 
     // ── Читання/запис буфера ───────────────────────────────────
     function appendToBuffer(bufferKey, module, line, logType) {
+        if (!bufferKey) {
+            console.error('[Logger] bufferKey відсутній — перевірте storageKey у конфігурації');
+            return;
+        }
         const lcfg   = LCFG();
         if (!lcfg) return;
         const maxLen = lcfg.bufferMaxLines;
+        if (!maxLen || typeof maxLen !== 'number') {
+            console.error('[Logger] bufferMaxLines не вказано або некоректне у SETTINGS_CONFIG.logging');
+            return;
+        }
 
         let buf = {};
         try { buf = JSON.parse(ls.get(bufferKey, '{}')); } catch { buf = {}; }
@@ -119,10 +127,10 @@ const Logger = (() => {
         buf[module].push(line);
 
         // Авто-обрізка найстаріших записів при перевищенні ліміту
-        const total = Object.values(buf).reduce((s, a) => s + a.length, 0);
-        if (total > maxLen) {
+        while (Object.values(buf).reduce((s, a) => s + a.length, 0) > maxLen) {
             const oldestKey = Object.keys(buf).find(k => buf[k].length > 0);
-            if (oldestKey) buf[oldestKey].shift();
+            if (!oldestKey) break;
+            buf[oldestKey].shift();
         }
 
         ls.set(bufferKey, JSON.stringify(buf));
@@ -229,11 +237,11 @@ const Logger = (() => {
 
         const modules = filterModule ? [filterModule] : Object.keys(buf);
 
-        modules.forEach(mod => {
+        modules.forEach((mod, i) => {
             const lines = buf[mod];
             if (!lines || lines.length === 0) return;
             const filename = `${cfg.folder}_${mod}+${dateSuffix()}.txt`;
-            _downloadText(lines.join('\n'), filename);
+            setTimeout(() => _downloadText(lines.join('\n'), filename), i * 300);
         });
     }
 
@@ -250,7 +258,7 @@ const Logger = (() => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        setTimeout(() => URL.revokeObjectURL(url), 100);
     }
 
     // ── Очистка буферів ────────────────────────────────────────
