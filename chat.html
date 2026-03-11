@@ -567,35 +567,40 @@ function App() {
     const newAns = [...ans,{q,v,result}];
     setAns(newAns);
 
-    if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
-      const elapsedSec = qStartedAt ? Math.max(1, Math.round((Date.now() - qStartedAt) / 1000)) : '';
-      const totalScore = newAns.reduce((s, a) => s + (a.result?.score || 0), 0);
-      const scoreMax = newAns.length * 10;
-      const taskText = [
-        q.question || '',
-        q.passage ? `Passage: ${q.passage}` : '',
-        q.audio_text ? `Audio: ${q.audio_text}` : ''
-      ].filter(Boolean).join(' | ');
+    try {
+      if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
+        const elapsedSec = qStartedAt ? Math.max(1, Math.round((Date.now() - qStartedAt) / 1000)) : '';
+        const totalScore = newAns.reduce((s, a) => s + (a.result?.score || 0), 0);
+        const scoreMax = newAns.length * 10;
+        const taskText = [
+          q.question || '',
+          q.passage ? `Passage: ${q.passage}` : '',
+          q.audio_text ? `Audio: ${q.audio_text}` : ''
+        ].filter(Boolean).join(' | ');
+        const answerText = typeof v === 'string' ? v : JSON.stringify(v || '');
 
-      Logger.study('chat_test', {
-        exercise_type: `test_${q.aspect || 'general'}`,
-        level: testLabel,
-        theme: q.aspect || 'general',
-        result: result.correct ? 'correct' : 'wrong',
-        score_total: totalScore,
-        score_max: scoreMax,
-        time_spent_sec: elapsedSec,
-        attempt_number: qi + 1,
-        wrong_answer: result.correct ? '' : String(v || ''),
-        correct_answer: String(q.correct || ''),
-        explanation_shown: result.feedback ? 1 : 0,
-        transcript_shown: q.aspect === 'speaking' ? 1 : 0,
-        slow_mode_used: 0,
-        tts_replays: q.aspect === 'listening' ? qTtsReplays : 0,
-        task_text: taskText,
-        answer_text: String(v || ''),
-        ai_feedback_text: [result.feedback || '', result.error_analysis || ''].filter(Boolean).join(' | '),
-      });
+        Logger.study('chat_test', {
+          exercise_type: `test_${q.aspect || 'general'}`,
+          level: testLabel,
+          theme: q.aspect || 'general',
+          result: result.correct ? 'correct' : 'wrong',
+          score_total: totalScore,
+          score_max: scoreMax,
+          time_spent_sec: elapsedSec,
+          attempt_number: qi + 1,
+          wrong_answer: result.correct ? '' : answerText,
+          correct_answer: String(q.correct || ''),
+          explanation_shown: result.feedback ? 1 : 0,
+          transcript_shown: q.aspect === 'speaking' ? 1 : 0,
+          slow_mode_used: 0,
+          tts_replays: q.aspect === 'listening' ? qTtsReplays : 0,
+          task_text: taskText,
+          answer_text: answerText,
+          ai_feedback_text: [result.feedback || '', result.error_analysis || ''].filter(Boolean).join(' | '),
+        });
+      }
+    } catch (e) {
+      addLog('study log error: ' + (e?.message || e), 'warn');
     }
     setTimeout(async()=>{
       setFb(null); setAnsd(false); setTr(''); setFt(''); setSe(false);
