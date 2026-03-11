@@ -1312,8 +1312,13 @@ body::before {
 // SELECTION SCREEN
 // ══════════════════════════════════════════════
 
-// Поточний вибраний рівень — читається при генерації
-const grammarAllowedLevels = ['A2', 'B1', 'B2'];
+// Допустимі рівні — беруться з verb_set.js (GRAMMAR_CONFIG.allowedLevels),
+// а якщо файл ще не підвантажений — з sett_set.js або hardcoded fallback.
+const grammarAllowedLevels = (typeof GRAMMAR_CONFIG !== 'undefined' && Array.isArray(GRAMMAR_CONFIG.allowedLevels))
+  ? GRAMMAR_CONFIG.allowedLevels
+  : ['A1', 'A2', 'B1', 'B2', 'C1'];
+
+// Дефолтний рівень — з sett_set.js (getDefaultExerciseLevel → SETTINGS_CONFIG.defaultExerciseLevel)
 let selectedLevel = (typeof getDefaultExerciseLevel === 'function')
   ? getDefaultExerciseLevel(grammarAllowedLevels)
   : 'B1';
@@ -2506,12 +2511,16 @@ async function goGenerateEx(exNum, retryCount = 0) {
     return;
   }
 
-  const exCfg      = CFG.exercises && CFG.exercises[exIdx];
-  const basePrompt = exCfg && exCfg.aiPrompt;
-  if (!basePrompt) {
+  const exCfg = CFG.exercises && CFG.exercises[exIdx];
+  if (!exCfg || !exCfg.aiPrompt) {
     showCardError(exIdx, 'Промпт для цієї вправи не знайдено у verb_set.js.');
     return;
   }
+  // level визначаємо тут, щоб передати в aiPrompt(level)
+  const level = selectedLevel || 'B1';
+  const basePrompt = typeof exCfg.aiPrompt === 'function'
+    ? exCfg.aiPrompt(level)
+    : exCfg.aiPrompt;
 
   // ── Seed: беремо свіжий, якого ще не було ────
   const seedPool  = (exCfg.seeds   && exCfg.seeds.length)   ? exCfg.seeds   : RANDOM_SEEDS_FALLBACK;
@@ -2538,7 +2547,6 @@ async function goGenerateEx(exNum, retryCount = 0) {
   }
 
   const theme = chosenTheme || randomTheme;
-  const level     = selectedLevel || 'B1';
   const token     = Date.now();
 
   // ── Формуємо заборону повторів для AI ────────
