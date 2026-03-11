@@ -311,7 +311,7 @@ function CefrRange({ from, to, onChange }) {
 }
 
 /* ── Question Card ──────────────────────────────────── */
-function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript, speechError, fallbackText, onStartRec, onStopRec, onSetFallback, onSetSpeechError }) {
+function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript, speechError, fallbackText, onStartRec, onStopRec, onSetFallback, onSetSpeechError, onAudioPlay }) {
   const [sel,setSel]   = useState(null);
   const [tv,setTv]     = useState('');
   const [played,setP]  = useState(false);
@@ -326,7 +326,7 @@ function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript
       </div>
       {q.passage && <blockquote style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:'12px 14px',marginBottom:14,color:'#cbd5e1',fontSize:'0.95rem',lineHeight:1.75,fontStyle:'italic',borderLeft:'3px solid '+col}}>{q.passage}</blockquote>}
       {q.aspect==='listening'&&q.audio_text&&(
-        <button onClick={()=>{speak(q.audio_text);setP(true);}} aria-label={played?'Відтворити знову':'Відтворити фразу'}
+        <button onClick={()=>{speak(q.audio_text);setP(true);if(onAudioPlay) onAudioPlay();}} aria-label={played?'Відтворити знову':'Відтворити фразу'}
           style={{display:'flex',alignItems:'center',gap:10,background:col+'22',border:'2px solid '+col+'55',borderRadius:12,padding:'12px 18px',color:col,cursor:'pointer',marginBottom:14,fontSize:'0.95rem',fontWeight:700,width:'100%'}}>
           🔊 {played?'Відтворити знову':'Відтворити фразу'}
         </button>
@@ -429,6 +429,8 @@ function App() {
   const [tr,setTr]           = useState('');
   const [se,setSe]           = useState(false);
   const [ft,setFt]           = useState('');
+  const [qStartedAt,setQStartedAt] = useState(0);
+  const [qTtsReplays,setQTtsReplays] = useState(0);
   const recRef = useRef(null);
 
   const [chatRec,setChatRec] = useState(false);
@@ -464,6 +466,13 @@ function App() {
   const testLabel = useMemo(()=>CEFR_ALL.slice(cfFrom,cfTo+1).join('-'),[cfFrom,cfTo]);
   // Для промптів уроку/чату: середній рівень (нижня середина)
   const sessLevel = useMemo(()=>CEFR_ALL[Math.floor((cfFrom+cfTo)/2)],[cfFrom,cfTo]);
+
+  useEffect(()=>{
+    if(screen==='test' && testPh==='questions' && qs[qi]){
+      setQStartedAt(Date.now());
+      setQTtsReplays(0);
+    }
+  },[screen,testPh,qi,qs]);
 
   /* Файл прогресу */
   const onFile = e => {
@@ -557,6 +566,42 @@ function App() {
     }
     const newAns = [...ans,{q,v,result}];
     setAns(newAns);
+
+    try {
+      if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
+        const elapsedSec = qStartedAt ? Math.max(1, Math.round((Date.now() - qStartedAt) / 1000)) : '';
+        const totalScore = newAns.reduce((s, a) => s + (a.result?.score || 0), 0);
+        const scoreMax = newAns.length * 10;
+        const taskText = [
+          q.question || '',
+          q.passage ? `Passage: ${q.passage}` : '',
+          q.audio_text ? `Audio: ${q.audio_text}` : ''
+        ].filter(Boolean).join(' | ');
+        const answerText = typeof v === 'string' ? v : JSON.stringify(v || '');
+
+        Logger.study('chat_test', {
+          exercise_type: `test_${q.aspect || 'general'}`,
+          level: testLabel,
+          theme: q.aspect || 'general',
+          result: result.correct ? 'correct' : 'wrong',
+          score_total: totalScore,
+          score_max: scoreMax,
+          time_spent_sec: elapsedSec,
+          attempt_number: qi + 1,
+          wrong_answer: result.correct ? '' : answerText,
+          correct_answer: String(q.correct || ''),
+          explanation_shown: result.feedback ? 1 : 0,
+          transcript_shown: q.aspect === 'speaking' ? 1 : 0,
+          slow_mode_used: 0,
+          tts_replays: q.aspect === 'listening' ? qTtsReplays : 0,
+          task_text: taskText,
+          answer_text: answerText,
+          ai_feedback_text: [result.feedback || '', result.error_analysis || ''].filter(Boolean).join(' | '),
+        });
+      }
+    } catch (e) {
+      addLog('study log error: ' + (e?.message || e), 'warn');
+    }
     setTimeout(async()=>{
       setFb(null); setAnsd(false); setTr(''); setFt(''); setSe(false);
       const next = qi+1;
@@ -568,7 +613,7 @@ function App() {
         await genReport(fs,newAns,asp);
       }
     },CHAT_CONFIG.test.feedbackDelay);
-  },[ansd,qs,qi,ans]);
+  },[ansd,qs,qi,ans,qStartedAt,qTtsReplays,testLabel]);
 
   /* Сесія */
   const startSess = async () => {
@@ -1074,7 +1119,8 @@ function App() {
             <QuestionCard key={qi} q={qs[qi]} idx={qi} total={qs.length}
               onAnswer={handleAns} answered={ansd} recording={rec} transcript={tr}
               speechError={se} fallbackText={ft} onStartRec={startRec} onStopRec={stopRec}
-              onSetFallback={setFt} onSetSpeechError={setSe}/>
+              onSetFallback={setFt} onSetSpeechError={setSe}
+              onAudioPlay={()=>setQTtsReplays(v=>v+1)}/>
           )}
           {fb&&(
             <div role="alert" style={{maxWidth:600,width:'100%',background:fb.correct?'rgba(74,222,128,0.1)':'rgba(248,113,113,0.1)',border:'2px solid '+(fb.correct?'rgba(74,222,128,0.35)':'rgba(248,113,113,0.35)'),borderRadius:16,padding:18,animation:'fadeIn .3s ease'}}>

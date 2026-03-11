@@ -195,6 +195,11 @@
         let conversation = [];
         let recognition = null;
         let currentTranscript = "";
+        let phoneAttemptStartedAt = 0;
+        let phoneAttemptNumber = 0;
+        let phoneCompletedTurns = 0;
+        let lastTaskText = '';
+        let lastAiFeedbackText = '';
         
         // --- Config from Storage (через sett_set.js storageKeys) ---
         function getConfig() {
@@ -233,6 +238,34 @@
 
         function toggleLogs() {
             document.getElementById('debug-logs').classList.toggle('hidden');
+        }
+
+        function logPhoneStudy(result, transcript = '', details = {}) {
+            if (typeof Logger === 'undefined' || typeof Logger.study !== 'function') return;
+
+            const elapsedSec = phoneAttemptStartedAt
+                ? Math.max(1, Math.round((Date.now() - phoneAttemptStartedAt) / 1000))
+                : '';
+
+            Logger.study('phone', {
+                exercise_type: currentType || 'speaking',
+                level: currentLevel || '',
+                theme: 'PhoneSpeaking',
+                result,
+                score_total: phoneCompletedTurns,
+                score_max: phoneCompletedTurns,
+                time_spent_sec: elapsedSec,
+                attempt_number: phoneAttemptNumber || (phoneCompletedTurns + 1),
+                wrong_answer: result === 'wrong' ? String(transcript || '') : '',
+                correct_answer: String(details.reference || conversation[conversation.length - 1]?.content || ''),
+                explanation_shown: details.explanationShown ? 1 : 0,
+                transcript_shown: transcript ? 1 : 0,
+                slow_mode_used: 0,
+                tts_replays: 0,
+                task_text: details.taskText || lastTaskText || '',
+                answer_text: String(transcript || ''),
+                ai_feedback_text: details.aiFeedbackText || lastAiFeedbackText || '',
+            });
         }
 
         // --- Exercise Logic Mapping — будується з phone_set.js ---
@@ -301,6 +334,9 @@
 
             currentLevel = lvl;
             currentType = type;
+            phoneAttemptStartedAt = 0;
+            phoneAttemptNumber = 0;
+            phoneCompletedTurns = 0;
 
             document.getElementById('header-title').innerText = typeText;
             document.getElementById('header-subtitle').innerText = `Рівень ${lvl}`;
@@ -326,6 +362,8 @@
             const systemInstruction = basePrompt + (typeof sysRaw === "function" ? sysRaw(lvl) : (sysRaw || ""));
             
             conversation = [{ role: 'system', content: systemInstruction }];
+            lastTaskText = '';
+            lastAiFeedbackText = '';
             addLog(`Промпт: ${systemInstruction}`);
             callAI();
         }
@@ -400,6 +438,7 @@
             try {
                 const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
                 document.getElementById('feedback-content').innerText = feedback;
+                lastAiFeedbackText = feedback || '';
                 document.getElementById('feedback-sheet').classList.remove('hidden');
                 addLog("Аналіз готовий", "success");
             } catch (err) {
@@ -413,14 +452,24 @@
             document.getElementById('feedback-sheet').classList.add('hidden');
             document.getElementById('transcript-preview').innerText = "";
             currentTranscript = "";
+            logPhoneStudy('skip', '', { explanationShown: true, taskText: lastTaskText, aiFeedbackText: lastAiFeedbackText });
             addLog("Повторна спроба");
         }
 
         function confirmFeedback() {
             document.getElementById('feedback-sheet').classList.add('hidden');
             const toSend = currentTranscript;
+            const taskForLog = conversation[conversation.length - 1]?.content || '';
+            lastTaskText = taskForLog;
+            phoneCompletedTurns++;
+            logPhoneStudy(toSend.trim() ? 'correct' : 'skip', toSend, {
+                explanationShown: true,
+                taskText: taskForLog,
+                aiFeedbackText: lastAiFeedbackText,
+            });
             currentTranscript = "";
             document.getElementById('transcript-preview').innerText = "";
+            lastAiFeedbackText = '';
             callAI(toSend);
         }
 
@@ -451,6 +500,8 @@
 
             recognition.onstart = () => {
                 isRecording = true;
+                phoneAttemptStartedAt = Date.now();
+                phoneAttemptNumber = phoneCompletedTurns + 1;
                 document.getElementById('mic-ring').classList.remove('hidden');
                 document.getElementById('mic-icon').className = 'fa-solid fa-square';
                 document.getElementById('stt-status').innerText = "СЛУХАЮ ІСПАНСЬКУ...";
