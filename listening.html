@@ -854,6 +854,11 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
 
         const result = await response.json();
         log(`Відповідь отримана (${response.status})`, 'success');
+        Logger.tech('listening', 'ai_response', 'Tasks received', {
+            provider, model,
+            tokens_in:  provider === 'openai' ? (result.usage?.prompt_tokens ?? null) : provider === 'anthropic' ? (result.usage?.input_tokens ?? null) : (result.usageMetadata?.promptTokenCount ?? null),
+            tokens_out: provider === 'openai' ? (result.usage?.completion_tokens ?? null) : provider === 'anthropic' ? (result.usage?.output_tokens ?? null) : (result.usageMetadata?.candidatesTokenCount ?? null),
+        });
 
         let content;
         try {
