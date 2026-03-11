@@ -21,8 +21,9 @@ base_dir_prod = f'/opt/share/nginx/html/{USER_DIR}'
 base_dir_local = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = base_dir_prod if os.path.isdir(base_dir_prod) else base_dir_local
 
-# Можна явно перевизначити директорію логів через HUB_LOG_DIR.
-LOG_DIR = os.environ.get('HUB_LOG_DIR', '').strip() or os.path.join(BASE_DIR, 'logs')
+# Можна явно перевизначити кореневу директорію логів через HUB_LOG_DIR.
+# За замовчуванням — корінь проекту, тому studylog/techlog будуть поруч з іншими файлами.
+LOG_DIR = os.environ.get('HUB_LOG_DIR', '').strip() or BASE_DIR
 
 # ── Головна сторінка ───────────────────────────────────────────
 @route('/')
@@ -91,6 +92,5 @@ def static_files(filename):
     return static_file(filename, root=BASE_DIR)
 
 # ── Запуск ────────────────────────────────────────────────────
-os.makedirs(LOG_DIR, exist_ok=True)
 print(f"[SpanishHub] Starting user={USER_DIR} port={PORT} dir={BASE_DIR} log_dir={LOG_DIR}")
 run(host='0.0.0.0', port=PORT, debug=False, quiet=True)
