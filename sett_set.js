@@ -203,7 +203,7 @@ const SETTINGS_CONFIG = {
         // ── Техлог ─────────────────────────────────────────
         techLog: {
             storageKey:  'sp_techlog_buffer',   // ключ буфера в localStorage
-            folder:      'techlog',             // папка на сервері
+            folder:      'techolog',            // папка на сервері
             // Назва файлу: <module>+ДД.ММ.txt  (напр. phone+10.06.txt)
             // Поля рядка (через TAB):
             // timestamp  module  level  event_type  description  [extra_json]

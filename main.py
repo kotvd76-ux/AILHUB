@@ -70,7 +70,8 @@ def receive_log():
             response.status = 400
             return json.dumps({"error": "empty line"})
 
-        folder = os.path.join(LOG_DIR, logtype + 'log')
+        folder_map = {'tech': 'techolog', 'study': 'studylog'}
+        folder = os.path.join(LOG_DIR, folder_map.get(logtype, logtype + 'log'))
         os.makedirs(folder, exist_ok=True)
 
         today = datetime.now().strftime('%Y-%m-%d')
