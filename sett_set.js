@@ -34,6 +34,16 @@ const SETTINGS_CONFIG = {
         { value: 'Emergencies', label: '🚨 Надзвичайні ситуації' },
     ],
 
+    // ── Глобальні рівні CEFR для всіх вправ ─────────────────
+    // Єдине джерело переліку рівнів у всіх модулях.
+    exerciseLevels: [
+        { value: 'A1', label: 'A1 — Початківець'       },
+        { value: 'A2', label: 'A2 — Елементарний'      },
+        { value: 'B1', label: 'B1 — Середній'          },
+        { value: 'B2', label: 'B2 — Вище середнього'   },
+        { value: 'C1', label: 'C1 — Просунутий'        },
+    ],
+
     // Режим теми для модуля граматики за замовчуванням:
     // 'random' — випадкова тема, якщо користувач не обрав вручну.
     grammarThemeDefaultMode: 'random',
@@ -299,6 +309,24 @@ function getLangConfig() {
 function getGrammarThemeDefaultMode() {
     const mode = (SETTINGS_CONFIG && SETTINGS_CONFIG.grammarThemeDefaultMode) || 'random';
     return mode === 'manual' ? 'manual' : 'random';
+}
+
+
+// ── Глобальна функція отримання переліку рівнів ─────────────
+// Повертає масив { value, label } для заповнення <select> у вправах.
+// Якщо allowedLevels вказано — фільтрує лише допустимі рівні.
+function getExerciseLevels(allowedLevels) {
+    const all = Array.isArray(SETTINGS_CONFIG?.exerciseLevels) && SETTINGS_CONFIG.exerciseLevels.length
+        ? SETTINGS_CONFIG.exerciseLevels
+        : [
+            { value: 'A1', label: 'A1 — Початківець'       },
+            { value: 'A2', label: 'A2 — Елементарний'      },
+            { value: 'B1', label: 'B1 — Середній'          },
+            { value: 'B2', label: 'B2 — Вище середнього'   },
+            { value: 'C1', label: 'C1 — Просунутий'        },
+        ];
+    if (!allowedLevels || !allowedLevels.length) return all;
+    return all.filter(l => allowedLevels.includes(l.value));
 }
 
 
