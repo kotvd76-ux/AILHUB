@@ -304,6 +304,7 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:18px 0}
       <button class="btn btn-blue" onclick="refreshLogs()"><i class="fa fa-rotate"></i> Оновити</button>
       <button class="btn" onclick="exportLog('study')"><i class="fa fa-download"></i> Навчання</button>
       <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Техлог</button>
+      <button class="btn btn-red" onclick="clearLog('study')"><i class="fa fa-trash"></i> Очистити навчання</button>
     </div>
   </div>
   <div class="sg">
@@ -329,6 +330,7 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:18px 0}
       <button class="btn btn-green" onclick="loadServerLogs('tech')"><i class="fa fa-server"></i> <span id="srv-tech-btn-lbl">Сервер</span></button>
       <button class="btn btn-blue" onclick="refreshTechLogs()"><i class="fa fa-rotate"></i> Оновити</button>
       <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Експорт</button>
+      <button class="btn btn-red" onclick="clearLog('tech')"><i class="fa fa-trash"></i> Очистити техлог</button>
     </div>
   </div>
 
@@ -772,6 +774,14 @@ function buildTable(parsed) {
     const lc = r.level === 'B2' ? 'tp' : r.level === 'B1' ? 'tb' : 'tg';
     return `<tr><td style="color:var(--dim)">${r.timestamp.slice(11,19)}</td><td><span class="tag tb">${r.module}</span></td><td>${r.theme||'—'}</td><td><span class="tag ${lc}">${r.level||'—'}</span></td><td style="color:${rc};font-weight:500">${r.result||'—'}</td><td>${r.time_spent||'—'}</td></tr>`;
   }).join('');
+}
+function clearLog(type) {
+  const key = type === 'study' ? 'sp_studylog_buffer' : 'sp_techlog_buffer';
+  const label = type === 'study' ? 'навчальний лог' : 'техлог';
+  if (!confirm(`Видалити ${label}?`)) return;
+  localStorage.removeItem(key);
+  refreshLogs(); refreshTechLogs();
+  toast(`✓ ${label} очищено`);
 }
 function exportLog(type) {
   const buf = type === 'study' ? getStudy() : getTech();
