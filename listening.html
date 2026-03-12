@@ -529,7 +529,7 @@
             <button id="settings-btn" onclick="" class="link-btn" style="color:var(--blue)">
                 <i class="fa-solid fa-gear" aria-hidden="true"></i> Налаштування AI
             </button>
-            <button onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted)" aria-label="Відкрити журнал діагностики">
+            <button id="diag-btn-home" onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted);display:none" aria-label="Відкрити журнал діагностики">
                 <i class="fa-solid fa-bug" aria-hidden="true"></i> Діагностика
             </button>
         </div>
@@ -547,7 +547,7 @@
             <div id="progress-fill" class="progress-fill" style="width:0%"></div>
         </div>
         <div class="score-badge" id="score-badge" aria-label="Рахунок">0</div>
-        <button onclick="toggleDebug()" class="btn btn-icon" aria-label="Журнал діагностики" title="Відкрити лог">
+        <button id="diag-btn-train" onclick="toggleDebug()" class="btn btn-icon" style="display:none" aria-label="Журнал діагностики" title="Відкрити лог">
             <i class="fa-solid fa-bug" aria-hidden="true"></i>
         </button>
     </div>
@@ -649,6 +649,13 @@
     function initFromConfig() {
         document.getElementById('back-link').href       = LISTEN_CONFIG.homePage;
         document.getElementById('settings-btn').onclick = () => location.href = LISTEN_CONFIG.settingsPage;
+
+        // Показуємо кнопки діагностики якщо сервіс режим або техлог увімкнено
+        const _diagVisible = localStorage.getItem('sp_service_mode') === '1'
+            || localStorage.getItem('sp_techlog_enabled') === '1';
+        document.querySelectorAll('#diag-btn-home, #diag-btn-train').forEach(b => {
+            b.style.display = _diagVisible ? '' : 'none';
+        });
 
         // Теми
         const themeSelect = document.getElementById('theme-select');

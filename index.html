@@ -52,8 +52,10 @@
             <p class="text-zinc-500 text-sm">Ваша мовна школа на Keenetic</p>
         </div>
         <div class="flex items-center gap-2">
-            <a href="service.html" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-zinc-600 hover:text-zinc-400 transition-colors duration-200" title="Сервіс">
-                <i class="fa-solid fa-screwdriver-wrench" style="font-size: 13px;"></i>
+            <a id="service-btn" href="service.html" style="display:none"
+               class="w-10 h-10 rounded-full glass-card flex items-center justify-center transition-colors duration-200"
+               style="color:#f59e0b;border-color:rgba(245,158,11,.35);" title="Сервіс">
+                <i class="fa-solid fa-screwdriver-wrench" style="font-size: 13px;color:#f59e0b;"></i>
             </a>
             <a href="settings.html" class="w-10 h-10 rounded-full glass-card flex items-center justify-center text-zinc-400">
                 <i class="fa-solid fa-gear"></i>
@@ -130,6 +132,14 @@
     </footer>
 
     <script>
+        // Показуємо кнопку Сервіс тільки коли увімкнено сервіс режим
+        (function() {
+            const btn = document.getElementById('service-btn');
+            if (btn && localStorage.getItem('sp_service_mode') === '1') {
+                btn.style.display = 'flex';
+            }
+        })();
+
         // Функція для оновлення статусу роутера
         async function updateSystemStatus() {
             try {

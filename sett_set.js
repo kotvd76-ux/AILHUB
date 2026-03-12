@@ -168,6 +168,9 @@ const SETTINGS_CONFIG = {
         techLogEnabled:  'sp_techlog_enabled',   // '1' | '0'
         studyLogEnabled: 'sp_studylog_enabled',  // '1' | '0'
         logServerUrl:    'sp_log_server_url',    // URL сервера, напр. 'http://localhost:3030'
+
+        // ── Сервіс режим ───────────────────────────────────
+        serviceMode:     'sp_service_mode',      // '1' | '0'
     },
 
     // ── Плейсхолдери для полів API-ключів ────────────────────
