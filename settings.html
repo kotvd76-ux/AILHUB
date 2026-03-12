@@ -947,7 +947,11 @@
         let currentTTSMode = 'online';
 
         // ── Ініціалізація ──────────────────────────────────────
-        window.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Спочатку підтягуємо налаштування з роутера (централізовані),
+            // потім заповнюємо UI вже синхронізованими значеннями.
+            await loadCentralSettings();
+
             buildProviderSelect();
             buildLanguageSelects();
 
@@ -1362,6 +1366,9 @@
             if (currentTTSMode === 'offline') {
                 set(SK.voiceNative, $('native-voice-select').value);
             }
+
+            // Зберігаємо налаштування на сервері (роутері) для синхронізації між пристроями
+            saveCentralSettings();
 
             showToast('Конфігурацію збережено!');
             setTimeout(() => window.location.href = SETTINGS_CONFIG.backUrl,
