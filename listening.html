@@ -656,12 +656,18 @@
             ? getPriorityThemes()
             : LISTEN_CONFIG.themes;
 
+        const autoOpt = document.createElement('option');
+        autoOpt.value = '';
+        autoOpt.textContent = '🎲 Автовибір теми';
+        themeSelect.appendChild(autoOpt);
+
         globalThemes.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.value;
             opt.textContent = t.label;
             themeSelect.appendChild(opt);
         });
+        themeSelect.value = '';
 
         // Рівні
         const levelSelect = document.getElementById('level-select');
@@ -743,9 +749,21 @@
         return ls(sk.voiceNative || 'sp_voice_native', '');
     }
 
+    // ── Випадковий підбір теми ────────────────────────────────────────────────
+    function resolveListenTheme() {
+        const sel = document.getElementById('theme-select');
+        const selected = sel ? sel.value : '';
+        if (selected) return selected;
+        // Авто: випадкова тема
+        const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+        if (!themes.length) return 'General';
+        const picked = themes[Math.floor(Math.random() * themes.length)];
+        return picked.value;
+    }
+
     // ── Старт тренування ──────────────────────────────────────────────────────
     async function startTraining() {
-        const theme    = document.getElementById('theme-select').value;
+        const theme    = resolveListenTheme();
         const levelVal = document.getElementById('level-select').value;
         const levelObj = LISTEN_CONFIG.levels.find(l => l.value === levelVal);
         const wordCount = levelObj ? levelObj.wordCount : 17;
