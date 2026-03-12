@@ -140,9 +140,11 @@ const Logger = (() => {
     // ── Відправка на локальний сервер ──────────────────────────
     async function trySendToServer(module, line, logType) {
         const serverUrlKey = SK()?.logServerUrl;
-        if (!serverUrlKey) return;
-        const serverUrl = ls.get(serverUrlKey, '').trim();
-        if (!serverUrl) return;
+        let serverUrl = serverUrlKey ? ls.get(serverUrlKey, '').trim() : '';
+        // Автовизначення: якщо URL не задано вручну — беремо поточний origin.
+        // Це працює, коли сторінка обслуговується самим Bottle-сервером
+        // (наприклад https://tst.keensl.keenetic.pro/ → POST /log іде туди ж).
+        if (!serverUrl) serverUrl = window.location.origin;
 
         try {
             await fetch(`${serverUrl}/log`, {
