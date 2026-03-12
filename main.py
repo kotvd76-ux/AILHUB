@@ -1,5 +1,6 @@
 from bottle import route, run, static_file, response, request
 import os
+import re
 import sys
 import json
 from datetime import datetime
@@ -87,6 +88,49 @@ def receive_log():
         response.status = 500
         response.content_type = 'application/json'
         return json.dumps({"error": str(e)})
+
+# ── Список лог-файлів (GET /logs/<logtype>) ───────────────────
+@route('/logs/<logtype>', method=['GET', 'OPTIONS'])
+def list_logs(logtype):
+    response.set_header('Access-Control-Allow-Origin', '*')
+    if request.method == 'OPTIONS':
+        return ''
+    folder = os.path.join(LOG_DIR, logtype + 'log')
+    if not os.path.isdir(folder):
+        response.content_type = 'application/json'
+        return json.dumps([])
+    files = sorted(
+        [f for f in os.listdir(folder) if f.endswith('.txt')],
+        reverse=True
+    )
+    response.content_type = 'application/json'
+    return json.dumps(files)
+
+# ── Читання лог-файлу (GET /logs/<logtype>/<filename>) ────────
+@route('/logs/<logtype>/<filename>', method=['GET', 'OPTIONS'])
+def read_log(logtype, filename):
+    response.set_header('Access-Control-Allow-Origin', '*')
+    if request.method == 'OPTIONS':
+        return ''
+    # Дозволяємо тільки безпечні імена: цифри, літери, дефіс, крапка
+    if not re.match(r'^[\w\-\.]+\.txt$', filename):
+        response.status = 400
+        response.content_type = 'application/json'
+        return json.dumps({"error": "invalid filename"})
+    folder   = os.path.join(LOG_DIR, logtype + 'log')
+    filepath = os.path.join(folder, filename)
+    # Захист від path traversal
+    if not os.path.abspath(filepath).startswith(os.path.abspath(folder) + os.sep):
+        response.status = 403
+        response.content_type = 'application/json'
+        return json.dumps({"error": "forbidden"})
+    if not os.path.isfile(filepath):
+        response.status = 404
+        response.content_type = 'application/json'
+        return json.dumps({"error": "not found"})
+    response.content_type = 'text/plain; charset=utf-8'
+    with open(filepath, 'r', encoding='utf-8') as f:
+        return f.read()
 
 # ── Статичні файли (має бути ОСТАННІМ роутом) ─────────────────
 @route('/<filename:path>')

@@ -298,8 +298,9 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:18px 0}
 <div class="panel active" id="panel-studylogs">
   <div class="ph">
     <div class="ph-icon" style="background:rgba(45,224,138,.12);color:var(--green)"><i class="fa fa-graduation-cap"></i></div>
-    <div><div class="ph-title">Аналіз стаділогів</div><div class="ph-sub">Статистика навчання з sp_studylog_buffer</div></div>
+    <div><div class="ph-title">Аналіз стаділогів</div><div class="ph-sub" id="study-src-lbl">Статистика навчання з sp_studylog_buffer</div></div>
     <div class="ph-acts">
+      <button class="btn btn-green" onclick="loadServerLogs('study')"><i class="fa fa-server"></i> <span id="srv-study-btn-lbl">Сервер</span></button>
       <button class="btn btn-blue" onclick="refreshLogs()"><i class="fa fa-rotate"></i> Оновити</button>
       <button class="btn" onclick="exportLog('study')"><i class="fa fa-download"></i> Навчання</button>
       <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Техлог</button>
@@ -323,8 +324,9 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:18px 0}
 <div class="panel" id="panel-techlogs">
   <div class="ph">
     <div class="ph-icon" style="background:rgba(180,127,255,.12);color:var(--purple)"><i class="fa fa-microchip"></i></div>
-    <div><div class="ph-title">Аналіз технологів</div><div class="ph-sub">Технічні події та помилки з sp_techlog_buffer</div></div>
+    <div><div class="ph-title">Аналіз технологів</div><div class="ph-sub" id="tech-src-lbl">Технічні події та помилки з sp_techlog_buffer</div></div>
     <div class="ph-acts">
+      <button class="btn btn-green" onclick="loadServerLogs('tech')"><i class="fa fa-server"></i> <span id="srv-tech-btn-lbl">Сервер</span></button>
       <button class="btn btn-blue" onclick="refreshTechLogs()"><i class="fa fa-rotate"></i> Оновити</button>
       <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Експорт</button>
     </div>
@@ -648,8 +650,62 @@ function toast(m, d = 2200) {
 // DATA HELPERS
 const getStudy = () => { try { return JSON.parse(localStorage.getItem('sp_studylog_buffer') || '{}'); } catch { return {}; } };
 const getTech = () => { try { return JSON.parse(localStorage.getItem('sp_techlog_buffer') || '{}'); } catch { return {}; } };
-const allStudyLines = () => Object.values(getStudy()).flat();
-const allTechLines = () => Object.values(getTech()).flat();
+
+// Серверні рядки логів (завантажені з /logs/…)
+let _serverStudyLines = [];
+let _serverTechLines  = [];
+
+// Об'єднуємо localStorage-буфер + серверні рядки (без дублікатів за вмістом)
+function allStudyLines() {
+  const local = Object.values(getStudy()).flat();
+  if (!_serverStudyLines.length) return local;
+  const set = new Set(local);
+  const extra = _serverStudyLines.filter(l => !set.has(l));
+  return [...local, ...extra].sort();
+}
+function allTechLines() {
+  const local = Object.values(getTech()).flat();
+  if (!_serverTechLines.length) return local;
+  const set = new Set(local);
+  const extra = _serverTechLines.filter(l => !set.has(l));
+  return [...local, ...extra].sort();
+}
+
+// Завантаження серверних логів через GET /logs/<type>
+async function loadServerLogs(type) {
+  const origin = localStorage.getItem('sp_log_server_url')?.trim() || window.location.origin;
+  const today  = new Date().toISOString().slice(0, 10);
+  const btnLbl = document.getElementById(type === 'study' ? 'srv-study-btn-lbl' : 'srv-tech-btn-lbl');
+  const srcLbl = document.getElementById(type === 'study' ? 'study-src-lbl'    : 'tech-src-lbl');
+
+  if (btnLbl) btnLbl.textContent = '…';
+  try {
+    // Список доступних файлів
+    const listResp = await fetch(`${origin}/logs/${type}`, { signal: AbortSignal.timeout(4000) });
+    if (!listResp.ok) throw new Error(`HTTP ${listResp.status}`);
+    const files = await listResp.json();
+
+    if (!files.length) { toast('На сервері немає лог-файлів'); if (btnLbl) btnLbl.textContent = 'Сервер'; return; }
+
+    // Завантажуємо сьогоднішній файл (або перший з переліку)
+    const target = files.includes(today + '.txt') ? today + '.txt' : files[0];
+    const fileResp = await fetch(`${origin}/logs/${type}/${target}`, { signal: AbortSignal.timeout(8000) });
+    if (!fileResp.ok) throw new Error(`HTTP ${fileResp.status}`);
+    const text = await fileResp.text();
+
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (type === 'study') { _serverStudyLines = lines; refreshLogs(); }
+    else                  { _serverTechLines  = lines; refreshTechLogs(); }
+
+    const allFiles = files.join(', ');
+    if (srcLbl) srcLbl.textContent = `Джерело: сервер (${target}) + localStorage · Файли: ${allFiles}`;
+    if (btnLbl) btnLbl.textContent = `✓ ${lines.length} рядків`;
+    toast(`Завантажено ${lines.length} рядків з сервера (${target})`);
+  } catch (e) {
+    toast(`Помилка сервера: ${e.message}`);
+    if (btnLbl) btnLbl.textContent = 'Сервер';
+  }
+}
 function parseSL(line) {
   const p = line.split('\t');
   return {
@@ -1079,7 +1135,13 @@ function calcUsage(){
 }
 
 // INIT
-window.addEventListener('DOMContentLoaded', () => { refreshLogs(); refreshTechLogs(); loadLS(); loadBkInfo(); loadApiKeys(); loadEd('sett_set', document.querySelector('.edtab.active')); });
+window.addEventListener('DOMContentLoaded', () => {
+  refreshLogs(); refreshTechLogs(); loadLS(); loadBkInfo(); loadApiKeys();
+  loadEd('sett_set', document.querySelector('.edtab.active'));
+  // Спроба автоматично підтягнути сьогоднішні логи з сервера
+  loadServerLogs('study');
+  loadServerLogs('tech');
+});
 </script>
 </body>
 </html>
