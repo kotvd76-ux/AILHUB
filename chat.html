@@ -153,7 +153,8 @@ const getSettings = () => {
     ttsMode:    localStorage.getItem(SETTINGS_CONFIG.storageKeys.ttsMode) || 'offline',
     voice:      localStorage.getItem(SETTINGS_CONFIG.storageKeys.voice) || '',
     speechLang: (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES',
-    techLogOn:  localStorage.getItem(SETTINGS_CONFIG.storageKeys.techLogEnabled) === '1',
+    techLogOn:  localStorage.getItem(SETTINGS_CONFIG.storageKeys.techLogEnabled) === '1'
+             || localStorage.getItem(SETTINGS_CONFIG.storageKeys.serviceMode || 'sp_service_mode') === '1',
   };
 };
 

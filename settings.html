@@ -520,6 +520,50 @@
             background:   rgba(239,68,68,.18);
             border-color: #ef4444;
         }
+
+        /* ── Сервіс режим ────────────────────────────────── */
+        .card--service {
+            border-color: rgba(245,158,11,.35);
+            background: rgba(245,158,11,.07);
+        }
+
+        .card--service.service-active {
+            border-color: rgba(245,158,11,.7);
+            background: rgba(245,158,11,.13);
+            box-shadow: 0 0 0 1px rgba(245,158,11,.25);
+        }
+
+        .service-mode-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .service-mode-row .switcher__track {
+            background: rgba(255,255,255,.12);
+        }
+
+        .service-mode-row .switcher input:checked ~ .switcher__track {
+            background: #f59e0b;
+        }
+
+        .service-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .15rem .6rem;
+            border-radius: 999px;
+            font-size: .6rem;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            background: rgba(245,158,11,.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245,158,11,.4);
+            margin-left: .5rem;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -538,6 +582,35 @@
         </header>
 
         <main class="space-y-5" role="main">
+
+            <!-- ── Сервіс режим ──────────────────────────────── -->
+            <section class="card card--service" id="service-mode-card" aria-labelledby="lbl-service-mode">
+                <div class="service-mode-row">
+                    <div style="flex:1">
+                        <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;">
+                            <label id="lbl-service-mode" class="field-label"
+                                   style="color:#f59e0b;margin-bottom:0;cursor:pointer;"
+                                   for="toggle-service-mode">
+                                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true" style="margin-right:.35rem;opacity:.85"></i>
+                                Сервіс режим
+                            </label>
+                            <span id="service-badge" class="service-badge" style="display:none;">
+                                <i class="fa-solid fa-circle" style="font-size:.45rem"></i> АКТИВНИЙ
+                            </span>
+                        </div>
+                        <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:0;line-height:1.45;">
+                            Вмикає по всьому хабу: кнопки «Діагностика» в усіх модулях,
+                            кнопку «Сервіс» на головній сторінці, перемикачі мови та логування.
+                        </p>
+                    </div>
+                    <label class="switcher" aria-label="Увімкнути сервіс режим" style="flex-shrink:0">
+                        <input type="checkbox" id="toggle-service-mode"
+                               onchange="onToggleServiceMode(this.checked)">
+                        <span class="switcher__track" aria-hidden="true"></span>
+                        <span class="switcher__thumb" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </section>
 
             <!-- ── Провайдер ──────────────────────────────────── -->
             <section class="card card--accent" aria-labelledby="lbl-provider">
@@ -902,6 +975,7 @@
             loadNativeVoices();
             checkKeyPresence();
             initLoggingSection();
+            initServiceMode();
 
             $('voice-speed').addEventListener('input', function () {
                 $('speed-val').textContent = this.value + '×';
@@ -1157,6 +1231,49 @@
             }, SETTINGS_CONFIG.toastDuration);
         }
 
+        // ── Сервіс режим ───────────────────────────────────────
+        window.onToggleServiceMode = function(enabled) {
+            const SK = SETTINGS_CONFIG.storageKeys;
+            set(SK.serviceMode, enabled ? '1' : '0');
+            applyServiceModeUI(enabled);
+        };
+
+        function applyServiceModeUI(enabled) {
+            const card  = $('service-mode-card');
+            const badge = $('service-badge');
+            if (enabled) {
+                card.classList.add('service-active');
+                badge.style.display = 'inline-flex';
+                // Автоматично розгортаємо секції логування та мов
+                const logBody  = $('logging-body');
+                const logChevr = $('logging-chevron');
+                const logBtn   = $('logging-toggle');
+                if (logBody && logBody.style.display === 'none') {
+                    logBody.style.display = 'block';
+                    if (logChevr) logChevr.style.transform = 'rotate(180deg)';
+                    if (logBtn) logBtn.setAttribute('aria-expanded', 'true');
+                }
+                const langBody  = $('languages-body');
+                const langChevr = $('languages-chevron');
+                const langBtn   = $('languages-toggle');
+                if (langBody && langBody.style.display === 'none') {
+                    langBody.style.display = 'block';
+                    if (langChevr) langChevr.style.transform = 'rotate(180deg)';
+                    if (langBtn) langBtn.setAttribute('aria-expanded', 'true');
+                }
+            } else {
+                card.classList.remove('service-active');
+                badge.style.display = 'none';
+            }
+        }
+
+        function initServiceMode() {
+            const SK = SETTINGS_CONFIG.storageKeys;
+            const enabled = get(SK.serviceMode, '0') === '1';
+            $('toggle-service-mode').checked = enabled;
+            applyServiceModeUI(enabled);
+        }
+
         // ── Логування ──────────────────────────────────────────
         const SKlog = () => SETTINGS_CONFIG.storageKeys;
 
@@ -1238,6 +1355,9 @@
             set(SK.techLogEnabled,  $('toggle-techlog').checked  ? '1' : '0');
             set(SK.studyLogEnabled, $('toggle-studylog').checked ? '1' : '0');
             set(SK.logServerUrl ?? 'sp_log_server_url', $('log-server-url').value.trim());
+
+            // Сервіс режим
+            set(SK.serviceMode, $('toggle-service-mode').checked ? '1' : '0');
 
             if (currentTTSMode === 'offline') {
                 set(SK.voiceNative, $('native-voice-select').value);

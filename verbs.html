@@ -2296,10 +2296,11 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
   if (selBack) selBack.href = homePage;
   if (selSett) selSett.href = settingsPage;
 
-  // Tech log visibility
+  // Tech log / service mode visibility
   const SK = (typeof SETTINGS_CONFIG !== 'undefined' && SETTINGS_CONFIG.storageKeys) ? SETTINGS_CONFIG.storageKeys : {};
   const techLogEnabled = localStorage.getItem(SK.techLogEnabled || 'sp_techlog_enabled') === '1';
-  if (!techLogEnabled) {
+  const serviceModeOn  = localStorage.getItem(SK.serviceMode   || 'sp_service_mode')    === '1';
+  if (!techLogEnabled && !serviceModeOn) {
     document.querySelectorAll('.hdr-btn-debug').forEach(b => b.style.display = 'none');
   }
 

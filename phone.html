@@ -137,7 +137,7 @@
                 <i class="fa-solid fa-play"></i>
                 ПОЧАТИ
             </button>
-            <button onclick="toggleLogs()" class="w-full mt-6 text-[10px] text-slate-600 font-bold uppercase tracking-widest underline decoration-orange-500/30">Логи налагодження</button>
+            <button id="phone-diag-btn" onclick="toggleLogs()" class="w-full mt-6 text-[10px] text-slate-600 font-bold uppercase tracking-widest underline decoration-orange-500/30" style="display:none">Логи налагодження</button>
         </div>
     </div>
 
@@ -634,6 +634,12 @@
             buildThemeDropdown();
             updateGameOptions();
             addLog(`Тренажер готовий до роботи (дефолтний рівень: ${currentLevel})`);
+
+            // Показуємо кнопку діагностики якщо сервіс режим або техлог увімкнено
+            const _phoneServiceMode = localStorage.getItem('sp_service_mode') === '1'
+                || localStorage.getItem('sp_techlog_enabled') === '1';
+            const _phoneDiagBtn = document.getElementById('phone-diag-btn');
+            if (_phoneDiagBtn) _phoneDiagBtn.style.display = _phoneServiceMode ? 'block' : 'none';
         };
     </script>
 </body>
