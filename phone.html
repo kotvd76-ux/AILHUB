@@ -621,7 +621,8 @@
             }
         }
 
-        window.onload = () => {
+        window.onload = async () => {
+            if (typeof loadCentralSettings === 'function') await loadCentralSettings();
             const levelSelect = document.getElementById('level-select');
             const defaultLevel = (typeof getDefaultExerciseLevel === 'function')
                 ? getDefaultExerciseLevel(PHONE_ALLOWED_LEVELS)
