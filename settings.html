@@ -1154,6 +1154,13 @@
             const data     = SETTINGS_CONFIG.onlineVoices[provider] ?? { desc: '', list: [] };
             const grid     = $('online-voice-grid');
             $('online-voice-desc').textContent = data.desc;
+
+            // Якщо поточний голос не входить у список нового провайдера — скидаємо на перший
+            const voiceIds = data.list.map(v => v.id);
+            if (data.list.length > 0 && !voiceIds.includes(currentVoice)) {
+                setVoice(data.list[0].id);
+            }
+
             grid.innerHTML = '';
             data.list.forEach(v => {
                 const btn = document.createElement('button');
