@@ -76,9 +76,19 @@ class GeminiLiveConnector {
 
     // ── Setup — точна структура за офіційною документацією ────
     _sendSetup() {
-        const storedVoice = (typeof SETTINGS_CONFIG !== 'undefined')
-            ? (localStorage.getItem(SETTINGS_CONFIG.storageKeys.voice) || 'Charon')
-            : 'Charon';
+        const GEMINI_VOICES = [
+            'Puck', 'Charon', 'Kore', 'Fenrir', 'Aoede',
+            'Orbit', 'Zephyr', 'Leda', 'Orus', 'Schedar',
+            'Gacrux', 'Pulcherrima', 'Achird', 'Zubenelgenubi',
+            'Vindemiatrix', 'Sadachbia', 'Sadaltager', 'Sulafat'
+        ];
+        const rawVoice = (typeof SETTINGS_CONFIG !== 'undefined')
+            ? (localStorage.getItem(SETTINGS_CONFIG.storageKeys.voice) || '')
+            : '';
+        const storedVoice = GEMINI_VOICES.includes(rawVoice) ? rawVoice : 'Charon';
+        if (rawVoice && rawVoice !== storedVoice) {
+            this._log(`voice "${rawVoice}" not in Gemini list — fallback to "Charon"`, 'warn');
+        }
 
         // Додаємо англомовну інструкцію щодо мови на початок промпту
         const langPrefix = 'IMPORTANT: The user speaks ONLY Spanish (es-ES). ' +
