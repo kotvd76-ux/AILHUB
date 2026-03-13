@@ -357,6 +357,65 @@ function getExerciseLevels(allowedLevels) {
 }
 
 
+// ── Централізовані налаштування на сервері (роутері) ────────
+// Ключі, що синхронізуються між пристроями через /settings.
+const CENTRAL_SETTINGS_KEYS = [
+    'sp_provider', 'sp_model',
+    'sp_api_key_openai', 'sp_api_key_google', 'sp_api_key_anthropic',
+    'sp_speed', 'sp_tts_mode', 'sp_voice', 'sp_voice_native',
+    'sp_target_lang', 'sp_native_lang', 'sp_helper_lang',
+    'sp_techlog_enabled', 'sp_studylog_enabled', 'sp_log_server_url',
+    'sp_service_mode',
+];
+
+// Завантажує налаштування з сервера в localStorage.
+// Серверні значення мають пріоритет над локальними —
+// це забезпечує єдину конфігурацію на всіх пристроях.
+// Повертає true, якщо дані успішно отримано.
+async function loadCentralSettings() {
+    try {
+        const res = await fetch('/settings', {
+            signal: AbortSignal.timeout(3000)
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        if (!data || typeof data !== 'object') return false;
+        let count = 0;
+        for (const key of CENTRAL_SETTINGS_KEYS) {
+            if (data[key] !== undefined && data[key] !== null) {
+                localStorage.setItem(key, data[key]);
+                count++;
+            }
+        }
+        return count > 0;
+    } catch {
+        return false;
+    }
+}
+
+// Зберігає поточні налаштування з localStorage на сервер.
+// Викликається після збереження налаштувань користувачем.
+// Повертає true у разі успіху.
+async function saveCentralSettings() {
+    try {
+        const data = {};
+        for (const key of CENTRAL_SETTINGS_KEYS) {
+            const val = localStorage.getItem(key);
+            if (val !== null) data[key] = val;
+        }
+        const res = await fetch('/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+            signal: AbortSignal.timeout(3000)
+        });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+
 // ── Глобальна функція дефолтного рівня для вправ ───────────
 // Повертає CEFR-рівень з sett_set.js, з перевіркою допустимих
 // значень для конкретного модуля (allowedLevels).

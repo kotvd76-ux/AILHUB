@@ -2278,7 +2278,8 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
 // ══════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════
-(function init() {
+(async function init() {
+  if (typeof loadCentralSettings === 'function') await loadCentralSettings();
   // Wire settings/back for main app header
   const settingsPage = (typeof GRAMMAR_CONFIG !== 'undefined' && GRAMMAR_CONFIG.settingsPage)
     ? GRAMMAR_CONFIG.settingsPage : 'settings.html';

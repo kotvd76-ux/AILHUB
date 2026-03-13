@@ -132,6 +132,40 @@ def read_log(logtype, filename):
     with open(filepath, 'r', encoding='utf-8') as f:
         return f.read()
 
+# ── Централізовані налаштування (GET + POST /settings) ────────
+# Зберігають налаштування у settings.json поруч із проєктом,
+# щоб будь-який пристрій у мережі читав одні й ті самі значення.
+SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
+
+@route('/settings', method=['GET', 'OPTIONS'])
+def get_settings():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.content_type = 'application/json'
+    if request.method == 'OPTIONS':
+        return ''
+    if os.path.isfile(SETTINGS_FILE):
+        with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+            return f.read()
+    return json.dumps({})
+
+@route('/settings', method=['POST', 'OPTIONS'])
+def save_settings():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.set_header('Access-Control-Allow-Headers', 'Content-Type')
+    if request.method == 'OPTIONS':
+        return ''
+    try:
+        data = request.json or {}
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        response.content_type = 'application/json'
+        return json.dumps({"ok": True})
+    except Exception as e:
+        response.status = 500
+        response.content_type = 'application/json'
+        return json.dumps({"error": str(e)})
+
 # ── Статичні файли (має бути ОСТАННІМ роутом) ─────────────────
 @route('/<filename:path>')
 def static_files(filename):

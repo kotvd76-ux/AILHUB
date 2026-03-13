@@ -1137,9 +1137,12 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
     }
 
     // ── Запуск ────────────────────────────────────────────────────────────────
-    initFromConfig();
-    window.speechSynthesis.getVoices();
-    log('Ініціалізовано. Конфіг: listen_set.js + sett_set.js');
+    (async () => {
+        if (typeof loadCentralSettings === 'function') await loadCentralSettings();
+        initFromConfig();
+        window.speechSynthesis.getVoices();
+        log('Ініціалізовано. Конфіг: listen_set.js + sett_set.js');
+    })();
 </script>
 </body>
 </html>

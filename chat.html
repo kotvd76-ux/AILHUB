@@ -1353,7 +1353,10 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+(async () => {
+    if (typeof loadCentralSettings === 'function') await loadCentralSettings();
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+})();
 </script>
 </body>
 </html>
