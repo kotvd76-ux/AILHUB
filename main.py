@@ -166,6 +166,76 @@ def save_settings():
         response.content_type = 'application/json'
         return json.dumps({"error": str(e)})
 
+# ── Збереження аудіо діалогів (POST /audio) ──────────────────
+# Приймає multipart/form-data з полями:
+#   file       — WebM blob (dialog_<ts>_<sessionId>.webm)
+#   session_id — ідентифікатор сесії
+#   track      — тип запису (dialog / mic / …)
+#   timestamp  — ISO-рядок часу запису
+# Зберігає у LOG_DIR/audio/<filename>
+AUDIO_DIR = os.path.join(LOG_DIR, 'audio')
+
+@route('/audio', method=['POST', 'OPTIONS'])
+def receive_audio():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.set_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    if request.method == 'OPTIONS':
+        return ''
+
+    try:
+        upload = request.files.get('file')
+        if not upload:
+            response.status = 400
+            response.content_type = 'application/json'
+            return json.dumps({"error": "no file"})
+
+        filename = upload.filename or 'audio.webm'
+        # Дозволяємо тільки безпечні імена: літери, цифри, дефіс, крапка, підкреслення
+        if not re.match(r'^[\w\-\.]+\.webm$', filename):
+            response.status = 400
+            response.content_type = 'application/json'
+            return json.dumps({"error": "invalid filename"})
+
+        os.makedirs(AUDIO_DIR, exist_ok=True)
+        save_path = os.path.join(AUDIO_DIR, filename)
+
+        # Захист від path traversal
+        if not os.path.abspath(save_path).startswith(os.path.abspath(AUDIO_DIR) + os.sep):
+            response.status = 403
+            response.content_type = 'application/json'
+            return json.dumps({"error": "forbidden"})
+
+        upload.save(save_path, overwrite=True)
+
+        size_kb = round(os.path.getsize(save_path) / 1024, 1)
+        print(f"[SpanishHub] audio saved: {filename} ({size_kb} KB)")
+
+        response.content_type = 'application/json'
+        return json.dumps({"ok": True, "filename": filename, "size_kb": size_kb})
+
+    except Exception as e:
+        response.status = 500
+        response.content_type = 'application/json'
+        return json.dumps({"error": str(e)})
+
+# ── Список аудіо-файлів (GET /audio/list) ─────────────────────
+@route('/audio/list', method=['GET', 'OPTIONS'])
+def list_audio():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    if request.method == 'OPTIONS':
+        return ''
+    if not os.path.isdir(AUDIO_DIR):
+        response.content_type = 'application/json'
+        return json.dumps([])
+    files = sorted(
+        [f for f in os.listdir(AUDIO_DIR) if f.endswith('.webm')],
+        reverse=True
+    )
+    response.content_type = 'application/json'
+    return json.dumps(files)
+
 # ── Статичні файли (має бути ОСТАННІМ роутом) ─────────────────
 @route('/<filename:path>')
 def static_files(filename):
