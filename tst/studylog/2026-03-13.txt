@@ -1,0 +1,49 @@
+2026-03-13 09:34:04	listening	qa	B1		wrong	0	5	12	1	Пішки	На метро	1	0	0	1	Яким транспортом зазвичай користується людина, щоб дістатися до роботи? | Transcript: Normalmente cojo el metro para ir al trabajo. A veces prefiero caminar si hace buen tiempo.	Пішки	Людина зазвичай їздить на метро до роботи, але може ходити пішки за гарної погоди.	c6d1e664
+2026-03-13 09:34:19	listening	qa	B1		correct	1	5	13	2		Резервувати квитки заздалегідь	1	0	0	1	Яку пораду дають щодо квитків на поїзд? | Transcript: Para tu viaje en tren, te recomiendo que reserves los billetes con tiempo. Así evitarás sorpresas.	Резервувати квитки заздалегідь	Рекомендується резервувати квитки на поїзд заздалегідь, щоб уникнути несподіванок і, ймовірно, заощадити.	c6d1e664
+2026-03-13 09:35:02	listening	qa	B1		correct	2	5	43	3		Година пік, і автобус зазвичай затримується	1	1	0	3	Чому є занепокоєння щодо запізнення на зустріч? | Transcript: En hora punta, el autobús suele tardar. Espero que no lleguemos tarde a nuestra reunión.	Година пік, і автобус зазвичай затримується	Через годину пік автобус зазвичай затримується, що може призвести до запізнення на зустріч.	c6d1e664
+2026-03-13 09:35:20	listening	qa	B1		correct	3	5	17	4		Це екологічно і допомагає тримати форму	1	0	0	2	Які переваги використання громадського велосипеда згадуються? | Transcript: Me gusta mucho la bici pública para la ciudad. Es ecológico y, además, haces ejercicio.	Це екологічно і допомагає тримати форму	Використання громадського велосипеда є екологічним способом пересування, а також допомагає підтримувати фізичну форму.	c6d1e664
+2026-03-13 09:35:40	listening	qa	B1		correct	4	5	19	5		Її машина зламалася	1	0	0	2	Чому людина взяла таксі сьогодні? | Transcript: Mi coche se averió hoy. Tuve que coger un taxi para ir al trabajo y no llegar tarde.	Її машина зламалася	Машина людини зламалася, тому їй довелося взяти таксі, щоб вчасно дістатися до роботи.	c6d1e664
+2026-03-13 12:46:02	phone	expand_sentence	B1	Shopping	correct	1	1	61	1		Привіт! Готові до тренування? Сьогодні ми працюємо над розширенням речень, і наша тема — "Shopping".
+
+Ось перше речення:
+
+**I went to the store.**
+
+Тепер, будь ласка, додайте ОДНУ деталь до цього речення. Наприклад, ви можете сказати, **хто** ще пішов з вами, **куди** саме ви пішли, **чому** ви туди пішли, або свою **думку** про похід.	1	1	0	0	Привіт! Готові до тренування? Сьогодні ми працюємо над розширенням речень, і наша тема — "Shopping".
+
+Ось перше речення:
+
+**I went to the store.**
+
+Тепер, будь ласка, додайте ОДНУ деталь до цього речення. Наприклад, ви можете сказати, **хто** ще пішов з вами, **куди** саме ви пішли, **чому** ви туди пішли, або свою **думку** про похід.	how are you	"how are you" – це привітання. Завдання було розширити речення "I went to the store". Спробуйте додати деталь!	29000554
+2026-03-13 12:46:30	phone	expand_sentence	B1	Shopping	correct	2	2	24	2		Привіт! Я чудово, дякую.
+
+Давайте повернемося до вправи. Пам'ятайте, нам потрібно розширити речення.
+
+Ось речення знову:
+
+**I went to the store.**
+
+Будь ласка, додайте ОДНУ деталь до цього речення. Хто, де, чому, або ваша думка?	1	1	0	0	Привіт! Я чудово, дякую.
+
+Давайте повернемося до вправи. Пам'ятайте, нам потрібно розширити речення.
+
+Ось речення знову:
+
+**I went to the store.**
+
+Будь ласка, додайте ОДНУ деталь до цього речення. Хто, де, чому, або ваша думка?	I want to shoot and to buy something	Це нове речення. Розшир 'I went to the store'. Слово 'shoot' тут не підходить, можливо, ти хотів сказати 'shop'?	29000554
+2026-03-13 13:06:23	listening	qa	B1		correct	1	5	9	1		Вітальня	1	0	0	2	Про яке місце говорить оповідач? | Transcript: My favourite place to unwind is definitely my living room, especially the comfy armchair by the window.	Вітальня	Оповідач згадує 'living room' (вітальня) як своє улюблене місце для відпочинку.	11e3fed2
+2026-03-13 13:06:31	listening	qa	B1		correct	2	5	8	2		Готувати та їсти з родиною	1	0	0	1	Що оповідач любить робити на кухні? | Transcript: My kitchen is truly the heart of our home. I enjoy cooking there and having family meals.	Готувати та їсти з родиною	Оповідач згадує, що любить 'cooking' (готувати) і 'having family meals' (їсти з родиною) на кухні.	11e3fed2
+2026-03-13 13:35:14	listening	qa	B1		correct	1	5	7	1		Проводити час на природі	1	0	0	1	Що подобається співрозмовнику робити? | Transcript: Look at that beautiful sunset! It’s so peaceful here. I love spending time in nature.	Проводити час на природі	Речення «I love spending time in nature» прямо вказує на це.	f13c2a32
+2026-03-13 13:35:23	listening	qa	B1		correct	2	5	7	2		Свіже повітря	1	0	0	1	Що було дивовижним після дощу? | Transcript: The sudden rain caught us by surprise, but the fresh air afterwards was so refreshing. Nature's beauty!	Свіже повітря	Фраза «the fresh air afterwards was so refreshing» чітко це зазначає.	f13c2a32
+2026-03-13 13:35:33	listening	qa	B1		correct	3	5	10	3		Співають пісні	1	0	0	1	Що роблять птахи, щоб підняти настрій співрозмовнику? | Transcript: Did you hear those birds singing this morning? Their lovely songs always make me feel so happy.	Співають пісні	Речення «Their lovely songs always make me feel so happy» вказує на вплив співу птахів.	f13c2a32
+2026-03-13 15:24:52	listening	qa	B1		correct	2	5	142	2		Que siga entrenando para ganar el partido.	1	1	0	6	¿Qué le aconseja la persona a su amigo? | Transcript: Si entrenas con constancia, seguro que ganas el partido. ¡No te rindas ahora que vas por buen camino!	Que siga entrenando para ganar el partido.	La frase motiva al oyente a ser constante en sus entrenamientos para lograr la victoria.	198a5c32
+2026-03-13 15:25:37	listening	qa	B1		correct	3	5	44	3		Piensa que es bueno para socializar.	1	0	0	3	¿Qué opina la persona sobre el pádel? | Transcript: He empezado a jugar al pádel últimamente. Es un deporte muy divertido para pasar tiempo con los amigos.	Piensa que es bueno para socializar.	El hablante destaca que es una actividad divertida para compartir con los amigos.	198a5c32
+2026-03-13 15:27:21	listening	qa	B1		correct	4	5	103	4		Ganar gracias a su práctica previa.	1	0	0	2	¿Qué espera la persona para el partido de mañana? | Transcript: Mañana jugaremos un partido de fútbol. Ojalá ganemos, porque hemos practicado mucho durante toda la semana pasada.	Ganar gracias a su práctica previa.	El uso del subjuntivo 'ojalá ganemos' expresa un deseo basado en el esfuerzo realizado anteriormente.	198a5c32
+2026-03-13 16:48:43	listening	qa	B1		correct	5	5	4877	5		Que es un desafío que requiere disciplina.	1	1	0	5	¿Qué siente el hablante respecto a la maratón? | Transcript: Correr una maratón es un reto increíble. Me encantaría terminarla, aunque sé que requiere mucha disciplina física.	Que es un desafío que requiere disciplina.	El hablante describe la maratón como un 'reto increíble' que exige disciplina.	198a5c32
+2026-03-13 16:49:50	listening	qa	B1		correct	1	5	46	1		Надіслати звіт поштою	1	0	0	4	Що саме колега просить зробити до закінчення наради? | Transcript: Hola, ¿podrías enviarme el informe por correo antes de que terminemos la reunión de hoy, por favor?	Надіслати звіт поштою	Фраза 'enviarme el informe' означає 'надіслати мені звіт', що є ключовим завданням у діалозі.	f3dc88dc
+2026-03-13 17:56:47	listening	qa	B1		correct	2	5	4016	2		Бо стіл у безладі і нічого не знайти	1	0	0	2	Чому виникла необхідність впорядкувати файли? | Transcript: Tenemos que organizar los archivos pronto, porque mi escritorio es un desastre y no encuentro nada.	Бо стіл у безладі і нічого не знайти	Слово 'desastre' вживається для опису безладу, а 'no encuentro nada' означає 'нічого не можу знайти'.	f3dc88dc
+2026-03-13 17:57:10	listening	qa	B1		correct	3	5	22	3		Добре ладнати з колегами по відділу	1	0	0	2	Що, за словами колеги, допоможе досягти успіху в компанії? | Transcript: Si quieres tener éxito en esta empresa, intenta llevarte bien con todos los compañeros del departamento.	Добре ладнати з колегами по відділу	Ідіома 'llevarte bien con' означає 'мати гарні стосунки з кимось' або 'ладнати з кимось'.	f3dc88dc
+2026-03-13 17:57:27	listening	qa	B1		correct	4	5	17	4		Принтер працює погано	1	0	0	2	Яка проблема виникла з офісною технікою? | Transcript: Aunque la impresora no funciona bien ahora, espero que el técnico la arregle durante esta tarde.	Принтер працює погано	Використання суб'юнктива 'arregle' після 'espero que' вказує на очікування щодо дії іншого фахівця.	f3dc88dc
+2026-03-13 17:57:49	listening	qa	B1		wrong	4	5	21	5	На робочому столі для швидкості	У хмарі, бо комп'ютер дає збої	1	0	0	2	Де рекомендується зберігати документи і чому? | Transcript: No olvides guardar todos tus documentos en la nube, ya que el ordenador suele dar problemas técnicos.	На робочому столі для швидкості	Вираз 'en la nube' означає хмарне сховище, а 'dar problemas' вказує на технічні несправності.	f3dc88dc

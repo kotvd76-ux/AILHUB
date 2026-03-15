@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Сервіс — Spanish AI Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Unbounded:wght@300;400;600;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root {
+  --bg:      #080b10;
+  --bg2:     #0d1117;
+  --bg3:     #111720;
+  --bg4:     #161e2c;
+  --bdr:     #1a2235;
+  --bdr2:    #243048;
+  --text:    #9aaec8;
+  --text2:   #ccd8ee;
+  --text3:   #f0f7ff;
+  --dim:     #546a88;
+  --blue:    #5aabff;
+  --green:   #36e896;
+  --orange:  #ff9550;
+  --red:     #ff6677;
+  --purple:  #be8fff;
+  --yellow:  #ffda7a;
+  --cyan:    #00eedd;
+  --mono:    'JetBrains Mono', monospace;
+  --head:    'Unbounded', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);font-size:14px;line-height:1.65;min-height:100vh;overflow-x:hidden}
+
+/* scanlines */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:9999}
+/* grid */
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(79,158,255,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(79,158,255,0.035) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;z-index:0}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:200;background:rgba(8,11,16,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--bdr2);padding:0 20px;height:56px;display:flex;align-items:center;gap:14px}
+.back-btn{display:flex;align-items:center;gap:7px;color:var(--text);text-decoration:none;font-size:12px;letter-spacing:.06em;padding:7px 13px;border:1px solid var(--bdr2);border-radius:4px;transition:all .2s}
+.back-btn:hover{color:var(--blue);border-color:var(--blue)}
+.hdr-logo{font-family:var(--head);font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
+.hdr-logo em{color:var(--orange);font-style:normal}
+.hdr-tag{font-size:11px;color:var(--text);border:1px solid var(--bdr2);padding:4px 12px;border-radius:20px;letter-spacing:.1em}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pdot 2s infinite}
+@keyframes pdot{0%,100%{opacity:1}50%{opacity:.4}}
+.menu-btn{display:none;align-items:center;justify-content:center;gap:6px;background:var(--bg3);border:1px solid var(--bdr2);border-radius:4px;color:var(--text2);padding:8px 13px;cursor:pointer;font-size:14px;font-family:var(--mono);transition:all .2s}
+.menu-btn:hover{border-color:var(--blue);color:var(--blue)}
+.sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:190;backdrop-filter:blur(2px)}
+.sb-overlay.show{display:block}
+
+/* LAYOUT */
+.layout{position:relative;z-index:1;display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 56px)}
+
+/* SIDEBAR */
+.sb{border-right:1px solid var(--bdr);padding:16px 0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;background:var(--bg2)}
+.sb-sec{padding:14px 18px 5px;font-size:10px;font-weight:700;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+.sb-item{display:flex;align-items:center;gap:11px;padding:11px 18px;cursor:pointer;color:var(--text);transition:all .15s;border-left:3px solid transparent;font-size:13px;user-select:none}
+.sb-item:hover{color:var(--text2);background:var(--bg3)}
+.sb-item.active{color:var(--text3);background:var(--bg4);border-left-color:var(--blue)}
+.sb-item i{width:16px;text-align:center;font-size:13px}
+.sb-item.active i{color:var(--blue)}
+.sb-bdg{margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;background:var(--bdr2);color:var(--text2)}
+.sb-bdg.g{background:rgba(54,232,150,.15);color:var(--green)}
+
+/* MAIN */
+.main{padding:26px 30px;overflow-y:auto}
+
+/* PANELS */
+.panel{display:none;animation:fin .25s ease}
+.panel.active{display:block}
+@keyframes fin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.ph{display:flex;align-items:flex-end;gap:16px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--bdr)}
+.ph-icon{width:46px;height:46px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.ph-title{font-family:var(--head);font-size:16px;font-weight:600;color:var(--text3);letter-spacing:.06em}
+.ph-sub{font-size:12px;color:var(--dim);margin-top:4px}
+.ph-acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:4px;border:1px solid var(--bdr2);background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:12.5px;cursor:pointer;transition:all .2s;letter-spacing:.03em;white-space:nowrap}
+.btn:hover{border-color:var(--blue);color:var(--blue)}
+.btn-blue{background:rgba(79,158,255,.12);border-color:rgba(79,158,255,.4);color:var(--blue)}
+.btn-blue:hover{background:rgba(79,158,255,.22)}
+.btn-green{background:rgba(45,224,138,.1);border-color:rgba(45,224,138,.35);color:var(--green)}
+.btn-green:hover{background:rgba(45,224,138,.2)}
+.btn-orange{background:rgba(255,140,66,.1);border-color:rgba(255,140,66,.35);color:var(--orange)}
+.btn-orange:hover{background:rgba(255,140,66,.2)}
+.btn-red{background:rgba(255,85,102,.1);border-color:rgba(255,85,102,.35);color:var(--red)}
+.btn-red:hover{background:rgba(255,85,102,.2)}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:16px;margin-bottom:14px}
+.card-ttl{font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px}
+.sbox{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:16px 18px}
+.sval{font-family:var(--head);font-size:26px;font-weight:600;color:var(--text3);line-height:1}
+.slbl{font-size:11px;color:var(--dim);margin-top:6px;letter-spacing:.06em}
+.sbox.b .sval{color:var(--blue)}.sbox.g .sval{color:var(--green)}.sbox.o .sval{color:var(--orange)}.sbox.p .sval{color:var(--purple)}
+
+/* CHART */
+.chw{width:100%;background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;padding:14px;margin-bottom:14px}
+.chtl{font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:60px}
+.bc{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.bar{width:100%;border-radius:2px 2px 0 0;min-height:3px}
+.blbl{font-size:9px;color:var(--dim)}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--bdr)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--bdr);color:var(--text2);font-size:13px;vertical-align:middle}
+.tbl tr:hover td{background:var(--bg3)}
+.tbl tr:last-child td{border-bottom:none}
+
+/* EDITOR */
+.edw{position:relative;background:var(--bg);border:1px solid var(--bdr2);border-radius:6px;overflow:hidden}
+.edtb{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--bdr)}
+.edtab{padding:5px 14px;border-radius:3px;font-size:11px;cursor:pointer;color:var(--dim);transition:all .15s;border:1px solid transparent}
+.edtab.active{color:var(--text3);background:var(--bg4);border-color:var(--bdr2)}
+.edtab:hover:not(.active){color:var(--text)}
+.edarea{width:100%;min-height:360px;background:transparent;border:none;outline:none;color:var(--green);font-family:var(--mono);font-size:12px;padding:16px;resize:vertical;line-height:1.65;white-space:pre;overflow-x:auto;tab-size:2}
+.edst{display:flex;align-items:center;gap:10px;padding:6px 14px;background:var(--bg3);border-top:1px solid var(--bdr);font-size:10px;color:var(--dim)}
+
+/* LS MANAGER */
+.lsi{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 12px;background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;margin-bottom:6px;transition:border-color .2s}
+.lsi:hover{border-color:var(--bdr2)}
+.lsk{color:var(--blue);font-size:11.5px}
+.lsv{color:var(--text);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:400px}
+.lsact{display:flex;gap:5px;flex-shrink:0}
+
+/* API CARDS */
+.apic{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:16px 18px;margin-bottom:10px;display:grid;grid-template-columns:26px 1fr auto auto;align-items:center;gap:14px;transition:border-color .2s}
+.apic:hover{border-color:var(--bdr2)}
+.apic-ico{font-size:20px}
+.apic-name{font-family:var(--head);font-size:12px;font-weight:600;color:var(--text3);letter-spacing:.06em}
+.apic-url{font-size:10px;color:var(--dim);margin-top:3px}
+.apic-lat{font-size:10px;color:var(--dim);margin-top:2px}
+.ast{font-size:11px;padding:4px 12px;border-radius:3px;font-weight:500;letter-spacing:.04em;min-width:100px;text-align:center}
+.ast.idle{background:var(--bg4);color:var(--dim);border:1px solid var(--bdr)}
+.ast.ok{background:rgba(45,224,138,.12);color:var(--green);border:1px solid rgba(45,224,138,.3)}
+.ast.fail{background:rgba(255,85,102,.12);color:var(--red);border:1px solid rgba(255,85,102,.3)}
+.ast.chk{background:rgba(79,158,255,.12);color:var(--blue);border:1px solid rgba(79,158,255,.3)}
+
+/* MONITOR */
+.mong{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.moni{background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;padding:14px;text-align:center}
+.moni-ico{font-size:20px;margin-bottom:8px}
+.moni-name{font-size:11px;color:var(--text2);margin-bottom:6px;letter-spacing:.04em}
+.moni-st{font-size:11px;font-weight:700;letter-spacing:.06em}
+.moni-ms{font-size:10px;color:var(--dim);margin-top:3px}
+.online .moni-st{color:var(--green)}.offline .moni-st{color:var(--red)}.pending .moni-st{color:var(--yellow)}
+
+/* PING LOG */
+.plog{background:var(--bg);border:1px solid var(--bdr);border-radius:4px;padding:12px 14px;height:160px;overflow-y:auto;font-size:11px;line-height:1.8}
+.pe{display:flex;gap:10px}
+.pts{color:var(--dim);flex-shrink:0}
+.pm.ok{color:var(--green)}.pm.fail{color:var(--red)}.pm.info{color:var(--blue)}
+
+/* SESSION */
+.sesi{background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;padding:12px 16px;margin-bottom:8px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;cursor:pointer;transition:border-color .2s}
+.sesi:hover{border-color:var(--bdr2)}
+.ses-mod{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.1em}
+.ses-inf{color:var(--text2);font-size:12.5px;margin-top:3px}
+.ses-sc{font-family:var(--head);font-size:18px;font-weight:600}
+.ses-sc.good{color:var(--green)}.ses-sc.mid{color:var(--yellow)}.ses-sc.bad{color:var(--red)}
+.ses-det{display:none;padding:10px 0 2px;border-top:1px solid var(--bdr);margin-top:10px;font-size:11px;color:var(--dim);line-height:1.9}
+.ses-det.open{display:block}
+
+/* EXPORT ZONE */
+.expz{border:2px dashed var(--bdr2);border-radius:8px;padding:32px;text-align:center;transition:all .2s;cursor:pointer;margin-bottom:14px}
+.expz:hover{border-color:var(--blue);background:rgba(79,158,255,.04)}
+.expz i{font-size:28px;color:var(--dim);margin-bottom:10px;display:block}
+.expz p{color:var(--text);font-size:12px}
+.expz small{color:var(--dim);font-size:10px}
+
+/* USAGE */
+.ub{margin-top:8px}
+.ub-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--dim);margin-bottom:4px}
+.utrack{height:4px;background:var(--bdr);border-radius:2px;overflow:hidden}
+.ufill{height:100%;border-radius:2px;background:var(--blue);transition:width 1s ease}
+.ufill.warn{background:var(--yellow)}.ufill.danger{background:var(--red)}
+
+/* TAGS */
+.tag{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:500;letter-spacing:.04em}
+.tb{background:rgba(79,158,255,.15);color:var(--blue)}
+.tg{background:rgba(45,224,138,.15);color:var(--green)}
+.to{background:rgba(255,140,66,.15);color:var(--orange)}
+.tr{background:rgba(255,85,102,.15);color:var(--red)}
+.tp{background:rgba(180,127,255,.15);color:var(--purple)}
+.tc{background:rgba(0,229,204,.15);color:var(--cyan)}
+
+/* INPUTS */
+input[type=text],input[type=password],select,textarea{background:var(--bg3);border:1px solid var(--bdr2);border-radius:4px;color:var(--text2);font-family:var(--mono);font-size:13px;padding:9px 13px;outline:none;transition:border-color .2s}
+input[type=text]:focus,input[type=password]:focus,select:focus,textarea:focus{border-color:var(--blue)}
+select{cursor:pointer}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--bg3);border:1px solid var(--bdr2);border-radius:5px;padding:10px 18px;font-size:12px;color:var(--text3);opacity:0;transform:translateY(8px);transition:all .3s;z-index:9000;pointer-events:none}
+#toast.show{opacity:1;transform:none}
+
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+.row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.f1{flex:1}
+hr.sep{border:none;border-top:1px solid var(--bdr);margin:18px 0}
+
+/* DAILY STATS BANNER */
+.day-banner{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.day-card{background:var(--bg3);border:1px solid var(--bdr2);border-radius:8px;padding:18px 22px;position:relative;overflow:hidden}
+.day-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,158,255,.06) 0%,transparent 60%);pointer-events:none}
+.day-card.g::before{background:linear-gradient(135deg,rgba(54,232,150,.06) 0%,transparent 60%)}
+.day-val{font-family:var(--head);font-size:32px;font-weight:700;color:var(--text3);line-height:1;margin-bottom:5px}
+.day-card.g .day-val{color:var(--green)}
+.day-card .day-val{color:var(--blue)}
+.day-lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}
+.day-sub{font-size:12px;color:var(--text);display:flex;gap:14px;flex-wrap:wrap}
+.day-sub span{display:flex;align-items:center;gap:5px}
+.day-sub em{color:var(--text2);font-style:normal;font-weight:600}
+
+/* TECH SESSION CARDS */
+.tses{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;padding:14px 18px;margin-bottom:8px;cursor:pointer;transition:border-color .2s}
+.tses:hover{border-color:var(--bdr2)}
+.tses-head{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.tses-id{font-size:11px;color:var(--dim);font-family:var(--mono);letter-spacing:.04em}
+.tses-meta{font-size:12px;color:var(--text2)}
+.tses-body{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--bdr)}
+.tses-body.open{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tses-stat{text-align:center;background:var(--bg4);border:1px solid var(--bdr);border-radius:5px;padding:10px 14px}
+.tses-stat-val{font-family:var(--head);font-size:18px;font-weight:600;color:var(--text3)}
+.tses-stat-lbl{font-size:10px;color:var(--dim);margin-top:4px;letter-spacing:.06em}
+
+/* MOBILE */
+@media(max-width:860px){
+  .menu-btn{display:flex}
+  .layout{grid-template-columns:1fr}
+  .sb{position:fixed;left:-240px;top:56px;height:calc(100vh - 56px);width:220px;z-index:200;transition:left .28s ease;box-shadow:6px 0 24px rgba(0,0,0,.5);border-right:1px solid var(--bdr2)}
+  .sb.open{left:0}
+  .main{padding:16px 18px}
+  .sg{grid-template-columns:repeat(2,1fr)}
+  .mong{grid-template-columns:repeat(2,1fr)}
+  .day-banner{grid-template-columns:1fr}
+  .ph{flex-wrap:wrap;gap:12px}
+  .ph-acts{margin-left:0;width:100%}
+  .tses-body.open{grid-template-columns:repeat(3,1fr)}
+  .apic{grid-template-columns:30px 1fr}
+  .apic .ast,.apic>button{grid-column:span 1}
+  .hdr-tag{display:none}
+}
+@media(max-width:480px){
+  .sg{grid-template-columns:1fr 1fr}
+  .day-val{font-size:26px}
+  .tses-body.open{grid-template-columns:1fr 1fr}
+  .mong{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <button class="menu-btn" onclick="toggleSidebar()" aria-label="Меню"><i class="fa fa-bars"></i></button>
+  <a href="index.html" class="back-btn"><i class="fa fa-arrow-left"></i> Назад</a>
+  <div class="hdr-logo">Spanish <em>AI</em> Hub</div>
+  <div style="flex:1"></div>
+  <div class="sdot"></div>
+  <div class="hdr-tag">СЕРВІС / УТИЛІТИ</div>
+</header>
+
+<div class="sb-overlay" id="sbOverlay" onclick="toggleSidebar()"></div>
+<div class="layout">
+
+<!-- SIDEBAR -->
+<nav class="sb">
+  <div class="sb-sec">Логи та статистика</div>
+  <div class="sb-item active" onclick="sw('studylogs',this)"><i class="fa fa-graduation-cap"></i> Аналіз стаділогів <span class="sb-bdg g" id="sb-lc">0</span></div>
+  <div class="sb-item" onclick="sw('techlogs',this)"><i class="fa fa-microchip"></i> Аналіз технологів <span class="sb-bdg" id="sb-tlc">0</span></div>
+  <div class="sb-item" onclick="sw('sessions',this)"><i class="fa fa-history"></i> Сесії <span class="sb-bdg" id="sb-sc">0</span></div>
+
+  <div class="sb-sec">Конфігурація</div>
+  <div class="sb-item" onclick="sw('editor',this)"><i class="fa fa-code"></i> Редактор JS</div>
+  <div class="sb-item" onclick="sw('storage',this)"><i class="fa fa-database"></i> localStorage <span class="sb-bdg" id="sb-lsc">0</span></div>
+  <div class="sb-item" onclick="sw('exportimport',this)"><i class="fa fa-file-export"></i> Експорт / Імпорт</div>
+
+  <div class="sb-sec">API</div>
+  <div class="sb-item" onclick="sw('apikeys',this)"><i class="fa fa-key"></i> API Ключі</div>
+  <div class="sb-item" onclick="sw('apitest',this)"><i class="fa fa-plug"></i> Тестер ключів</div>
+  <div class="sb-item" onclick="sw('monitor',this)"><i class="fa fa-signal"></i> Моніторинг доступн.</div>
+  <div class="sb-item" onclick="sw('usage',this)"><i class="fa fa-gauge-high"></i> Використання ключів</div>
+</nav>
+
+<main class="main">
+
+<!-- ═══ STUDY LOGS ═══ -->
+<div class="panel active" id="panel-studylogs">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(45,224,138,.12);color:var(--green)"><i class="fa fa-graduation-cap"></i></div>
+    <div><div class="ph-title">Аналіз стаділогів</div><div class="ph-sub" id="study-src-lbl">Статистика навчання з sp_studylog_buffer</div></div>
+    <div class="ph-acts">
+      <button class="btn btn-green" onclick="loadServerLogs('study')"><i class="fa fa-server"></i> <span id="srv-study-btn-lbl">Сервер</span></button>
+      <button class="btn btn-blue" onclick="refreshLogs()"><i class="fa fa-rotate"></i> Оновити</button>
+      <button class="btn" onclick="exportLog('study')"><i class="fa fa-download"></i> Навчання</button>
+      <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Техлог</button>
+      <button class="btn btn-red" onclick="clearLog('study')"><i class="fa fa-trash"></i> Очистити навчання</button>
+    </div>
+  </div>
+  <div class="sg">
+    <div class="sbox b"><div class="sval" id="st-total">0</div><div class="slbl">Всього записів</div></div>
+    <div class="sbox g"><div class="sval" id="st-cor">0%</div><div class="slbl">Правильних</div></div>
+    <div class="sbox o"><div class="sval" id="st-ses">0</div><div class="slbl">Сесій</div></div>
+    <div class="sbox p"><div class="sval" id="st-avg">0с</div><div class="slbl">Сер. час/відп.</div></div>
+  </div>
+  <div class="chw"><div class="chtl"><i class="fa fa-tag" style="margin-right:6px"></i>Точність по темах</div><div class="bars" id="thChart"></div></div>
+  <div class="chw"><div class="chtl"><i class="fa fa-layer-group" style="margin-right:6px"></i>Результати по рівнях</div><div class="bars" id="lvChart"></div></div>
+  <div class="card"><div class="card-ttl"><i class="fa fa-list"></i> Останні 30 записів</div>
+    <table class="tbl"><thead><tr><th>Час</th><th>Модуль</th><th>Тема</th><th>Рівень</th><th>Результат</th><th>Час(с)</th></tr></thead>
+    <tbody id="logTbody"><tr><td colspan="6" style="color:var(--dim);text-align:center;padding:20px">Немає даних у буфері</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- ═══ TECH LOGS ═══ -->
+<div class="panel" id="panel-techlogs">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(180,127,255,.12);color:var(--purple)"><i class="fa fa-microchip"></i></div>
+    <div><div class="ph-title">Аналіз технологів</div><div class="ph-sub" id="tech-src-lbl">Технічні події та помилки з sp_techlog_buffer</div></div>
+    <div class="ph-acts">
+      <button class="btn btn-green" onclick="loadServerLogs('tech')"><i class="fa fa-server"></i> <span id="srv-tech-btn-lbl">Сервер</span></button>
+      <button class="btn btn-blue" onclick="refreshTechLogs()"><i class="fa fa-rotate"></i> Оновити</button>
+      <button class="btn" onclick="exportLog('tech')"><i class="fa fa-download"></i> Експорт</button>
+      <button class="btn btn-red" onclick="clearLog('tech')"><i class="fa fa-trash"></i> Очистити техлог</button>
+    </div>
+  </div>
+
+  <!-- Daily banner -->
+  <div class="day-banner">
+    <div class="day-card">
+      <div class="day-lbl"><i class="fa fa-coins" style="margin-right:6px"></i>Токенів за сьогодні</div>
+      <div class="day-val" id="tl-tok-day">—</div>
+      <div class="day-sub">
+        <span><i class="fa fa-arrow-up" style="color:var(--orange)"></i> відправлено: <em id="tl-tok-in-day">—</em></span>
+        <span><i class="fa fa-arrow-down" style="color:var(--green)"></i> отримано: <em id="tl-tok-out-day">—</em></span>
+      </div>
+    </div>
+    <div class="day-card g">
+      <div class="day-lbl"><i class="fa fa-bolt" style="margin-right:6px"></i>Запитів за сьогодні</div>
+      <div class="day-val" id="tl-req-day">—</div>
+      <div class="day-sub" id="tl-req-sub">
+        <span>Всього подій: <em id="tl-today">0</em></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary stats -->
+  <div class="sg">
+    <div class="sbox b"><div class="sval" id="tl-total">0</div><div class="slbl">Всього подій</div></div>
+    <div class="sbox p"><div class="sval" id="tl-errors">0</div><div class="slbl">Помилок</div></div>
+    <div class="sbox g"><div class="sval" id="tl-mods">0</div><div class="slbl">Модулів</div></div>
+    <div class="sbox o"><div class="sval" id="tl-tok-all">—</div><div class="slbl">Токенів всього</div></div>
+  </div>
+
+  <div class="chw"><div class="chtl"><i class="fa fa-layer-group" style="margin-right:6px"></i>Події по модулях</div><div class="bars" id="tlModChart"></div></div>
+
+  <!-- Sessions breakdown -->
+  <div class="card">
+    <div class="card-ttl"><i class="fa fa-list-check"></i> Сесії — токени та запити <span id="tl-ses-count" style="margin-left:8px;font-weight:400;color:var(--text)"></span></div>
+    <div id="tlSessions"><p style="color:var(--dim);font-size:12px">Немає сесій з токен-даними</p></div>
+  </div>
+
+  <!-- Raw log table -->
+  <div class="card"><div class="card-ttl"><i class="fa fa-list"></i> Останні 50 записів</div>
+    <table class="tbl"><thead><tr><th>Час</th><th>Модуль</th><th>Рівень</th><th>Подія</th><th>Опис</th></tr></thead>
+    <tbody id="tlTbody"><tr><td colspan="5" style="color:var(--dim);text-align:center;padding:20px">Немає даних у буфері</td></tr></tbody></table>
+  </div>
+</div>
+
+<!-- ═══ SESSIONS ═══ -->
+<div class="panel" id="panel-sessions">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(0,229,204,.1);color:var(--cyan)"><i class="fa fa-history"></i></div>
+    <div><div class="ph-title">Переглядач сесій</div><div class="ph-sub">Деталі кожної навчальної сесії</div></div>
+    <div class="ph-acts"><button class="btn" onclick="loadSessions()"><i class="fa fa-rotate"></i> Оновити</button></div>
+  </div>
+  <div id="sesList"><p style="color:var(--dim)">Немає збережених сесій</p></div>
+</div>
+
+<!-- ═══ EDITOR ═══ -->
+<div class="panel" id="panel-editor">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(45,224,138,.1);color:var(--green)"><i class="fa fa-code"></i></div>
+    <div><div class="ph-title">Редактор JS-конфігів</div><div class="ph-sub">Перегляд та редагування конфігів застосунку</div></div>
+  </div>
+  <div style="background:rgba(255,213,102,.08);border:1px solid rgba(255,213,102,.25);border-radius:5px;padding:11px 14px;margin-bottom:16px;font-size:11.5px;color:var(--yellow)">
+    <i class="fa fa-triangle-exclamation" style="margin-right:8px"></i>
+    Редактор зберігає зміни у <strong>localStorage-копію</strong>. Для застосування на сервері — скопіюйте вміст кнопкою «Копіювати».
+  </div>
+  <div class="edw">
+    <div class="edtb">
+      <span style="font-size:10px;color:var(--dim);margin-right:4px">Файл:</span>
+      <div class="edtab active" onclick="loadEd('sett_set',this)">sett_set.js</div>
+      <div class="edtab" onclick="loadEd('listen_set',this)">listen_set.js</div>
+      <div class="edtab" onclick="loadEd('phone_set',this)">phone_set.js</div>
+      <div class="edtab" onclick="loadEd('logger',this)">logger.js</div>
+      <div style="flex:1"></div>
+      <button class="btn btn-green" onclick="saveEd()" style="padding:4px 12px;font-size:11px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn" onclick="copyEd()" style="padding:4px 12px;font-size:11px"><i class="fa fa-copy"></i> Копіювати</button>
+    </div>
+    <textarea class="edarea" id="edArea" spellcheck="false" placeholder="// Вміст файлу завантажиться тут&#10;// або введіть код вручну"></textarea>
+    <div class="edst">
+      <span id="edFile" style="color:var(--blue)">sett_set.js</span><span>·</span>
+      <span id="edLines">0 рядків</span><span>·</span>
+      <span id="edSt" style="color:var(--dim)">не збережено</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STORAGE ═══ -->
+<div class="panel" id="panel-storage">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(180,127,255,.1);color:var(--purple)"><i class="fa fa-database"></i></div>
+    <div><div class="ph-title">Менеджер localStorage</div><div class="ph-sub">Всі ключі застосунку з префіксом sp_</div></div>
+    <div class="ph-acts">
+      <button class="btn" onclick="loadLS()"><i class="fa fa-rotate"></i> Оновити</button>
+      <button class="btn btn-red" onclick="clearLS()"><i class="fa fa-trash"></i> Очистити все</button>
+    </div>
+  </div>
+  <div class="row">
+    <input type="text" id="lsSrch" placeholder="Пошук за ключем..." style="width:220px" oninput="filterLS()">
+    <span id="lsTotal" style="color:var(--dim);font-size:11px"></span>
+  </div>
+  <div id="lsList"></div>
+</div>
+
+<!-- ═══ EXPORT/IMPORT ═══ -->
+<div class="panel" id="panel-exportimport">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(255,140,66,.1);color:var(--orange)"><i class="fa fa-file-export"></i></div>
+    <div><div class="ph-title">Експорт / Імпорт</div><div class="ph-sub">Резервна копія всіх налаштувань та даних</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div>
+      <div class="card-ttl" style="margin-bottom:12px"><i class="fa fa-file-export"></i> Експорт</div>
+      <p style="color:var(--text);font-size:12px;margin-bottom:14px;line-height:1.7">Збереже всі вибрані дані у JSON-файл для резервної копії або перенесення.</p>
+      <div class="row" style="margin-bottom:12px;flex-direction:column;align-items:flex-start;gap:7px">
+        <label style="font-size:12px;color:var(--text);display:flex;gap:8px;align-items:center"><input type="checkbox" id="exS" checked> Налаштування та API-ключі</label>
+        <label style="font-size:12px;color:var(--text);display:flex;gap:8px;align-items:center"><input type="checkbox" id="exL"> Буфери логів</label>
+        <label style="font-size:12px;color:var(--text);display:flex;gap:8px;align-items:center"><input type="checkbox" id="exC"> Збережені JS-конфіги</label>
+      </div>
+      <button class="btn btn-orange" onclick="doExport()"><i class="fa fa-download"></i> Завантажити backup.json</button>
+    </div>
+    <div>
+      <div class="card-ttl" style="margin-bottom:12px"><i class="fa fa-file-import"></i> Імпорт</div>
+      <p style="color:var(--text);font-size:12px;margin-bottom:14px;line-height:1.7">Відновить дані з раніше збереженого JSON-файлу. Поточні дані будуть перезаписані.</p>
+      <div class="expz" onclick="document.getElementById('impFile').click()">
+        <i class="fa fa-cloud-arrow-up"></i>
+        <p>Натисніть або перетягніть файл</p>
+        <small>spanishaihub_backup_YYYY-MM-DD.json</small>
+      </div>
+      <input type="file" id="impFile" accept=".json" style="display:none" onchange="doImport(event)">
+    </div>
+  </div>
+  <hr class="sep">
+  <div class="card-ttl"><i class="fa fa-clock-rotate-left"></i> Остання резервна копія</div>
+  <div id="bkInfo" style="color:var(--dim);font-size:12px">Резервних копій не знайдено</div>
+</div>
+
+<!-- ═══ API KEYS ═══ -->
+<div class="panel" id="panel-apikeys">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(255,213,102,.12);color:var(--yellow)"><i class="fa fa-key"></i></div>
+    <div><div class="ph-title">API Ключі</div><div class="ph-sub">Управління ключами провайдерів — зберігаються у localStorage</div></div>
+    <div class="ph-acts"><button class="btn btn-blue" onclick="loadApiKeys()"><i class="fa fa-rotate"></i> Оновити</button></div>
+  </div>
+  <div style="background:rgba(79,158,255,.07);border:1px solid rgba(79,158,255,.2);border-radius:5px;padding:11px 14px;margin-bottom:20px;font-size:11.5px;color:var(--blue)">
+    <i class="fa fa-circle-info" style="margin-right:8px"></i>
+    Ключі зберігаються локально у вашому браузері (<strong>localStorage</strong>) і ніколи не передаються на сервер.
+  </div>
+
+  <!-- OpenAI -->
+  <div class="apic" style="display:block;padding:18px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="apic-ico">🤖</div>
+      <div><div class="apic-name">OpenAI</div><div class="apic-url">sp_apiKey_openai</div></div>
+      <div style="margin-left:auto" id="akst-openai"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="ak-openai" placeholder="sk-..." style="flex:1;font-size:12px" oninput="markUnsaved('openai')">
+      <button class="btn btn-green" onclick="saveApiKey('openai')" style="padding:6px 14px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn btn-red" onclick="clearApiKey('openai')" style="padding:6px 10px" title="Видалити"><i class="fa fa-trash"></i></button>
+      <button class="btn" onclick="toggleShowKey('openai')" style="padding:6px 10px" title="Показати/сховати"><i class="fa fa-eye" id="eye-openai"></i></button>
+    </div>
+  </div>
+
+  <!-- Gemini -->
+  <div class="apic" style="display:block;padding:18px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="apic-ico">✨</div>
+      <div><div class="apic-name">Google Gemini</div><div class="apic-url">sp_apiKey_gemini</div></div>
+      <div style="margin-left:auto" id="akst-gemini"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="ak-gemini" placeholder="AIza..." style="flex:1;font-size:12px" oninput="markUnsaved('gemini')">
+      <button class="btn btn-green" onclick="saveApiKey('gemini')" style="padding:6px 14px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn btn-red" onclick="clearApiKey('gemini')" style="padding:6px 10px" title="Видалити"><i class="fa fa-trash"></i></button>
+      <button class="btn" onclick="toggleShowKey('gemini')" style="padding:6px 10px" title="Показати/сховати"><i class="fa fa-eye" id="eye-gemini"></i></button>
+    </div>
+  </div>
+
+  <!-- Anthropic -->
+  <div class="apic" style="display:block;padding:18px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px">
+      <div class="apic-ico">🔮</div>
+      <div><div class="apic-name">Anthropic Claude</div><div class="apic-url">sp_apiKey_anthropic</div></div>
+      <div style="margin-left:auto" id="akst-anthropic"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="ak-anthropic" placeholder="sk-ant-..." style="flex:1;font-size:12px" oninput="markUnsaved('anthropic')">
+      <button class="btn btn-green" onclick="saveApiKey('anthropic')" style="padding:6px 14px"><i class="fa fa-floppy-disk"></i> Зберегти</button>
+      <button class="btn btn-red" onclick="clearApiKey('anthropic')" style="padding:6px 10px" title="Видалити"><i class="fa fa-trash"></i></button>
+      <button class="btn" onclick="toggleShowKey('anthropic')" style="padding:6px 10px" title="Показати/сховати"><i class="fa fa-eye" id="eye-anthropic"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ API TEST ═══ -->
+<div class="panel" id="panel-apitest">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(79,158,255,.1);color:var(--blue)"><i class="fa fa-plug"></i></div>
+    <div><div class="ph-title">Тестер API-ключів</div><div class="ph-sub">Перевірка валідності ключів для кожного провайдера</div></div>
+    <div class="ph-acts"><button class="btn btn-blue" onclick="testAll()"><i class="fa fa-play"></i> Перевірити всі</button></div>
+  </div>
+  <div class="apic">
+    <div class="apic-ico">🤖</div>
+    <div><div class="apic-name">OpenAI</div><div class="apic-url">api.openai.com/v1/models</div><div class="apic-lat" id="lat-openai"></div></div>
+    <div class="ast idle" id="ast-openai">— не перевірено</div>
+    <button class="btn btn-blue" onclick="testKey('openai')" style="padding:6px 12px"><i class="fa fa-play"></i></button>
+  </div>
+  <div class="apic">
+    <div class="apic-ico">✨</div>
+    <div><div class="apic-name">Google Gemini</div><div class="apic-url">generativelanguage.googleapis.com</div><div class="apic-lat" id="lat-gemini"></div></div>
+    <div class="ast idle" id="ast-gemini">— не перевірено</div>
+    <button class="btn btn-blue" onclick="testKey('gemini')" style="padding:6px 12px"><i class="fa fa-play"></i></button>
+  </div>
+  <div class="apic">
+    <div class="apic-ico">🔮</div>
+    <div><div class="apic-name">Anthropic Claude</div><div class="apic-url">api.anthropic.com/v1/models</div><div class="apic-lat" id="lat-anthropic"></div></div>
+    <div class="ast idle" id="ast-anthropic">— не перевірено</div>
+    <button class="btn btn-blue" onclick="testKey('anthropic')" style="padding:6px 12px"><i class="fa fa-play"></i></button>
+  </div>
+  <hr class="sep">
+  <div class="card-ttl"><i class="fa fa-terminal"></i> Лог перевірок</div>
+  <div class="plog" id="apiLog"><div class="pe"><span class="pm info">Натисніть «Перевірити всі» або перевірте кожен ключ окремо</span></div></div>
+</div>
+
+<!-- ═══ MONITOR ═══ -->
+<div class="panel" id="panel-monitor">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(0,229,204,.1);color:var(--cyan)"><i class="fa fa-signal"></i></div>
+    <div><div class="ph-title">Монітор доступності</div><div class="ph-sub">Ping до ендпоінтів провайдерів та CDN-залежностей</div></div>
+    <div class="ph-acts"><button class="btn btn-green" id="monBtn" onclick="toggleMon()"><i class="fa fa-play"></i> Запустити</button></div>
+  </div>
+  <div class="mong">
+    <div class="moni pending" id="mi-oai"><div class="moni-ico">🤖</div><div class="moni-name">OpenAI API</div><div class="moni-st">ОЧІКУВАННЯ</div><div class="moni-ms" id="mm-oai">— мс</div></div>
+    <div class="moni pending" id="mi-gem"><div class="moni-ico">✨</div><div class="moni-name">Gemini API</div><div class="moni-st">ОЧІКУВАННЯ</div><div class="moni-ms" id="mm-gem">— мс</div></div>
+    <div class="moni pending" id="mi-ant"><div class="moni-ico">🔮</div><div class="moni-name">Anthropic API</div><div class="moni-st">ОЧІКУВАННЯ</div><div class="moni-ms" id="mm-ant">— мс</div></div>
+    <div class="moni pending" id="mi-fnt"><div class="moni-ico">🔤</div><div class="moni-name">Google Fonts</div><div class="moni-st">ОЧІКУВАННЯ</div><div class="moni-ms" id="mm-fnt">— мс</div></div>
+    <div class="moni pending" id="mi-fa"><div class="moni-ico">🎨</div><div class="moni-name">Font Awesome CDN</div><div class="moni-st">ОЧІКУВАННЯ</div><div class="moni-ms" id="mm-fa">— мс</div></div>
+    <div class="moni pending" id="mi-knt"><div class="moni-ico">📡</div><div class="moni-name">Keenetic /status</div><div class="moni-st">ОЧІКУВАННЯ</div><div class="moni-ms" id="mm-knt">— мс</div></div>
+  </div>
+  <div class="card-ttl"><i class="fa fa-terminal" style="margin-right:6px"></i>Лог пінгів</div>
+  <div class="plog" id="pLog"><div class="pe"><span class="pm info">Натисніть «Запустити» для початку моніторингу</span></div></div>
+</div>
+
+<!-- ═══ USAGE ═══ -->
+<div class="panel" id="panel-usage">
+  <div class="ph">
+    <div class="ph-icon" style="background:rgba(255,209,102,.1);color:var(--yellow)"><i class="fa fa-gauge-high"></i></div>
+    <div><div class="ph-title">Використання ключів</div><div class="ph-sub">Підрахунок запитів на основі techlog-буфера</div></div>
+    <div class="ph-acts"><button class="btn" onclick="calcUsage()"><i class="fa fa-rotate"></i> Перерахувати</button></div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl" style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--text2)">🤖 <strong>OpenAI</strong></div>
+    <div class="sg" style="margin-bottom:10px">
+      <div class="sbox"><div class="sval" id="u-oai-t">0</div><div class="slbl">Запитів сьогодні</div></div>
+      <div class="sbox"><div class="sval" id="u-oai-a">0</div><div class="slbl">Всього запитів</div></div>
+      <div class="sbox b"><div class="sval" id="u-oai-s">0</div><div class="slbl">TTS запитів</div></div>
+    </div>
+    <div class="ub"><div class="ub-lbl"><span>Денний ліміт (оцінка)</span><span id="u-oai-p">0%</span></div><div class="utrack"><div class="ufill" id="u-oai-b" style="width:0%"></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl" style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--text2)">✨ <strong>Google Gemini</strong></div>
+    <div class="sg" style="margin-bottom:10px">
+      <div class="sbox"><div class="sval" id="u-gem-t">0</div><div class="slbl">Запитів сьогодні</div></div>
+      <div class="sbox"><div class="sval" id="u-gem-a">0</div><div class="slbl">Всього запитів</div></div>
+    </div>
+    <div class="ub"><div class="ub-lbl"><span>Денний ліміт (оцінка)</span><span id="u-gem-p">0%</span></div><div class="utrack"><div class="ufill" id="u-gem-b" style="width:0%"></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-ttl" style="font-size:13px;text-transform:none;letter-spacing:0;color:var(--text2)">🔮 <strong>Anthropic Claude</strong></div>
+    <div class="sg" style="margin-bottom:10px">
+      <div class="sbox"><div class="sval" id="u-ant-t">0</div><div class="slbl">Запитів сьогодні</div></div>
+      <div class="sbox"><div class="sval" id="u-ant-a">0</div><div class="slbl">Всього запитів</div></div>
+    </div>
+    <div class="ub"><div class="ub-lbl"><span>Денний ліміт (оцінка)</span><span id="u-ant-p">0%</span></div><div class="utrack"><div class="ufill" id="u-ant-b" style="width:0%"></div></div></div>
+  </div>
+
+  <div style="padding:12px 14px;background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;font-size:11px;color:var(--dim);line-height:1.8">
+    <i class="fa fa-circle-info" style="margin-right:6px;color:var(--blue)"></i>
+    Дані розраховуються на основі <strong style="color:var(--text)">sp_techlog_buffer</strong>. Підрахунок є оціночним — фактичне використання перевіряйте у кабінеті провайдера.
+  </div>
+</div>
+
+</main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// MOBILE SIDEBAR
+function toggleSidebar() {
+  const sb = document.querySelector('.sb');
+  const ov = document.getElementById('sbOverlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('show');
+}
+
+// NAV
+function sw(id, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  el.classList.add('active');
+  // close sidebar on mobile after selection
+  const sb = document.querySelector('.sb');
+  if (sb.classList.contains('open')) toggleSidebar();
+  const actions = { studylogs: refreshLogs, techlogs: refreshTechLogs, sessions: loadSessions, storage: loadLS, editor: () => loadEd('sett_set', document.querySelector('.edtab.active')), exportimport: loadBkInfo, usage: calcUsage, apikeys: loadApiKeys };
+  if (actions[id]) actions[id]();
+}
+
+// TOAST
+function toast(m, d = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), d);
+}
+
+// DATA HELPERS
+const getStudy = () => { try { return JSON.parse(localStorage.getItem('sp_studylog_buffer') || '{}'); } catch { return {}; } };
+const getTech = () => { try { return JSON.parse(localStorage.getItem('sp_techlog_buffer') || '{}'); } catch { return {}; } };
+
+// Серверні рядки логів (завантажені з /logs/…)
+let _serverStudyLines = [];
+let _serverTechLines  = [];
+
+// Об'єднуємо localStorage-буфер + серверні рядки (без дублікатів за вмістом)
+function allStudyLines() {
+  const local = Object.values(getStudy()).flat();
+  if (!_serverStudyLines.length) return local;
+  const set = new Set(local);
+  const extra = _serverStudyLines.filter(l => !set.has(l));
+  return [...local, ...extra].sort();
+}
+function allTechLines() {
+  const local = Object.values(getTech()).flat();
+  if (!_serverTechLines.length) return local;
+  const set = new Set(local);
+  const extra = _serverTechLines.filter(l => !set.has(l));
+  return [...local, ...extra].sort();
+}
+
+// Завантаження серверних логів через GET /logs/<type>
+async function loadServerLogs(type) {
+  const origin = localStorage.getItem('sp_log_server_url')?.trim() || window.location.origin;
+  const today  = new Date().toISOString().slice(0, 10);
+  const btnLbl = document.getElementById(type === 'study' ? 'srv-study-btn-lbl' : 'srv-tech-btn-lbl');
+  const srcLbl = document.getElementById(type === 'study' ? 'study-src-lbl'    : 'tech-src-lbl');
+
+  if (btnLbl) btnLbl.textContent = '…';
+  try {
+    // Список доступних файлів
+    const listResp = await fetch(`${origin}/logs/${type}`, { signal: AbortSignal.timeout(4000) });
+    if (!listResp.ok) throw new Error(`HTTP ${listResp.status}`);
+    const files = await listResp.json();
+
+    if (!files.length) { toast('На сервері немає лог-файлів'); if (btnLbl) btnLbl.textContent = 'Сервер'; return; }
+
+    // Завантажуємо сьогоднішній файл (або перший з переліку)
+    const target = files.includes(today + '.txt') ? today + '.txt' : files[0];
+    const fileResp = await fetch(`${origin}/logs/${type}/${target}`, { signal: AbortSignal.timeout(8000) });
+    if (!fileResp.ok) throw new Error(`HTTP ${fileResp.status}`);
+    const text = await fileResp.text();
+
+    const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+    if (type === 'study') { _serverStudyLines = lines; refreshLogs(); }
+    else                  { _serverTechLines  = lines; refreshTechLogs(); }
+
+    const allFiles = files.join(', ');
+    if (srcLbl) srcLbl.textContent = `Джерело: сервер (${target}) + localStorage · Файли: ${allFiles}`;
+    if (btnLbl) btnLbl.textContent = `✓ ${lines.length} рядків`;
+    toast(`Завантажено ${lines.length} рядків з сервера (${target})`);
+  } catch (e) {
+    toast(`Помилка сервера: ${e.message}`);
+    if (btnLbl) btnLbl.textContent = 'Сервер';
+  }
+}
+function parseSL(line) {
+  const p = line.split('\t');
+  return {
+    timestamp: p[0]||'',
+    module: p[1]||'',
+    exercise_type: p[2]||'',
+    level: p[3]||'',
+    theme: p[4]||'',
+    result: p[5]||'',
+    score_total: p[6]||'0',
+    score_max: p[7]||'0',
+    time_spent: parseInt(p[8])||0,
+    attempt_number: p[9]||'1',
+    wrong_answer: p[10]||'',
+    correct_answer: p[11]||'',
+    explanation_shown: p[12]||'0',
+    transcript_shown: p[13]||'0',
+    slow_mode: p[14]||'0',
+    tts_replays: p[15]||'0',
+    task_text: p[16]||'',
+    answer_text: p[17]||'',
+    ai_feedback_text: p[18]||'',
+    // back-compat: у старому форматі session_id був на [16]
+    session_id: p[p.length - 1] || ''
+  };
+}
+
+// LOGS
+function refreshLogs() {
+  const lines = allStudyLines(); const parsed = lines.map(parseSL);
+  const total = parsed.length;
+  const correct = parsed.filter(r => r.result === 'correct').length;
+  const pct = total ? Math.round(correct / total * 100) : 0;
+  const sessions = new Set(parsed.map(r => r.session_id).filter(Boolean)).size;
+  const avgTime = total ? Math.round(parsed.reduce((a,r) => a + r.time_spent, 0) / total) : 0;
+  document.getElementById('st-total').textContent = total;
+  document.getElementById('st-cor').textContent = pct + '%';
+  document.getElementById('st-ses').textContent = sessions;
+  document.getElementById('st-avg').textContent = avgTime + 'с';
+  document.getElementById('sb-lc').textContent = total;
+  document.getElementById('sb-sc').textContent = sessions;
+  buildChart('thChart', parsed, 'theme', { Travel:'#4f9eff', Office:'#2de08a', Restaurant:'#ff8c42', 'Small Talk':'#b47fff', Family:'#ffd166', Shopping:'#00e5cc', Health:'#ff5566', Emergency:'#e07a5f' });
+  buildChart('lvChart', parsed, 'level', { A2:'#2de08a', B1:'#4f9eff', B2:'#b47fff' });
+  buildTable(parsed);
+}
+function buildChart(containerId, parsed, field, colors) {
+  const map = {};
+  parsed.forEach(r => { if (!r[field]) return; if (!map[r[field]]) map[r[field]] = { correct: 0, total: 0 }; map[r[field]].total++; if (r.result === 'correct') map[r[field]].correct++; });
+  const el = document.getElementById(containerId);
+  if (!Object.keys(map).length) { el.innerHTML = '<span style="color:var(--dim);font-size:11px">Немає даних</span>'; return; }
+  const max = Math.max(...Object.values(map).map(v => v.total)) || 1;
+  el.innerHTML = Object.entries(map).map(([k, d]) => {
+    const h = Math.max(4, Math.round(d.total / max * 55));
+    const pct = d.total ? Math.round(d.correct / d.total * 100) : 0;
+    const color = colors[k] || '#4f9eff';
+    return `<div class="bc" title="${k}: ${pct}% правильних (${d.total})"><div class="bar" style="height:${h}px;background:${color};opacity:.8"></div><div class="blbl">${k.slice(0,5)}</div></div>`;
+  }).join('');
+}
+function buildTable(parsed) {
+  const tbody = document.getElementById('logTbody');
+  if (!parsed.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--dim);text-align:center;padding:20px">Немає даних</td></tr>'; return; }
+  tbody.innerHTML = parsed.slice(-30).reverse().map(r => {
+    const rc = r.result === 'correct' ? 'var(--green)' : r.result === 'wrong' ? 'var(--red)' : 'var(--dim)';
+    const lc = r.level === 'B2' ? 'tp' : r.level === 'B1' ? 'tb' : 'tg';
+    return `<tr><td style="color:var(--dim)">${r.timestamp.slice(11,19)}</td><td><span class="tag tb">${r.module}</span></td><td>${r.theme||'—'}</td><td><span class="tag ${lc}">${r.level||'—'}</span></td><td style="color:${rc};font-weight:500">${r.result||'—'}</td><td>${r.time_spent||'—'}</td></tr>`;
+  }).join('');
+}
+function clearLog(type) {
+  const key = type === 'study' ? 'sp_studylog_buffer' : 'sp_techlog_buffer';
+  const label = type === 'study' ? 'навчальний лог' : 'техлог';
+  if (!confirm(`Видалити ${label}?`)) return;
+  localStorage.removeItem(key);
+  refreshLogs(); refreshTechLogs();
+  toast(`✓ ${label} очищено`);
+}
+function exportLog(type) {
+  const buf = type === 'study' ? getStudy() : getTech();
+  const lines = Object.values(buf).flat();
+  if (!lines.length) { toast('Буфер порожній'); return; }
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `${type}log_${new Date().toISOString().slice(0,10)}.txt`; a.click();
+}
+
+// TECH LOGS
+function parseTokFromExtra(extra) {
+  // try multiple naming conventions
+  const tokIn  = extra.tokens_in  ?? extra.input_tokens  ?? extra.prompt_tokens     ?? extra.tokens_prompt     ?? 0;
+  const tokOut = extra.tokens_out ?? extra.output_tokens ?? extra.completion_tokens  ?? extra.tokens_completion ?? 0;
+  return { tokIn: Number(tokIn)||0, tokOut: Number(tokOut)||0 };
+}
+function fmtNum(n) { return n >= 1000 ? (n/1000).toFixed(1)+'k' : String(n); }
+function refreshTechLogs() {
+  const lines = allTechLines();
+  const today = new Date().toISOString().slice(0, 10);
+  let errors = 0, todayCount = 0, todayReqs = 0;
+  let allTokIn = 0, allTokOut = 0, dayTokIn = 0, dayTokOut = 0;
+  const modMap = {};
+  const sesMap = {}; // session_id -> { reqs, tokIn, tokOut, mod, ts }
+
+  lines.forEach(l => {
+    const p = l.split('\t');
+    const ts = p[0]||'', mod = p[1]||'?', lvl = p[2]||'', evt = p[3]||'';
+    let extra = {};
+    try { extra = JSON.parse(p[5]||'{}'); } catch {}
+    const { tokIn, tokOut } = parseTokFromExtra(extra);
+    allTokIn += tokIn; allTokOut += tokOut;
+    if (lvl === 'ERROR') errors++;
+    modMap[mod] = (modMap[mod]||0) + 1;
+    const isReq = tokIn > 0 || tokOut > 0 || evt.includes('request') || evt.includes('api') || evt.includes('AI') || evt.includes('generate');
+    if (ts.startsWith(today)) {
+      todayCount++;
+      if (isReq) { todayReqs++; dayTokIn += tokIn; dayTokOut += tokOut; }
+    }
+    // session grouping
+    const sid = extra.session_id || extra.sessionId || '';
+    if (sid) {
+      if (!sesMap[sid]) sesMap[sid] = { reqs:0, tokIn:0, tokOut:0, mod, ts, events:[] };
+      sesMap[sid].reqs++;
+      sesMap[sid].tokIn  += tokIn;
+      sesMap[sid].tokOut += tokOut;
+      if (sesMap[sid].events.length < 3) sesMap[sid].events.push(evt);
+      if (!sesMap[sid].ts || ts > sesMap[sid].ts) {} // keep first ts
+    }
+  });
+
+  const dayTok = dayTokIn + dayTokOut;
+  const allTok  = allTokIn + allTokOut;
+
+  // update daily banner
+  document.getElementById('tl-tok-day').textContent    = dayTok > 0 ? fmtNum(dayTok) : '—';
+  document.getElementById('tl-tok-in-day').textContent  = dayTokIn  > 0 ? fmtNum(dayTokIn)  : '—';
+  document.getElementById('tl-tok-out-day').textContent = dayTokOut > 0 ? fmtNum(dayTokOut) : '—';
+  document.getElementById('tl-req-day').textContent     = todayReqs > 0 ? todayReqs : todayCount;
+  document.getElementById('tl-today').textContent       = todayCount;
+  // update summary stats
+  document.getElementById('tl-total').textContent  = lines.length;
+  document.getElementById('tl-errors').textContent  = errors;
+  document.getElementById('tl-mods').textContent    = Object.keys(modMap).length;
+  document.getElementById('tl-tok-all').textContent = allTok > 0 ? fmtNum(allTok) : '—';
+  document.getElementById('sb-tlc').textContent     = lines.length;
+
+  // chart by module
+  const modEl = document.getElementById('tlModChart');
+  if (!Object.keys(modMap).length) { modEl.innerHTML = '<span style="color:var(--dim);font-size:12px">Немає даних</span>'; }
+  else {
+    const colors = ['#5aabff','#36e896','#ff9550','#be8fff','#ffda7a','#00eedd','#ff6677'];
+    const max = Math.max(...Object.values(modMap))||1;
+    modEl.innerHTML = Object.entries(modMap).map(([k,cnt],i) => {
+      const h = Math.max(4, Math.round(cnt/max*55));
+      return `<div class="bc" title="${k}: ${cnt}"><div class="bar" style="height:${h}px;background:${colors[i%colors.length]};opacity:.85"></div><div class="blbl">${k.slice(0,7)}</div></div>`;
+    }).join('');
+  }
+
+  // sessions breakdown
+  const sesEl = document.getElementById('tlSessions');
+  const sesCnt = document.getElementById('tl-ses-count');
+  const sesList = Object.entries(sesMap).sort((a,b) => (b[1].ts||'').localeCompare(a[1].ts||''));
+  sesCnt.textContent = sesList.length ? `(${sesList.length})` : '';
+  if (!sesList.length) {
+    sesEl.innerHTML = '<p style="color:var(--dim);font-size:12px">Немає сесій з ідентифікатором у extra-даних техлогу</p>';
+  } else {
+    sesEl.innerHTML = sesList.slice(0,30).map(([sid, d]) => {
+      const tokTotal = d.tokIn + d.tokOut;
+      const tsStr = d.ts ? d.ts.slice(0,16) : '—';
+      return `<div class="tses" onclick="toggleTses('${sid}')">
+        <div class="tses-head">
+          <div>
+            <div class="tses-id"><i class="fa fa-tag" style="margin-right:5px;color:var(--dim)"></i>${sid.slice(0,28)}${sid.length>28?'…':''}</div>
+            <div class="tses-meta" style="margin-top:4px"><span class="tag tb">${d.mod}</span> &nbsp; ${tsStr} &nbsp;·&nbsp; ${d.reqs} запит${d.reqs!==1?'ів':''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            ${tokTotal>0?`<div style="font-family:var(--head);font-size:15px;color:var(--blue)">${fmtNum(tokTotal)}</div><div style="font-size:10px;color:var(--dim)">токенів</div>`:`<div style="font-size:11px;color:var(--dim)">токени<br>відсутні</div>`}
+          </div>
+        </div>
+        <div class="tses-body" id="tsb-${sid}">
+          <div class="tses-stat"><div class="tses-stat-val" style="color:var(--orange)">${fmtNum(d.tokIn)||'—'}</div><div class="tses-stat-lbl">↑ Токени відправлені</div></div>
+          <div class="tses-stat"><div class="tses-stat-val" style="color:var(--green)">${fmtNum(d.tokOut)||'—'}</div><div class="tses-stat-lbl">↓ Токени отримані</div></div>
+          <div class="tses-stat"><div class="tses-stat-val" style="color:var(--blue)">${d.reqs}</div><div class="tses-stat-lbl">Кількість запитів</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // raw table
+  const tbody = document.getElementById('tlTbody');
+  if (!lines.length) { tbody.innerHTML = '<tr><td colspan="5" style="color:var(--dim);text-align:center;padding:20px">Немає даних</td></tr>'; return; }
+  tbody.innerHTML = lines.slice(-50).reverse().map(l => {
+    const p = l.split('\t');
+    const ts = p[0]||'', mod = p[1]||'?', lvl = p[2]||'', evt = p[3]||'', desc = p[4]||'';
+    const lc = lvl==='ERROR' ? 'var(--red)' : lvl==='WARN' ? 'var(--yellow)' : 'var(--blue)';
+    const tag = lvl==='ERROR' ? 'tr' : lvl==='WARN' ? 'to' : 'tb';
+    return `<tr><td style="color:var(--dim)">${ts.slice(11,19)}</td><td><span class="tag tb">${mod}</span></td><td><span class="tag ${tag}" style="color:${lc}">${lvl||'INFO'}</span></td><td style="color:var(--text2)">${evt}</td><td style="color:var(--dim);max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${desc}">${desc}</td></tr>`;
+  }).join('');
+}
+function toggleTses(sid) { const el = document.getElementById('tsb-'+sid); if(el) el.classList.toggle('open'); }
+
+// SESSIONS
+function loadSessions() {
+  const lines = allStudyLines().map(parseSL);
+  const byS = {};
+  lines.forEach(r => { if (!r.session_id) return; if (!byS[r.session_id]) byS[r.session_id] = { items:[], ts:r.timestamp, module:r.module }; byS[r.session_id].items.push(r); });
+  const sessions = Object.entries(byS).sort((a,b) => b[1].ts.localeCompare(a[1].ts));
+  document.getElementById('sb-sc').textContent = sessions.length;
+  const c = document.getElementById('sesList');
+  if (!sessions.length) { c.innerHTML = '<p style="color:var(--dim)">Немає збережених сесій</p>'; return; }
+  c.innerHTML = sessions.slice(0,50).map(([sid, d]) => {
+    const cor = d.items.filter(i => i.result === 'correct').length;
+    const tot = d.items.length;
+    const pct = tot ? Math.round(cor/tot*100) : 0;
+    const cls = pct >= 80 ? 'good' : pct >= 50 ? 'mid' : 'bad';
+    const themes = [...new Set(d.items.map(i=>i.theme).filter(Boolean))].join(', ');
+    const levels = [...new Set(d.items.map(i=>i.level).filter(Boolean))].join(', ');
+    const avgT = tot ? Math.round(d.items.reduce((a,i)=>a+i.time_spent,0)/tot) : 0;
+    const slow = d.items.filter(i=>i.slow_mode==='1').length;
+    return `<div class="sesi" onclick="toggleSes('${sid}')">
+      <div><div class="ses-mod">${d.module} · ${d.ts.slice(0,16)}</div>
+      <div class="ses-inf">${themes||'—'} &nbsp;·&nbsp; рівень ${levels||'—'} &nbsp;·&nbsp; ${tot} відповідей</div>
+      <div class="ses-det" id="sd-${sid}">✓ Правильних: ${cor}/${tot} &nbsp;·&nbsp; Сер. час: ${avgT}с &nbsp;·&nbsp; «Повільно»: ${slow}x<br>ID: <span style="color:var(--blue)">${sid}</span></div></div>
+      <div class="ses-sc ${cls}">${pct}%</div>
+    </div>`;
+  }).join('');
+}
+function toggleSes(id) { const el = document.getElementById('sd-'+id); if(el) el.classList.toggle('open'); }
+
+// EDITOR
+let curEdFile = 'sett_set';
+const DEFAULTS = {
+  sett_set: `// sett_set.js — Глобальний конфіг Spanish AI Hub\n\nconst SETTINGS_CONFIG = {\n  providers: [\n    { id: 'openai',    label: 'OpenAI',          icon: '🤖' },\n    { id: 'gemini',    label: 'Google Gemini',    icon: '✨' },\n    { id: 'anthropic', label: 'Anthropic Claude', icon: '🔮' }\n  ],\n  models: {\n    openai:    ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],\n    gemini:    ['gemini-1.5-pro', 'gemini-1.5-flash'],\n    anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307']\n  },\n  speed: { min: 0.5, max: 1.5, step: 0.1, default: 0.9 },\n  storageKeys: {\n    provider:        'sp_provider',\n    model:           'sp_model',\n    speed:           'sp_speed',\n    ttsMode:         'sp_tts_mode',\n    voice:           'sp_voice',\n    techLogEnabled:  'sp_techlog_on',\n    studyLogEnabled: 'sp_studylog_on',\n    logServerUrl:    'sp_log_server_url'\n  }\n};\n`,
+  listen_set: `// listen_set.js — Конфіг модуля Аудіювання\n\nconst LISTEN_CONFIG = {\n  themes: [\n    { value: 'Travel',     label: '✈️ Подорожі' },\n    { value: 'Office',     label: '💼 Офіс' },\n    { value: 'Restaurant', label: '🍽️ Ресторан' },\n    { value: 'Small Talk', label: '💬 Small Talk' },\n    { value: 'Family',     label: '👨‍👩‍👧 Сімʼя' },\n    { value: 'Shopping',   label: '🛍️ Шопінг' },\n    { value: 'Health',     label: '🏥 Здоровʼя' },\n    { value: 'Emergency',  label: '🚨 Надзвичайні' }\n  ],\n  levels: [\n    { value: 'A2', wordCount: 10 },\n    { value: 'B1', wordCount: 17, default: true },\n    { value: 'B2', wordCount: 25 }\n  ],\n  tasksPerSession:    5,\n  defaultPersonality: 'informal',\n  defaultStrictness:  'mid',\n  slowSpeed:          0.6,\n  autoPlayDelay:      800,\n  speechLang:         'es-ES'\n};\n`,
+  phone_set: `// phone_set.js — Конфіг вправ телефонного розмовника\n\nconst PHONE_CONFIG = {\n  exercises: {\n    echo:            { level: 'A1', label: 'Shadowing Lite' },\n    simple_question: { level: 'A1', label: 'Просте питання' },\n    conversion:      { level: 'A1', label: 'Конверсія речення' },\n    describe:        { level: 'A2', label: 'Опис сцени' },\n    explain_word:    { level: 'A2', label: 'Пояснення слова' },\n    what_happened:   { level: 'A2', label: 'Що сталося' },\n    expand_sentence: { level: 'B1', label: 'Розширення речення' },\n    roleplay:        { level: 'B1', label: 'Рольова гра' },\n    debate:          { level: 'B2', label: 'Дебати' }\n  },\n  feedback: {\n    maxWords: 20,\n    language: 'uk'\n  }\n};\n`,
+  logger: `// logger.js — Модуль логування Spanish AI Hub\n// Підключати після sett_set.js на кожній сторінці\n\nconst Logger = {\n  bufferMax: 500,\n\n  tech(module, event, desc, extra = {}) {\n    if (!this._techOn()) return;\n    this._push('sp_techlog_buffer', module,\n      [this._ts(), module, 'INFO', event, desc, JSON.stringify(extra)].join('\\t'));\n  },\n\n  techError(module, event, desc, extra = {}) {\n    if (!this._techOn()) return;\n    this._push('sp_techlog_buffer', module,\n      [this._ts(), module, 'ERROR', event, desc, JSON.stringify(extra)].join('\\t'));\n  },\n\n  study(module, data) {\n    if (!this._studyOn()) return;\n    const f = data;\n    this._push('sp_studylog_buffer', module,\n      [this._ts(), module, f.exercise_type, f.level, f.theme, f.result,\n       f.score_total, f.score_max, f.time_spent_sec, f.attempt_number,\n       f.wrong_answer||'', f.correct_answer||'',\n       f.explanation_shown||0, f.transcript_shown||0,\n       f.slow_mode_used||0, f.tts_replays||0, f.session_id||''].join('\\t'));\n  },\n\n  _ts()      { return new Date().toISOString().replace('T',' ').slice(0,19); },\n  _techOn()  { return localStorage.getItem('sp_techlog_on')  === '1'; },\n  _studyOn() { return localStorage.getItem('sp_studylog_on') === '1'; },\n\n  _push(key, module, line) {\n    const buf = JSON.parse(localStorage.getItem(key)||'{}');\n    if (!buf[module]) buf[module] = [];\n    buf[module].push(line);\n    localStorage.setItem(key, JSON.stringify(buf));\n  }\n};\n`
+};
+function loadEd(name, tabEl) {
+  curEdFile = name;
+  document.querySelectorAll('.edtab').forEach(t => t.classList.remove('active'));
+  if (tabEl) tabEl.classList.add('active');
+  document.getElementById('edArea').value = localStorage.getItem('sp_jsconf_'+name) || DEFAULTS[name] || '';
+  updEdSt();
+}
+function updEdSt() {
+  const v = document.getElementById('edArea').value;
+  document.getElementById('edFile').textContent = curEdFile + '.js';
+  document.getElementById('edLines').textContent = v.split('\n').length + ' рядків';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('edArea').addEventListener('input', () => {
+    updEdSt();
+    document.getElementById('edSt').textContent = '● не збережено';
+    document.getElementById('edSt').style.color = 'var(--orange)';
+  });
+});
+function saveEd() {
+  localStorage.setItem('sp_jsconf_'+curEdFile, document.getElementById('edArea').value);
+  document.getElementById('edSt').textContent = '✓ збережено';
+  document.getElementById('edSt').style.color = 'var(--green)';
+  toast('Збережено у localStorage');
+}
+function copyEd() { navigator.clipboard.writeText(document.getElementById('edArea').value); toast('Скопійовано в буфер'); }
+
+// STORAGE
+let allKeys = [];
+function loadLS() {
+  allKeys = [];
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('sp_') || k.startsWith('sah_')) allKeys.push(k); }
+  allKeys.sort();
+  document.getElementById('sb-lsc').textContent = allKeys.length;
+  renderLS(allKeys);
+}
+function renderLS(keys) {
+  document.getElementById('lsTotal').textContent = keys.length + ' ключів';
+  const c = document.getElementById('lsList');
+  if (!keys.length) { c.innerHTML = '<p style="color:var(--dim)">Немає ключів з префіксом sp_</p>'; return; }
+  c.innerHTML = keys.map(k => {
+    let v = localStorage.getItem(k) || '';
+    const isJ = v.startsWith('{') || v.startsWith('[');
+    const dv = isJ ? `<em style="color:var(--dim)">[JSON ${v.length} байт]</em>` : (v.slice(0,80) + (v.length>80?'…':'')||'<em style="color:var(--dim)">порожньо</em>');
+    return `<div class="lsi"><div><div class="lsk">${k}</div><div class="lsv">${dv}</div></div><div class="lsact"><button class="btn" onclick="cpLS('${k}')" style="padding:4px 8px;font-size:10px" title="Копіювати"><i class="fa fa-copy"></i></button><button class="btn btn-red" onclick="delLS('${k}')" style="padding:4px 8px;font-size:10px" title="Видалити"><i class="fa fa-trash"></i></button></div></div>`;
+  }).join('');
+}
+function filterLS() { const q = document.getElementById('lsSrch').value.toLowerCase(); renderLS(allKeys.filter(k=>k.toLowerCase().includes(q))); }
+function cpLS(k) { navigator.clipboard.writeText(localStorage.getItem(k)||''); toast('Скопійовано: '+k); }
+function delLS(k) { if (!confirm(`Видалити ключ «${k}»?`)) return; localStorage.removeItem(k); loadLS(); toast('Видалено: '+k); }
+function clearLS() {
+  if (!confirm('Видалити всі ключі Spanish AI Hub?\n\nЦе скине всі налаштування та логи!')) return;
+  allKeys.forEach(k => localStorage.removeItem(k)); loadLS(); toast('Очищено');
+}
+
+// EXPORT/IMPORT
+function loadBkInfo() { const v = localStorage.getItem('sp_last_backup'); document.getElementById('bkInfo').textContent = v ? '✓ Збережено: '+v : 'Резервних копій не знайдено'; }
+function doExport() {
+  const d = { version:'1.0', date: new Date().toISOString(), settings:{} };
+  if (document.getElementById('exS').checked) {
+    for (let i=0;i<localStorage.length;i++) { const k=localStorage.key(i); if(k.startsWith('sp_')&&!k.includes('buffer')&&!k.includes('jsconf')) d.settings[k]=localStorage.getItem(k); }
+  }
+  if (document.getElementById('exL').checked) { d.techlog=getTech(); d.studylog=getStudy(); }
+  if (document.getElementById('exC').checked) { d.jsconfigs={}; ['sett_set','listen_set','phone_set','logger'].forEach(n=>{const v=localStorage.getItem('sp_jsconf_'+n);if(v)d.jsconfigs[n]=v;}); }
+  const blob = new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`spanishaihub_backup_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  const ts = new Date().toLocaleString('uk-UA'); localStorage.setItem('sp_last_backup',ts); loadBkInfo(); toast('Backup збережено');
+}
+function doImport(ev) {
+  const file=ev.target.files[0]; if(!file) return;
+  const r=new FileReader();
+  r.onload=e=>{
+    try {
+      const d=JSON.parse(e.target.result);
+      if(!confirm(`Відновити backup від ${d.date||'невідома дата'}?\n\nПоточні дані будуть перезаписані.`)) return;
+      if(d.settings) Object.entries(d.settings).forEach(([k,v])=>localStorage.setItem(k,v));
+      if(d.techlog) localStorage.setItem('sp_techlog_buffer',JSON.stringify(d.techlog));
+      if(d.studylog) localStorage.setItem('sp_studylog_buffer',JSON.stringify(d.studylog));
+      if(d.jsconfigs) Object.entries(d.jsconfigs).forEach(([k,v])=>localStorage.setItem('sp_jsconf_'+k,v));
+      toast('✓ Імпорт успішний'); loadBkInfo();
+    } catch { toast('Помилка: некоректний файл'); }
+  };
+  r.readAsText(file); ev.target.value='';
+}
+
+// API KEYS
+const AK_PROVIDERS = ['openai','gemini','anthropic'];
+function loadApiKeys() {
+  AK_PROVIDERS.forEach(p => {
+    const key = localStorage.getItem('sp_apiKey_'+p) || localStorage.getItem('sp_'+p+'_key') || '';
+    const inp = document.getElementById('ak-'+p);
+    inp.value = key;
+    inp.type = 'password';
+    document.getElementById('eye-'+p).className = 'fa fa-eye';
+    setAkStatus(p, key ? 'saved' : 'empty');
+  });
+}
+function setAkStatus(p, state) {
+  const el = document.getElementById('akst-'+p);
+  if (state === 'saved') { el.className = 'ast ok'; el.textContent = '✓ збережено'; }
+  else if (state === 'empty') { el.className = 'ast idle'; el.textContent = '— не задано'; }
+  else if (state === 'unsaved') { el.className = 'ast chk'; el.textContent = '● не збережено'; }
+}
+function markUnsaved(p) { setAkStatus(p, 'unsaved'); }
+function saveApiKey(p) {
+  const val = document.getElementById('ak-'+p).value.trim();
+  if (!val) { toast('Введіть ключ перед збереженням'); return; }
+  localStorage.setItem('sp_apiKey_'+p, val);
+  setAkStatus(p, 'saved');
+  toast('✓ Ключ збережено: '+p);
+}
+function clearApiKey(p) {
+  if (!confirm(`Видалити ключ ${p}?`)) return;
+  localStorage.removeItem('sp_apiKey_'+p);
+  localStorage.removeItem('sp_'+p+'_key');
+  document.getElementById('ak-'+p).value = '';
+  setAkStatus(p, 'empty');
+  toast('Ключ видалено: '+p);
+}
+function toggleShowKey(p) {
+  const inp = document.getElementById('ak-'+p);
+  const ico = document.getElementById('eye-'+p);
+  if (inp.type === 'password') { inp.type = 'text'; ico.className = 'fa fa-eye-slash'; }
+  else { inp.type = 'password'; ico.className = 'fa fa-eye'; }
+}
+
+// API TEST
+const API_CFGS = {
+  openai: { getKey: ()=>localStorage.getItem('sp_apiKey_openai')||localStorage.getItem('sp_openai_key'), test: async k=>{ const t=Date.now(),r=await fetch('https://api.openai.com/v1/models',{headers:{Authorization:'Bearer '+k}}); return{ok:r.ok,ms:Date.now()-t,s:r.status}; } },
+  gemini: { getKey: ()=>localStorage.getItem('sp_apiKey_gemini')||localStorage.getItem('sp_gemini_key'), test: async k=>{ const t=Date.now(),r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${k}`); return{ok:r.ok,ms:Date.now()-t,s:r.status}; } },
+  anthropic: { getKey: ()=>localStorage.getItem('sp_apiKey_anthropic')||localStorage.getItem('sp_anthropic_key'), test: async k=>{ const t=Date.now(),r=await fetch('https://api.anthropic.com/v1/models',{headers:{'x-api-key':k,'anthropic-version':'2023-06-01'}}); return{ok:r.ok,ms:Date.now()-t,s:r.status}; } }
+};
+function apiLog(m,c='info'){const l=document.getElementById('apiLog'),ts=new Date().toLocaleTimeString('uk-UA');l.innerHTML+=`<div class="pe"><span class="pts">${ts}</span><span class="pm ${c}">${m}</span></div>`;l.scrollTop=l.scrollHeight;}
+async function testKey(p) {
+  const cfg=API_CFGS[p]; const key=cfg.getKey();
+  const el=document.getElementById('ast-'+p); const lat=document.getElementById('lat-'+p);
+  if(!key){el.className='ast fail';el.textContent='✕ немає ключа';apiLog(`${p}: ключ не знайдено у localStorage`,'fail');return;}
+  el.className='ast chk';el.textContent='⟳ перевірка…';apiLog(`${p}: перевіряємо ${key.slice(0,8)}…`,'info');
+  try {
+    const res=await cfg.test(key);
+    if(res.ok){el.className='ast ok';el.textContent='✓ OK';lat.textContent=res.ms+'мс';apiLog(`${p}: ✓ ключ валідний (${res.ms}мс)`,'ok');}
+    else{el.className='ast fail';el.textContent=`✕ HTTP ${res.s}`;apiLog(`${p}: ✕ HTTP ${res.s}`,'fail');}
+  } catch(e){el.className='ast fail';el.textContent='✕ мережа';apiLog(`${p}: ✕ ${e.message}`,'fail');}
+}
+async function testAll() { for(const p of ['openai','gemini','anthropic']) await testKey(p); }
+
+// MONITOR
+let monIv=null;
+const MTGTS=[
+  {id:'oai',name:'OpenAI',url:'https://api.openai.com/v1/models',keenetic:false},
+  {id:'gem',name:'Gemini',url:'https://generativelanguage.googleapis.com',keenetic:false},
+  {id:'ant',name:'Anthropic',url:'https://api.anthropic.com',keenetic:false},
+  {id:'fnt',name:'Google Fonts',url:'https://fonts.googleapis.com',keenetic:false},
+  {id:'fa',name:'Font Awesome',url:'https://cdnjs.cloudflare.com',keenetic:false},
+  {id:'knt',name:'Keenetic',url:'/status',keenetic:true}
+];
+function pLog(m,c){const l=document.getElementById('pLog'),ts=new Date().toLocaleTimeString('uk-UA');l.innerHTML+=`<div class="pe"><span class="pts">${ts}</span><span class="pm ${c}">${m}</span></div>`;l.scrollTop=l.scrollHeight;if(l.children.length>100)l.removeChild(l.firstChild);}
+async function pingT(t){
+  const t0=Date.now();const el=document.getElementById('mi-'+t.id);const ms=document.getElementById('mm-'+t.id);
+  try{
+    await fetch(t.url,{method:'HEAD',mode:'no-cors',signal:AbortSignal.timeout(4000)});
+    const dt=Date.now()-t0;el.className='moni online';el.querySelector('.moni-st').textContent='ONLINE';ms.textContent=dt+'мс';pLog(`✓ ${t.name} — ${dt}мс`,'ok');
+  }catch(e){
+    const dt=Date.now()-t0;
+    if(t.keenetic){el.className='moni offline';el.querySelector('.moni-st').textContent='OFFLINE';ms.textContent='—мс';pLog(`✕ ${t.name} недоступний`,'fail');}
+    else{el.className='moni online';el.querySelector('.moni-st').textContent='ONLINE';ms.textContent=dt+'мс';pLog(`✓ ${t.name} — no-cors OK`,'ok');}
+  }
+}
+function toggleMon(){
+  if(monIv){clearInterval(monIv);monIv=null;document.getElementById('monBtn').innerHTML='<i class="fa fa-play"></i> Запустити';document.getElementById('monBtn').className='btn btn-green';pLog('— Моніторинг зупинено','info');}
+  else{document.getElementById('monBtn').innerHTML='<i class="fa fa-stop"></i> Зупинити';document.getElementById('monBtn').className='btn btn-red';pLog('▶ Запущено (кожні 30с)','info');MTGTS.forEach(pingT);monIv=setInterval(()=>MTGTS.forEach(pingT),30000);}
+}
+
+// USAGE
+function calcUsage(){
+  const tech=allTechLines(); const today=new Date().toISOString().slice(0,10);
+  const cnts={openai:{t:0,a:0,s:0},gemini:{t:0,a:0},anthropic:{t:0,a:0}};
+  tech.forEach(l=>{
+    const p=l.split('\t'); const ts=p[0]||''; let ex={};
+    try{ex=JSON.parse(p[5]||'{}');}catch{}
+    const prov=ex.provider; if(!prov||!cnts[prov]) return;
+    cnts[prov].a++; if(ts.startsWith(today)) cnts[prov].t++;
+    if((p[3]||'').includes('tts')) cnts[prov].s=(cnts[prov].s||0)+1;
+  });
+  // add study lines as rough estimate for active provider
+  const actProv=localStorage.getItem('sp_provider')||'openai';
+  const sl=allStudyLines().map(parseSL);
+  if(cnts[actProv]){
+    cnts[actProv].a+=sl.length;
+    cnts[actProv].t+=sl.filter(r=>r.timestamp.startsWith(today)).length;
+  }
+  const LIM=100;
+  [['openai','oai'],['gemini','gem'],['anthropic','ant']].forEach(([prov,key])=>{
+    const c=cnts[prov]; const pct=Math.min(100,Math.round(c.t/LIM*100));
+    document.getElementById(`u-${key}-t`).textContent=c.t;
+    document.getElementById(`u-${key}-a`).textContent=c.a;
+    if(prov==='openai') document.getElementById('u-oai-s').textContent=c.s||0;
+    const bar=document.getElementById(`u-${key}-b`);
+    bar.style.width=pct+'%'; bar.className='ufill'+(pct>80?' danger':pct>50?' warn':'');
+    document.getElementById(`u-${key}-p`).textContent=pct+'%';
+  });
+}
+
+// INIT
+window.addEventListener('DOMContentLoaded', () => {
+  refreshLogs(); refreshTechLogs(); loadLS(); loadBkInfo(); loadApiKeys();
+  loadEd('sett_set', document.querySelector('.edtab.active'));
+  // Спроба автоматично підтягнути сьогоднішні логи з сервера
+  loadServerLogs('study');
+  loadServerLogs('tech');
+});
+</script>
+</body>
+</html>

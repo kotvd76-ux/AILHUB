@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>Аудіювання — Spanish AI Hub</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="sett_set.js"></script>
+    <script src="listen_set.js"></script>
+    <script src="logger.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+        :root {
+            --bg:        #0d1117;
+            --surface:   #161b22;
+            --surface2:  #21262d;
+            --border:    rgba(255,255,255,0.08);
+            --yellow:    #f0c040;
+            --yellow-dim:#f0c04022;
+            --blue:      #58a6ff;
+            --green:     #3fb950;
+            --red:       #f85149;
+            --text:      #e6edf3;
+            --text-muted:#8b949e;
+            --radius:    1.25rem;
+            --radius-lg: 2rem;
+
+            /* Accessibility: розмір шрифту масштабується через браузер */
+            font-size: 18px;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
+        }
+
+        /* ── Focus visible (доступність) ── */
+        :focus-visible {
+            outline: 3px solid var(--yellow);
+            outline-offset: 3px;
+            border-radius: 6px;
+        }
+
+        /* ── Поверхні ── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+
+        /* ── Кнопки — великі зони дотику ≥ 48px ── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            min-height: 56px;
+            padding: .75rem 1.5rem;
+            border: none;
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform .15s, opacity .15s, box-shadow .15s;
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: scale(.96); }
+
+        .btn-primary {
+            background: var(--yellow);
+            color: #000;
+            font-size: 1.15rem;
+            width: 100%;
+            min-height: 64px;
+            border-radius: var(--radius-lg);
+            box-shadow: 0 4px 24px rgba(240,192,64,.18);
+        }
+        .btn-primary:hover { box-shadow: 0 6px 32px rgba(240,192,64,.3); }
+
+        .btn-ghost {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .btn-ghost:hover { background: var(--surface); }
+
+        .btn-icon {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            width: 56px;
+            height: 56px;
+            padding: 0;
+            border-radius: var(--radius);
+            flex-shrink: 0;
+        }
+
+        /* ── Select / Label ── */
+        .field { display: flex; flex-direction: column; gap: .5rem; }
+
+        label.field-label {
+            font-size: .75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: var(--text-muted);
+            padding-left: .25rem;
+        }
+
+        select {
+            appearance: none;
+            background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 1rem center;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--blue);
+            font-family: inherit;
+            font-size: 1.05rem;
+            font-weight: 800;
+            min-height: 56px;
+            padding: .75rem 3rem .75rem 1.1rem;
+            width: 100%;
+            cursor: pointer;
+        }
+        select:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+        option { background: #161b22; color: var(--text); }
+
+        /* ── Прогрес-бар ── */
+        .progress-track {
+            height: 8px;
+            background: var(--surface2);
+            border-radius: 99px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--yellow);
+            border-radius: 99px;
+            transition: width .5s ease;
+        }
+
+        /* ── Екрани ── */
+        .screen { display: none; }
+        .screen.active { display: flex; }
+
+        /* ── Головний екран ── */
+        #screen-home {
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 1.5rem 1.25rem 2rem;
+            max-width: 520px;
+            margin: 0 auto;
+            min-height: 100dvh;
+            gap: 2rem;
+        }
+
+        .home-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding-top: .5rem;
+        }
+
+        .home-title {
+            font-size: 1.75rem;
+            font-weight: 900;
+            letter-spacing: -.02em;
+        }
+
+        .home-card {
+            padding: 1.75rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .home-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 .25rem;
+        }
+        .link-btn {
+            background: none;
+            border: none;
+            font-family: inherit;
+            font-size: .8rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            cursor: pointer;
+            padding: .5rem;
+            min-height: 44px;
+            border-radius: 8px;
+        }
+
+        /* ── Тренувальний екран ── */
+        #screen-training {
+            flex-direction: column;
+            padding: 1.25rem;
+            max-width: 520px;
+            margin: 0 auto;
+            min-height: 100dvh;
+            gap: 1.25rem;
+        }
+
+        .training-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .score-badge {
+            background: var(--yellow-dim);
+            border: 1px solid var(--yellow);
+            color: var(--yellow);
+            font-weight: 900;
+            font-size: 1.2rem;
+            padding: .4rem 1rem;
+            border-radius: var(--radius);
+            min-width: 56px;
+            text-align: center;
+        }
+
+        /* ── Плеєр ── */
+        .player-card {
+            padding: 2rem 1.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .play-btn {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            background: var(--yellow);
+            color: #000;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(240,192,64,.25);
+            transition: transform .15s, box-shadow .15s;
+            flex-shrink: 0;
+        }
+        .play-btn:active { transform: scale(.92); }
+        .play-btn[aria-label] { /* aria-label required */ }
+
+        /* Пульсація при відтворенні */
+        @keyframes pulse-ring {
+            0%   { transform: scale(1);   opacity: .6; }
+            100% { transform: scale(1.5); opacity: 0;  }
+        }
+        .play-btn.playing::before {
+            content: '';
+            position: absolute;
+            width: 96px; height: 96px;
+            border-radius: 50%;
+            background: var(--yellow);
+            animation: pulse-ring .9s ease-out infinite;
+        }
+        .play-btn { position: relative; }
+
+        .controls-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .75rem;
+            width: 100%;
+        }
+
+        /* ── Транскрипт ── */
+        #transcript-box {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: .75rem;
+        }
+
+        .transcript-text {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            font-size: 1.15rem;
+            font-weight: 700;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .translation-text {
+            background: rgba(240,192,64,.07);
+            border: 1px solid rgba(240,192,64,.18);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            font-size: 1rem;
+            color: #f0d080;
+            line-height: 1.6;
+            text-align: center;
+            font-style: italic;
+        }
+
+        /* ── Q&A ── */
+        .qa-card {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        #question-text {
+            font-size: 1.2rem;
+            font-weight: 800;
+            line-height: 1.4;
+            text-align: center;
+        }
+
+        #options-grid { display: flex; flex-direction: column; gap: .6rem; }
+
+        .option-btn {
+            width: 100%;
+            min-height: 64px;
+            padding: 1rem 1.25rem;
+            background: var(--surface2);
+            border: 2px solid var(--border);
+            border-radius: var(--radius);
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+            text-align: left;
+            cursor: pointer;
+            transition: border-color .15s, background .15s, transform .1s;
+            line-height: 1.4;
+        }
+        .option-btn:hover { border-color: rgba(255,255,255,.2); background: #1c2129; }
+        .option-btn:active { transform: scale(.98); }
+
+        /* ── Фідбек ── */
+        .feedback-card {
+            padding: 1.75rem 1.5rem;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        #feedback-title {
+            font-size: 1.6rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -.01em;
+        }
+
+        #feedback-desc {
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        /* ── Результати ── */
+        #screen-results {
+            flex-direction: column;
+            justify-content: center;
+            padding: 1.5rem 1.25rem;
+            max-width: 520px;
+            margin: 0 auto;
+            min-height: 100dvh;
+        }
+
+        .results-card {
+            padding: 2.5rem 1.75rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .results-title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            letter-spacing: -.03em;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .result-box {
+            border-radius: var(--radius);
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+        }
+
+        .result-box .label {
+            font-size: .75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+        }
+
+        .result-box .number {
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .result-correct  { background: rgba(63,185,80,.1);  border: 1px solid rgba(63,185,80,.25);  }
+        .result-wrong    { background: rgba(248,81,73,.1);   border: 1px solid rgba(248,81,73,.2);   }
+        .result-correct .label  { color: var(--green); }
+        .result-wrong   .label  { color: var(--red);   }
+
+        /* ── Loader ── */
+        #loader {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            background: rgba(13,17,23,.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 2rem;
+        }
+        #loader.active { display: flex; }
+
+        .spinner {
+            width: 72px; height: 72px;
+            border: 5px solid rgba(240,192,64,.15);
+            border-top-color: var(--yellow);
+            border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        #loader-text {
+            font-size: 1.4rem;
+            font-weight: 900;
+            text-align: center;
+            line-height: 1.3;
+        }
+
+        /* ── Debug console ── */
+        #debug-console {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            height: 42vh;
+            background: #000;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 10px;
+            overflow-y: auto;
+            z-index: 100;
+            border-top: 2px solid #333;
+            display: none;
+        }
+        #debug-console.active { display: block; }
+
+        /* ── HIDDEN ── */
+        .hidden { display: none !important; }
+
+        /* ── Загальні відступи для маленьких екранів ── */
+        @media (max-height: 700px) {
+            .player-card { padding: 1.25rem 1.5rem 1rem; gap: 1rem; }
+            .play-btn { width: 80px; height: 80px; font-size: 1.75rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ════════════════════ Loader ════════════════════ -->
+<div id="loader" role="status" aria-live="polite" aria-label="Завантаження">
+    <div class="spinner" aria-hidden="true"></div>
+    <p id="loader-text">AI створює сесію…</p>
+    <button onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted)">Журнал запиту</button>
+</div>
+
+<!-- ════════════════════ Debug console ════════════════════ -->
+<div id="debug-console" role="log" aria-label="Журнал системи">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #333;padding-bottom:6px;margin-bottom:6px;">
+        <strong>System Log</strong>
+        <button onclick="toggleDebug()" style="color:#f87171;background:none;border:none;cursor:pointer;font-size:13px;">[Закрити]</button>
+    </div>
+    <div id="log-content"></div>
+</div>
+
+<!-- ════════════════════ HOME SCREEN ════════════════════ -->
+<main id="screen-home" class="screen active" aria-label="Головний екран">
+
+    <header class="home-header">
+        <a href="" id="back-link" class="btn btn-icon" aria-label="Назад на головну">
+            <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+        </a>
+        <h1 class="home-title">🎧 Аудіювання</h1>
+    </header>
+
+    <div class="card home-card">
+        <div class="field">
+            <label class="field-label" for="theme-select">Тематика</label>
+            <select id="theme-select" aria-label="Оберіть тематику"></select>
+        </div>
+
+        <div class="field">
+            <label class="field-label" for="level-select">Рівень</label>
+            <select id="level-select" aria-label="Оберіть рівень складності"></select>
+        </div>
+
+        <button onclick="startTraining()" class="btn btn-primary" aria-label="Розпочати тренування">
+            <i class="fa-solid fa-bolt" aria-hidden="true"></i> Почати
+        </button>
+
+        <div class="home-footer">
+            <button id="settings-btn" onclick="" class="link-btn" style="color:var(--blue)">
+                <i class="fa-solid fa-gear" aria-hidden="true"></i> Налаштування AI
+            </button>
+            <button id="diag-btn-home" onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted);display:none" aria-label="Відкрити журнал діагностики">
+                <i class="fa-solid fa-bug" aria-hidden="true"></i> Діагностика
+            </button>
+        </div>
+    </div>
+</main>
+
+<!-- ════════════════════ TRAINING SCREEN ════════════════════ -->
+<section id="screen-training" class="screen" aria-label="Тренування" aria-live="polite">
+
+    <div class="training-header">
+        <button onclick="location.reload()" class="btn btn-icon" aria-label="Повернутись на головну">
+            <i class="fa-solid fa-house" aria-hidden="true"></i>
+        </button>
+        <div class="progress-track" style="flex:1" role="progressbar" aria-label="Прогрес сесії" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            <div id="progress-fill" class="progress-fill" style="width:0%"></div>
+        </div>
+        <div class="score-badge" id="score-badge" aria-label="Рахунок">0</div>
+        <button id="diag-btn-train" onclick="toggleDebug()" class="btn btn-icon" style="display:none" aria-label="Журнал діагностики" title="Відкрити лог">
+            <i class="fa-solid fa-bug" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Player Card -->
+    <div class="card player-card" aria-label="Аудіоплеєр">
+        <button id="btn-play" class="play-btn" onclick="playCurrentAudio()" aria-label="Відтворити аудіо">
+            <i class="fa-solid fa-play" aria-hidden="true"></i>
+        </button>
+
+        <div class="controls-row">
+            <button id="btn-slow" onclick="toggleSlowMode()" class="btn btn-ghost" aria-pressed="false" aria-label="Повільне відтворення">
+                <i class="fa-solid fa-gauge-simple-low" aria-hidden="true"></i> Повільно
+            </button>
+            <button onclick="toggleTranscript()" class="btn btn-ghost" aria-label="Показати текст" aria-expanded="false" id="btn-transcript">
+                <i class="fa-solid fa-eye" aria-hidden="true"></i> Текст
+            </button>
+        </div>
+
+        <div id="transcript-box" class="hidden" aria-label="Транскрипт">
+            <div id="text-es" class="transcript-text" lang="es" aria-label="Іспанський текст"></div>
+            <button id="btn-translate" onclick="toggleTranslation()" class="link-btn" style="color:var(--text-muted);align-self:center" aria-expanded="false">
+                <i class="fa-solid fa-language" aria-hidden="true"></i> Переклад
+            </button>
+            <div id="text-ua" class="translation-text hidden" lang="uk" aria-label="Переклад українською"></div>
+        </div>
+    </div>
+
+    <!-- Q&A Card -->
+    <div id="qa-container" class="card qa-card" aria-label="Завдання">
+        <h2 id="question-text"></h2>
+        <div id="options-grid" role="group" aria-label="Варіанти відповідей"></div>
+    </div>
+
+    <!-- Feedback Card -->
+    <div id="feedback-box" class="card feedback-card hidden" aria-live="assertive">
+        <h3 id="feedback-title"></h3>
+        <p id="feedback-desc"></p>
+        <button onclick="nextQuestion()" class="btn btn-primary">
+            Далі <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+        </button>
+    </div>
+
+</section>
+
+<!-- ════════════════════ RESULTS SCREEN ════════════════════ -->
+<section id="screen-results" class="screen" aria-label="Результати сесії">
+    <div class="card results-card">
+        <h2 class="results-title">🏁 Результат</h2>
+        <div class="results-grid">
+            <div class="result-box result-correct">
+                <span class="label">✅ Вірно</span>
+                <span id="final-score" class="number" aria-label="Правильних відповідей"></span>
+            </div>
+            <div class="result-box result-wrong">
+                <span class="label">❌ Помилки</span>
+                <span id="final-wrong" class="number" aria-label="Помилок"></span>
+            </div>
+        </div>
+        <button onclick="location.reload()" class="btn btn-primary">
+            <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Спробувати знову
+        </button>
+    </div>
+</section>
+
+<!-- ════════════════════ SCRIPT ════════════════════ -->
+<script>
+    // ══════════════════════════════════════════════════════════════════════════
+    //  Допоміжна функція: читає localStorage або повертає default
+    //  Ключі завжди беруться з SETTINGS_CONFIG.storageKeys (sett_set.js)
+    // ══════════════════════════════════════════════════════════════════════════
+    const SK = () => (typeof SETTINGS_CONFIG !== 'undefined' ? SETTINGS_CONFIG.storageKeys : {});
+    const ls = (key, fallback = '') => localStorage.getItem(key) || fallback;
+
+    // ── Стан ──────────────────────────────────────────────────────────────────
+    let tasks        = [];
+    let currentIndex = 0;
+    let score        = 0;
+    let isSlow       = false;
+    let attemptStartedAt = 0;
+    let transcriptShownForAttempt = 0;
+    let slowUsedForAttempt = 0;
+    let ttsReplaysForAttempt = 0;
+    let audioPlayer  = null;
+
+    // ── Лог / Діагностика ─────────────────────────────────────────────────────
+    function log(msg, type = 'info') {
+        const content = document.getElementById('log-content');
+        const time    = new Date().toLocaleTimeString();
+        const colors  = { error:'#f87171', success:'#4ade80', info:'#60a5fa', warn:'#fbbf24' };
+        content.innerHTML += `<div style="color:${colors[type]||'#fff'}">[${time}] ${msg}</div>`;
+        content.scrollTop = content.scrollHeight;
+    }
+    function toggleDebug() {
+        document.getElementById('debug-console').classList.toggle('active');
+    }
+
+    // ── Ініціалізація UI ──────────────────────────────────────────────────────
+    function initFromConfig() {
+        document.getElementById('back-link').href       = LISTEN_CONFIG.homePage;
+        document.getElementById('settings-btn').onclick = () => location.href = LISTEN_CONFIG.settingsPage;
+
+        // Показуємо кнопки діагностики якщо сервіс режим або техлог увімкнено
+        const _diagVisible = localStorage.getItem('sp_service_mode') === '1'
+            || localStorage.getItem('sp_techlog_enabled') === '1';
+        document.querySelectorAll('#diag-btn-home, #diag-btn-train').forEach(b => {
+            b.style.display = _diagVisible ? '' : 'none';
+        });
+
+        // Теми
+        const themeSelect = document.getElementById('theme-select');
+        const globalThemes = (typeof getPriorityThemes === 'function')
+            ? getPriorityThemes()
+            : LISTEN_CONFIG.themes;
+
+        const autoOpt = document.createElement('option');
+        autoOpt.value = '';
+        autoOpt.textContent = '🎲 Автовибір теми';
+        themeSelect.appendChild(autoOpt);
+
+        globalThemes.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.value;
+            opt.textContent = t.label;
+            themeSelect.appendChild(opt);
+        });
+        themeSelect.value = '';
+
+        // Рівні
+        const levelSelect = document.getElementById('level-select');
+        LISTEN_CONFIG.levels.forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l.value;
+            opt.textContent = l.label;
+            levelSelect.appendChild(opt);
+        });
+
+        const defaultLevel = (typeof LISTEN_CONFIG.defaultExerciseLevel === 'string' && LISTEN_CONFIG.defaultExerciseLevel)
+            ? LISTEN_CONFIG.defaultExerciseLevel
+            : 'B1';
+        if (LISTEN_CONFIG.levels.some(l => l.value === defaultLevel)) {
+            levelSelect.value = defaultLevel;
+        }
+    }
+
+    // ── Отримуємо налаштування з sett_set.js / localStorage ──────────────────
+    function getActiveProvider() {
+        const sk = SK();
+        return ls(sk.provider || 'sp_provider', 'openai');
+    }
+
+    function getActiveModel(provider) {
+        const sk = SK();
+        const saved = ls(sk.model || 'sp_model', '');
+
+        // Перевіряємо чи збережена модель є в списку sett_set.js для цього провайдера
+        const modelList = (typeof SETTINGS_CONFIG !== 'undefined')
+            ? (SETTINGS_CONFIG.models[provider] || [])
+            : [];
+
+        const isValid = modelList.some(m => m.id === saved);
+        if (saved && isValid) return saved;
+
+        // Fallback: перша модель зі списку sett_set.js
+        if (modelList.length > 0) {
+            if (saved) log(`Модель "${saved}" не знайдена у sett_set.js → fallback: "${modelList[0].id}"`, 'warn');
+            return modelList[0].id;
+        }
+        return 'gpt-4o-mini'; // абсолютний fallback
+    }
+
+    function getApiKey(provider) {
+        // Глобальна функція з sett_set.js: пріоритет файл → localStorage
+        // Перевіряємо HARDCODED_KEYS з sett_set.js (не window.getApiKey щоб уникнути рекурсії)
+        if (typeof HARDCODED_KEYS !== 'undefined') {
+            const hardcoded = (HARDCODED_KEYS[provider] || '').trim();
+            if (hardcoded) return hardcoded;
+        }
+        // Fallback: читаємо з localStorage
+        const sk = SK();
+        const keyMap = {
+            openai:    sk.apiKeyOpenai || 'sp_api_key_openai',
+            google:    sk.apiKeyGoogle || 'sp_api_key_google',
+            anthropic: sk.apiKeyAnthro || 'sp_api_key_anthropic',
+        };
+        return ls(keyMap[provider] || `sp_api_key_${provider}`, '').trim();
+    }
+
+    function getSpeed() {
+        const sk = SK();
+        return parseFloat(ls(sk.speed || 'sp_speed', String(LISTEN_CONFIG.defaultSpeed ?? 0.9)));
+    }
+
+    function getTtsMode() {
+        const sk = SK();
+        return ls(sk.ttsMode || 'sp_tts_mode', 'online');
+    }
+
+    function getTtsVoice() {
+        const sk = SK();
+        return ls(sk.voice || 'sp_voice', 'alloy');
+    }
+
+    function getNativeVoice() {
+        const sk = SK();
+        return ls(sk.voiceNative || 'sp_voice_native', '');
+    }
+
+    // ── Випадковий підбір теми ────────────────────────────────────────────────
+    function resolveListenTheme() {
+        const sel = document.getElementById('theme-select');
+        const selected = sel ? sel.value : '';
+        if (selected) return selected;
+        // Авто: випадкова тема
+        const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
+        if (!themes.length) return 'General';
+        const picked = themes[Math.floor(Math.random() * themes.length)];
+        return picked.value;
+    }
+
+    // ── Старт тренування ──────────────────────────────────────────────────────
+    async function startTraining() {
+        const theme    = resolveListenTheme();
+        const levelVal = document.getElementById('level-select').value;
+        const levelObj = LISTEN_CONFIG.levels.find(l => l.value === levelVal);
+        const wordCount = levelObj ? levelObj.wordCount : 17;
+
+        log(`Запуск: Тема=${theme}, Рівень=${levelVal}`);
+        document.getElementById('loader').classList.add('active');
+
+        try {
+            tasks = await fetchAITasks(theme, levelVal, wordCount);
+            if (!tasks || tasks.length === 0) throw new Error('ШІ повернув порожній список завдань.');
+            log(`Завантажено ${tasks.length} завдань`, 'success');
+            showScreen('screen-training');
+            renderQuestion();
+        } catch (err) {
+            log(`ПОМИЛКА: ${err.message}`, 'error');
+            let detail = err.message;
+            if (detail.includes('404')) detail += ' (Перевірте назву моделі у налаштуваннях)';
+            alert('Помилка: ' + detail + '\nПеревірте налаштування AI (settings.html).');
+            toggleDebug();
+        } finally {
+            document.getElementById('loader').classList.remove('active');
+        }
+    }
+
+    // ── Запит до AI ───────────────────────────────────────────────────────────
+    let _listenAiRequestCount = 0;
+    async function fetchAITasks(theme, level, wordCount) {
+        const provider = getActiveProvider();
+        const apiKey   = getApiKey(provider);
+        const model    = getActiveModel(provider);
+        const personality = ls('sp_personality', LISTEN_CONFIG.defaultPersonality);
+        const strictness  = ls('sp_strictness',  LISTEN_CONFIG.defaultStrictness);
+
+        log(`Провайдер: ${provider} | Модель: ${model} | Ключ: ${apiKey ? apiKey.slice(0,8)+'…' : '❌ ВІДСУТНІЙ'}`);
+        if (!apiKey) throw new Error(`API-ключ для провайдера "${provider}" не вказано у налаштуваннях.`);
+
+        // ── Мовна конфігурація ──────────────────────────────
+        const LC = (typeof getLangConfig === 'function') ? getLangConfig() : {
+            teacherRole: 'professional Spanish teacher',
+            targetName:  'Spanish',
+            targetNative:'Español',
+            uiLanguage:  'Ukrainian',
+            helperClause:'',
+            speechLang:  'es-ES',
+        };
+
+        const styleDesc = personality === 'informal'
+            ? 'Friendly, informal (using Tú)'
+            : 'Formal, respectful (using Usted)';
+
+        const lvlProfile = LISTEN_CONFIG.levelProfiles?.[level];
+        const levelInstruction = lvlProfile
+            ? `Speech profile for ${level}: pace — ${lvlProfile.ttsHint}; lexicon — ${lvlProfile.lexicon}; grammar — ${lvlProfile.grammar}; sentence length — ${lvlProfile.sentences}. Strictly follow this profile.`
+            : '';
+
+        const prompt = `
+Act as a ${LC.teacherRole}.
+Theme: ${theme}. Target Level: ${level}.
+${levelInstruction}
+Instructions:
+1. Create a dialogue or phrase in ${LC.targetName} of approx ${wordCount} words matching the level profile above.
+2. Tone: ${styleDesc}.
+3. Feedback strictness for student: ${strictness}.
+4. Language for UI parts (question, explanation, translation): ${LC.uiLanguage}.
+${LC.helperClause ? `5. ${LC.helperClause}` : ''}
+
+Return VALID JSON ONLY:
+{ "tasks": [{
+    "ttsText": "phrase for speaking in ${LC.targetName}",
+    "question": "${LC.uiLanguage} question about text content",
+    "options": ["${LC.uiLanguage} option 1", "${LC.uiLanguage} option 2", "${LC.uiLanguage} option 3", "${LC.uiLanguage} option 4"],
+    "correctAnswer": "the exact text of the correct option",
+    "explanation": "${LC.uiLanguage} brief explanation",
+    "transcript": "${LC.targetName} full text",
+    "translation": "${LC.uiLanguage} full translation"
+}] }
+Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
+        `.trim();
+
+        let url, body;
+        const headers = { 'Content-Type': 'application/json' };
+
+        if (provider === 'google') {
+            url  = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } };
+        } else if (provider === 'openai') {
+            url  = 'https://api.openai.com/v1/chat/completions';
+            headers['Authorization'] = `Bearer ${apiKey}`;
+            body = { model, messages: [{ role: 'system', content: prompt }], response_format: { type: 'json_object' } };
+        } else if (provider === 'anthropic') {
+            url  = 'https://api.anthropic.com/v1/messages';
+            headers['x-api-key']         = apiKey;
+            headers['anthropic-version'] = '2023-06-01';
+            body = { model, max_tokens: 2000, messages: [{ role: 'user', content: prompt + ' Output ONLY JSON content.' }] };
+        } else {
+            throw new Error(`Невідомий провайдер: ${provider}`);
+        }
+
+        _listenAiRequestCount++;
+        log('Надсилання запиту…');
+        const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+
+        if (!response.ok) {
+            const err = await response.text();
+            log(`Server Error (${response.status}): ${err}`, 'error');
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        log(`Відповідь отримана (${response.status})`, 'success');
+        Logger.tech('listening', 'ai_response', 'Tasks received', {
+            provider, model,
+            tokens_in:  provider === 'openai' ? (result.usage?.prompt_tokens ?? null) : provider === 'anthropic' ? (result.usage?.input_tokens ?? null) : (result.usageMetadata?.promptTokenCount ?? null),
+            tokens_out: provider === 'openai' ? (result.usage?.completion_tokens ?? null) : provider === 'anthropic' ? (result.usage?.output_tokens ?? null) : (result.usageMetadata?.candidatesTokenCount ?? null),
+            request_num: _listenAiRequestCount,
+        });
+
+        let content;
+        try {
+            if      (provider === 'google')    content = result.candidates[0].content.parts[0].text;
+            else if (provider === 'openai')    content = result.choices[0].message.content;
+            else if (provider === 'anthropic') content = result.content[0].text;
+        } catch (e) {
+            log(`Помилка розбору структури відповіді: ${e.message}`, 'error');
+            log(`Відповідь API: ${JSON.stringify(result).substring(0, 200)}`, 'warn');
+            throw new Error('Неочікувана структура відповіді від AI.');
+        }
+
+        log(`Довжина контенту: ${content?.length ?? 0} символів`);
+
+        try {
+            const parsed = JSON.parse(content);
+            if (!parsed.tasks) throw new Error('Відсутнє поле "tasks" у JSON');
+            log(`Розібрано ${parsed.tasks.length} завдань`, 'success');
+            return parsed.tasks;
+        } catch (e) {
+            log(`JSON Parse Error: ${e.message}`, 'error');
+            log(`Початок контенту: ${String(content).substring(0, 200)}`, 'warn');
+            throw new Error('AI повернув некоректний формат JSON.');
+        }
+    }
+
+    // ── Рендер питання ────────────────────────────────────────────────────────
+    function renderQuestion() {
+        const task = tasks[currentIndex];
+        const pct  = Math.round(((currentIndex + 1) / tasks.length) * 100);
+
+        attemptStartedAt = Date.now();
+        transcriptShownForAttempt = 0;
+        slowUsedForAttempt = 0;
+        ttsReplaysForAttempt = 0;
+
+        const fill = document.getElementById('progress-fill');
+        fill.style.width = pct + '%';
+        fill.parentElement.setAttribute('aria-valuenow', pct);
+
+        document.getElementById('question-text').textContent = task.question;
+        document.getElementById('text-es').textContent       = task.transcript;
+        document.getElementById('text-ua').textContent       = task.translation;
+
+        const grid = document.getElementById('options-grid');
+        grid.innerHTML = '';
+        task.options.forEach(opt => {
+            const b = document.createElement('button');
+            b.className = 'option-btn';
+            b.textContent = opt;
+            b.setAttribute('aria-label', `Варіант: ${opt}`);
+            b.onclick = () => checkAnswer(opt, b);
+            grid.appendChild(b);
+        });
+
+        document.getElementById('feedback-box').classList.add('hidden');
+        document.getElementById('qa-container').classList.remove('hidden');
+        document.getElementById('transcript-box').classList.add('hidden');
+        document.getElementById('btn-transcript').setAttribute('aria-expanded', 'false');
+
+        const playBtn = document.getElementById('btn-play');
+        playBtn.innerHTML = '<i class="fa-solid fa-play" aria-hidden="true"></i>';
+        playBtn.classList.remove('playing');
+
+        setTimeout(playCurrentAudio, LISTEN_CONFIG.autoPlayDelay);
+    }
+
+    // ── TTS ───────────────────────────────────────────────────────────────────
+    async function playCurrentAudio() {
+        const task     = tasks[currentIndex];
+        if (!task) return;
+        ttsReplaysForAttempt++;
+        const provider = getActiveProvider();
+        const mode     = getTtsMode();
+        const speed    = isSlow ? LISTEN_CONFIG.slowSpeed : getSpeed();
+
+        log(`TTS: провайдер=${provider}, режим=${mode}, speed=${speed}`);
+
+        if (mode === 'online') {
+            if (provider === 'openai') {
+                await playOpenAITTS(task.ttsText, speed);
+            } else {
+                // Google і Anthropic поки не мають браузерного online TTS →
+                // використовуємо offline з попередженням
+                log(`Online TTS для "${provider}" не підтримується — використовую браузерний голос`, 'warn');
+                playOfflineTTS(task.ttsText, speed);
+            }
+        } else {
+            playOfflineTTS(task.ttsText, speed);
+        }
+    }
+
+    async function playOpenAITTS(text, speed) {
+        const apiKey = getApiKey('openai');
+        const voice  = getTtsVoice();
+
+        if (!apiKey) {
+            log('OpenAI API-ключ відсутній → браузерний TTS', 'warn');
+            return playOfflineTTS(text, speed);
+        }
+
+        setPlayState('loading');
+        try {
+            const response = await fetch('https://api.openai.com/v1/audio/speech', {
+                method:  'POST',
+                headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ model: 'tts-1', input: text, voice, speed })
+            });
+            if (!response.ok) throw new Error(`OpenAI TTS: HTTP ${response.status}`);
+
+            const blob = await response.blob();
+            const url  = URL.createObjectURL(blob);
+            if (audioPlayer) audioPlayer.pause();
+            audioPlayer         = new Audio(url);
+            audioPlayer.onplay  = () => setPlayState('playing');
+            audioPlayer.onended = () => setPlayState('idle');
+            audioPlayer.play();
+        } catch (e) {
+            log(`Online TTS Error: ${e.message}`, 'error');
+            playOfflineTTS(text, speed);
+        }
+    }
+
+    function playOfflineTTS(text, speed) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang  = LISTEN_CONFIG.speechLang;
+        utterance.rate  = speed;
+
+        const nativeVoiceName = getNativeVoice();
+        if (nativeVoiceName) {
+            const found = window.speechSynthesis.getVoices().find(v => v.name === nativeVoiceName);
+            if (found) utterance.voice = found;
+        }
+
+        utterance.onstart = () => setPlayState('playing');
+        utterance.onend   = () => setPlayState('idle');
+        window.speechSynthesis.speak(utterance);
+    }
+
+    function setPlayState(state) {
+        const btn = document.getElementById('btn-play');
+        if (state === 'loading') {
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i>';
+            btn.setAttribute('aria-label', 'Завантаження…');
+            btn.classList.remove('playing');
+        } else if (state === 'playing') {
+            btn.innerHTML = '<i class="fa-solid fa-volume-high" aria-hidden="true"></i>';
+            btn.setAttribute('aria-label', 'Відтворення…');
+            btn.classList.add('playing');
+        } else {
+            btn.innerHTML = '<i class="fa-solid fa-play" aria-hidden="true"></i>';
+            btn.setAttribute('aria-label', 'Відтворити аудіо');
+            btn.classList.remove('playing');
+        }
+    }
+
+    // ── Взаємодія ─────────────────────────────────────────────────────────────
+    function checkAnswer(v) {
+        const task      = tasks[currentIndex];
+        const isCorrect = v === task.correctAnswer;
+        const elapsedSec = attemptStartedAt
+            ? Math.max(1, Math.round((Date.now() - attemptStartedAt) / 1000))
+            : '';
+
+        document.getElementById('qa-container').classList.add('hidden');
+
+        const fb = document.getElementById('feedback-box');
+        fb.classList.remove('hidden');
+        fb.style.borderColor = isCorrect ? 'var(--green)' : 'var(--red)';
+
+        const title = document.getElementById('feedback-title');
+        title.textContent = isCorrect ? '✅ Чудово!' : '❌ Майже так';
+        title.style.color = isCorrect ? 'var(--green)' : 'var(--red)';
+
+        document.getElementById('feedback-desc').textContent = task.explanation;
+
+        if (isCorrect) {
+            score++;
+            document.getElementById('score-badge').textContent = score;
+        }
+
+        if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
+            Logger.study('listening', {
+                exercise_type: 'qa',
+                level: document.getElementById('level-select')?.value || '',
+                theme: document.getElementById('theme-select')?.value || '',
+                result: isCorrect ? 'correct' : 'wrong',
+                score_total: score,
+                score_max: tasks.length,
+                time_spent_sec: elapsedSec,
+                attempt_number: currentIndex + 1,
+                wrong_answer: isCorrect ? '' : String(v || ''),
+                correct_answer: String(task.correctAnswer || ''),
+                explanation_shown: 1,
+                transcript_shown: transcriptShownForAttempt,
+                slow_mode_used: slowUsedForAttempt,
+                tts_replays: ttsReplaysForAttempt,
+                task_text: [task.question || '', task.transcript ? `Transcript: ${task.transcript}` : ''].filter(Boolean).join(' | '),
+                answer_text: String(v || ''),
+                ai_feedback_text: String(task.explanation || ''),
+            });
+        }
+    }
+
+    function nextQuestion() {
+        currentIndex++;
+        if (currentIndex < tasks.length) renderQuestion();
+        else showResults();
+    }
+
+    function showResults() {
+        showScreen('screen-results');
+        document.getElementById('final-score').textContent = score;
+        document.getElementById('final-wrong').textContent = tasks.length - score;
+    }
+
+    function toggleSlowMode() {
+        isSlow = !isSlow;
+        if (isSlow) slowUsedForAttempt = 1;
+        const btn = document.getElementById('btn-slow');
+        btn.style.color = isSlow ? 'var(--yellow)' : '';
+        btn.setAttribute('aria-pressed', String(isSlow));
+        playCurrentAudio();
+    }
+
+    function toggleTranscript() {
+        const box      = document.getElementById('transcript-box');
+        const btn      = document.getElementById('btn-transcript');
+        const isHidden = box.classList.toggle('hidden');
+        if (!isHidden) transcriptShownForAttempt = 1;
+        btn.setAttribute('aria-expanded', String(!isHidden));
+    }
+
+    function toggleTranslation() {
+        const el       = document.getElementById('text-ua');
+        const btn      = document.getElementById('btn-translate');
+        const isHidden = el.classList.toggle('hidden');
+        btn.setAttribute('aria-expanded', String(!isHidden));
+        btn.innerHTML  = isHidden
+            ? '<i class="fa-solid fa-language" aria-hidden="true"></i> Переклад'
+            : '<i class="fa-solid fa-eye-slash" aria-hidden="true"></i> Приховати';
+    }
+
+    function showScreen(id) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    // ── Запуск ────────────────────────────────────────────────────────────────
+    (async () => {
+        if (typeof loadCentralSettings === 'function') await loadCentralSettings();
+        initFromConfig();
+        window.speechSynthesis.getVoices();
+        log('Ініціалізовано. Конфіг: listen_set.js + sett_set.js');
+    })();
+</script>
+</body>
+</html>

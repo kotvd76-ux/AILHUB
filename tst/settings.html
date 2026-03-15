@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+    <meta name="theme-color" content="#09090b">
+    <title>Налаштування — Spanish AI Hub</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Конфігурація налаштувань -->
+    <script src="sett_set.js"></script>
+    <script src="logger.js"></script>
+
+    <style>
+        /* ── Базові змінні ───────────────────────────────────── */
+        :root {
+            --bg:       #09090b;
+            --card:     rgba(24, 24, 27, 0.92);
+            --orange:   #f97316;
+            --orange-l: #fb923c;
+            --blue-dd:  #1e3a8a;
+            --radius:   1.25rem;   /* 20px */
+            --touch:    3.25rem;   /* ~52px — мінімальна зона дотику */
+            --font-base: 1.0625rem; /* 17px */
+        }
+
+        /* ── Базовий стиль ───────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html { font-size: var(--font-base); }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100dvh;
+        }
+
+        /* ── Картки ──────────────────────────────────────────── */
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(249,115,22,.15);
+            border-radius: var(--radius);
+            padding: 1.25rem;
+            backdrop-filter: blur(12px);
+        }
+
+        .card--accent { border-left: 4px solid var(--orange); }
+
+        /* ── Мітки ───────────────────────────────────────────── */
+        .field-label {
+            display: block;
+            font-size: .6875rem;          /* 11px */
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--orange-l);
+            margin-bottom: .625rem;
+        }
+
+        /* ── Поля введення та вибору ─────────────────────────── */
+        .field {
+            width: 100%;
+            min-height: var(--touch);
+            padding: .875rem 1rem;
+            border-radius: .875rem;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+        input.field {
+            background: rgba(255,255,255,.06);
+            border: 1.5px solid rgba(249,115,22,.25);
+            color: #fff;
+        }
+
+        select.field {
+            background: var(--blue-dd);
+            border: 1.5px solid rgba(255,255,255,.2);
+            color: #fff;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%23fb923c' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            padding-right: 2.75rem;
+        }
+
+        input.field:focus,
+        select.field:focus {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+            border-color: var(--orange);
+            box-shadow: 0 0 0 4px rgba(249,115,22,.18);
+        }
+
+        /* ── Кнопка «eye» для пароля ─────────────────────────── */
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap input { padding-right: 3.25rem; }
+
+        .eye-btn {
+            position: absolute;
+            right: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 2.25rem;
+            height: 2.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--orange-l);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            border-radius: .5rem;
+            font-size: 1rem;
+            transition: color .2s;
+        }
+
+        .eye-btn:focus-visible {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        /* ── Перемикач режиму TTS ────────────────────────────── */
+        .mode-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .375rem;
+            background: rgba(255,255,255,.05);
+            border-radius: 1rem;
+            padding: .25rem;
+            margin-bottom: 1rem;
+        }
+
+        .toggle-btn {
+            min-height: var(--touch);
+            padding: .625rem .5rem;
+            border-radius: .75rem;
+            font-size: .8125rem;
+            font-weight: 700;
+            letter-spacing: .06em;
+            border: 2px solid transparent;
+            color: rgba(255,255,255,.55);
+            background: transparent;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+        .toggle-btn.active {
+            background: var(--orange);
+            color: #fff;
+            border-color: var(--orange);
+        }
+
+        .toggle-btn:focus-visible {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        /* ── Кнопки голосів ──────────────────────────────────── */
+        .voice-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .625rem;
+        }
+
+        .voice-btn {
+            min-height: var(--touch);
+            padding: .75rem .5rem;
+            border-radius: .875rem;
+            font-size: .9375rem;
+            border: 1.5px solid rgba(255,255,255,.1);
+            background: transparent;
+            color: rgba(255,255,255,.7);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            transition: all .2s;
+        }
+
+        .voice-btn.active {
+            background: rgba(249,115,22,.2);
+            border-color: rgba(249,115,22,.55);
+            color: var(--orange-l);
+        }
+
+        .voice-btn:focus-visible {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        /* ── Слайдер швидкості ───────────────────────────────── */
+        input[type="range"].field {
+            -webkit-appearance: none;
+            height: 8px;
+            border: none;
+            background: rgba(249,115,22,.12);
+            border-radius: 4px;
+            background-image: linear-gradient(var(--orange), var(--orange));
+            background-repeat: no-repeat;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        input[type="range"].field::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            box-shadow: 0 0 12px rgba(249,115,22,.6);
+        }
+
+        input[type="range"].field::-moz-range-thumb {
+            height: 28px;
+            width: 28px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 12px rgba(249,115,22,.6);
+        }
+
+        /* ── Значок швидкості ────────────────────────────────── */
+        .speed-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: .625rem;
+        }
+
+        .speed-val {
+            font-size: 1.375rem;
+            font-weight: 700;
+            color: var(--orange);
+            min-width: 3rem;
+            text-align: right;
+        }
+
+        .speed-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: .6875rem;
+            color: rgba(255,255,255,.35);
+        }
+
+        /* ── Статус-бейдж ────────────────────────────────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            font-size: .75rem;
+            font-weight: 700;
+            padding: .3rem .7rem;
+            border-radius: 999px;
+        }
+
+        .badge--ok    { background: rgba(34,197,94,.18); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+        .badge--error { background: rgba(239,68,68,.18);  color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+
+        /* ── Головна кнопка ──────────────────────────────────── */
+        .btn-save {
+            width: 100%;
+            min-height: 3.5rem;
+            background: var(--orange);
+            color: #fff;
+            font-size: 1.0625rem;
+            font-weight: 700;
+            border: none;
+            border-radius: var(--radius);
+            cursor: pointer;
+            letter-spacing: .03em;
+            box-shadow: 0 6px 24px rgba(249,115,22,.3);
+            transition: background .2s, transform .1s, box-shadow .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+        }
+
+        .btn-save:hover  { background: #ea6c0a; }
+        .btn-save:active { transform: scale(.97); box-shadow: 0 2px 12px rgba(249,115,22,.2); }
+
+        .btn-save:focus-visible {
+            outline: 3px solid #fff;
+            outline-offset: 3px;
+        }
+
+        /* ── Кнопка «назад» ──────────────────────────────────── */
+        .back-btn {
+            width: var(--touch);
+            height: var(--touch);
+            border-radius: .875rem;
+            background: var(--card);
+            border: 1px solid rgba(249,115,22,.15);
+            color: var(--orange-l);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.125rem;
+            cursor: pointer;
+            text-decoration: none;
+            flex-shrink: 0;
+            transition: color .2s, background .2s;
+        }
+
+        .back-btn:hover         { color: #fff; background: rgba(249,115,22,.2); }
+        .back-btn:focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; }
+
+        /* ── Toast ───────────────────────────────────────────── */
+        @keyframes slideUp {
+            from { transform: translateY(120%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        .toast {
+            animation: slideUp .3s cubic-bezier(.22,1,.36,1) forwards;
+            background: var(--card);
+            border: 1px solid rgba(249,115,22,.2);
+            border-left: 4px solid var(--orange);
+            border-radius: var(--radius);
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,.6);
+            transition: opacity .4s;
+        }
+
+        /* ── Утиліти ─────────────────────────────────────────── */
+        .hidden { display: none !important; }
+
+        /* ── Скіп-посилання для клавіатури ──────────────────── */
+        .skip-link {
+            position: absolute;
+            top: -100%;
+            left: 1rem;
+            background: var(--orange);
+            color: #fff;
+            font-weight: 700;
+            padding: .5rem 1rem;
+            border-radius: .5rem;
+            z-index: 999;
+            text-decoration: none;
+            transition: top .1s;
+        }
+
+        .skip-link:focus { top: 1rem; }
+
+        /* ── Log Toggle Switch ───────────────────────────────── */
+        .log-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: .75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,.06);
+        }
+
+        .log-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .log-row:first-child { padding-top: 0; }
+
+        .log-row__info { flex: 1; min-width: 0; }
+
+        .log-row__title {
+            font-size: .9375rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: .2rem;
+        }
+
+        .log-row__desc {
+            font-size: .75rem;
+            color: rgba(255,255,255,.4);
+            line-height: 1.4;
+        }
+
+        /* iOS-style toggle */
+        .switcher {
+            position: relative;
+            width: 52px;
+            height: 30px;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .switcher input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .switcher__track {
+            position: absolute;
+            inset: 0;
+            border-radius: 999px;
+            background: rgba(255,255,255,.12);
+            cursor: pointer;
+            transition: background .25s;
+        }
+
+        .switcher input:checked ~ .switcher__track {
+            background: var(--orange);
+        }
+
+        .switcher__thumb {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,.4);
+            transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+            pointer-events: none;
+        }
+
+        .switcher input:checked ~ .switcher__thumb {
+            transform: translateX(22px);
+        }
+
+        .switcher:focus-within .switcher__track {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        /* Поле URL сервера */
+        .server-url-wrap {
+            margin-top: .875rem;
+            display: flex;
+            flex-direction: column;
+            gap: .375rem;
+        }
+
+        /* Статистика буфера */
+        .buf-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .5rem;
+            margin-top: .875rem;
+        }
+
+        .buf-box {
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: .75rem;
+            padding: .625rem .875rem;
+        }
+
+        .buf-box__label {
+            font-size: .625rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            color: rgba(255,255,255,.35);
+            margin-bottom: .2rem;
+        }
+
+        .buf-box__val {
+            font-size: 1.375rem;
+            font-weight: 800;
+            color: var(--orange-l);
+            line-height: 1;
+        }
+
+        /* Кнопки експорту */
+        .export-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .5rem;
+            margin-top: .75rem;
+        }
+
+        .btn-export {
+            min-height: 2.75rem;
+            border-radius: .75rem;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .04em;
+            border: 1.5px solid rgba(249,115,22,.3);
+            background: rgba(249,115,22,.08);
+            color: var(--orange-l);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .4rem;
+            transition: background .2s, border-color .2s;
+        }
+
+        .btn-export:hover { background: rgba(249,115,22,.18); border-color: var(--orange); }
+
+        .btn-export:focus-visible {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        .btn-export--danger {
+            border-color: rgba(239,68,68,.3);
+            background:   rgba(239,68,68,.08);
+            color: #f87171;
+        }
+
+        .btn-export--danger:hover {
+            background:   rgba(239,68,68,.18);
+            border-color: #ef4444;
+        }
+
+        /* ── Сервіс режим ────────────────────────────────── */
+        .card--service {
+            border-color: rgba(245,158,11,.35);
+            background: rgba(245,158,11,.07);
+        }
+
+        .card--service.service-active {
+            border-color: rgba(245,158,11,.7);
+            background: rgba(245,158,11,.13);
+            box-shadow: 0 0 0 1px rgba(245,158,11,.25);
+        }
+
+        .service-mode-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .service-mode-row .switcher__track {
+            background: rgba(255,255,255,.12);
+        }
+
+        .service-mode-row .switcher input:checked ~ .switcher__track {
+            background: #f59e0b;
+        }
+
+        .service-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .15rem .6rem;
+            border-radius: 999px;
+            font-size: .6rem;
+            font-weight: 800;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            background: rgba(245,158,11,.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245,158,11,.4);
+            margin-left: .5rem;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Скіп-посилання (доступність) -->
+    <a href="#main-content" class="skip-link">Перейти до змісту</a>
+
+    <div class="max-w-md mx-auto px-4 pt-6 pb-32" id="main-content">
+
+        <!-- Заголовок -->
+        <header class="flex items-center gap-4 mb-8" role="banner">
+            <a href="index.html" class="back-btn" aria-label="Повернутись на головну">
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            </a>
+            <h1 class="text-xl font-bold text-white">Налаштування ШІ</h1>
+        </header>
+
+        <main class="space-y-5" role="main">
+
+            <!-- ── Сервіс режим ──────────────────────────────── -->
+            <section class="card card--service" id="service-mode-card" aria-labelledby="lbl-service-mode">
+                <div class="service-mode-row">
+                    <div style="flex:1">
+                        <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;">
+                            <label id="lbl-service-mode" class="field-label"
+                                   style="color:#f59e0b;margin-bottom:0;cursor:pointer;"
+                                   for="toggle-service-mode">
+                                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true" style="margin-right:.35rem;opacity:.85"></i>
+                                Сервіс режим
+                            </label>
+                            <span id="service-badge" class="service-badge" style="display:none;">
+                                <i class="fa-solid fa-circle" style="font-size:.45rem"></i> АКТИВНИЙ
+                            </span>
+                        </div>
+                        <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:0;line-height:1.45;">
+                            Вмикає по всьому хабу: кнопки «Діагностика» в усіх модулях,
+                            кнопку «Сервіс» на головній сторінці, перемикачі мови та логування.
+                        </p>
+                    </div>
+                    <label class="switcher" aria-label="Увімкнути сервіс режим" style="flex-shrink:0">
+                        <input type="checkbox" id="toggle-service-mode"
+                               onchange="onToggleServiceMode(this.checked)">
+                        <span class="switcher__track" aria-hidden="true"></span>
+                        <span class="switcher__thumb" aria-hidden="true"></span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- ── Провайдер ──────────────────────────────────── -->
+            <section class="card card--accent" aria-labelledby="lbl-provider">
+                <label id="lbl-provider" for="ai-provider" class="field-label">Оберіть провайдера</label>
+                <select id="ai-provider" class="field" onchange="handleProviderChange()"
+                        aria-describedby="provider-hint">
+                    <!-- Заповнюється через JS з sett_set.js -->
+                </select>
+                <p id="provider-hint" class="sr-only">Виберіть сервіс штучного інтелекту, який ви хочете використовувати</p>
+            </section>
+
+            <!-- ── Модель + Статус API ────────────────────────── -->
+            <section class="card" aria-labelledby="lbl-model">
+                <div class="flex justify-between items-center mb-3 gap-2 flex-wrap">
+                    <label id="lbl-model" for="ai-model" class="field-label" style="margin-bottom:0">Модель ШІ</label>
+                    <div id="api-status" role="status" aria-live="polite" aria-atomic="true" class="badge badge--error">
+                        <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+                        <span>Ключ відсутній</span>
+                    </div>
+                </div>
+                <select id="ai-model" class="field" aria-labelledby="lbl-model">
+                    <!-- Заповнюється через JS -->
+                </select>
+            </section>
+
+            <!-- ── API Ключ ───────────────────────────────────── -->
+            <section class="card" aria-labelledby="lbl-apikey">
+                <label id="lbl-apikey" class="field-label">API Ключ</label>
+
+                <div id="openai-key-box" class="provider-key">
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-openai" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="sk-..." oninput="checkKeyPresence()"
+                               aria-label="API ключ для OpenAI"
+                               aria-describedby="key-hint">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-openai', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="google-key-box" class="provider-key hidden">
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-google" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="AIzaSy..." oninput="checkKeyPresence()"
+                               aria-label="API ключ для Google Gemini">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-google', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="anthropic-key-box" class="provider-key hidden">
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-anthropic" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="sk-ant-..." oninput="checkKeyPresence()"
+                               aria-label="API ключ для Anthropic Claude">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-anthropic', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                </div>
+                <p id="key-hint" class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
+                    Ключ зберігається лише на вашому пристрої
+                </p>
+            </section>
+
+            <!-- ── Озвучка (TTS) ──────────────────────────────── -->
+            <section class="card" aria-labelledby="lbl-tts">
+                <label id="lbl-tts" class="field-label">Режим озвучки (TTS)</label>
+
+                <div class="mode-bar" role="group" aria-label="Режим озвучки">
+                    <button id="mode-online" class="toggle-btn"
+                            onclick="setTTSMode('online')"
+                            aria-pressed="false">
+                        <i class="fa-solid fa-wifi mr-1" aria-hidden="true"></i> Онлайн
+                    </button>
+                    <button id="mode-offline" class="toggle-btn"
+                            onclick="setTTSMode('offline')"
+                            aria-pressed="false">
+                        <i class="fa-solid fa-wifi-slash mr-1" aria-hidden="true"></i> Офлайн
+                    </button>
+                </div>
+
+                <!-- Онлайн-голоси -->
+                <div id="section-tts-online" class="hidden" aria-live="polite">
+                    <div id="online-voice-grid" class="voice-grid" role="group" aria-label="Оберіть голос"></div>
+                    <p id="online-voice-desc" class="text-xs mt-3" style="color: var(--orange-l);"></p>
+                </div>
+
+                <!-- Офлайн-голоси -->
+                <div id="section-tts-offline" class="hidden">
+                    <label for="native-voice-select" class="field-label" style="margin-top:.25rem;">Голос пристрою</label>
+                    <select id="native-voice-select" class="field" aria-label="Вибір системного голосу"></select>
+                </div>
+
+                <!-- Швидкість -->
+                <div class="mt-5">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="voice-speed" class="field-label" style="margin-bottom:0">Швидкість мовлення</label>
+                        <span id="speed-val" class="speed-val" aria-live="polite" aria-atomic="true">0.9×</span>
+                    </div>
+                    <input type="range" id="voice-speed" class="field"
+                           min="0.5" max="1.5" step="0.1" value="0.9"
+                           aria-label="Швидкість мовлення"
+                           aria-valuemin="0.5" aria-valuemax="1.5" aria-valuenow="0.9">
+                    <div class="speed-labels mt-1">
+                        <span>Повільно 0.5×</span>
+                        <span>1.0×</span>
+                        <span>Швидко 1.5×</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── Логування ──────────────────────────────────── -->
+            <section class="card" aria-labelledby="lbl-logging">
+
+                <!-- Заголовок-тригер (collapsible) -->
+                <button id="logging-toggle"
+                        onclick="toggleLoggingSection()"
+                        aria-expanded="false"
+                        aria-controls="logging-body"
+                        style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;color:inherit;">
+                    <label id="lbl-logging" class="field-label" style="cursor:pointer;margin-bottom:0;pointer-events:none;">
+                        <i class="fa-solid fa-database" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
+                        Логування
+                    </label>
+                    <i id="logging-chevron" class="fa-solid fa-chevron-down"
+                       style="color:var(--muted,#8890b0);font-size:13px;transition:transform .25s ease;"></i>
+                </button>
+
+                <!-- Тіло секції (приховане за замовчуванням) -->
+                <div id="logging-body" style="display:none;margin-top:1rem;">
+
+                <!-- Вимикач 1: Технічний лог -->
+                <div class="log-row">
+                    <div class="log-row__info">
+                        <div class="log-row__title">
+                            <i class="fa-solid fa-terminal" aria-hidden="true" style="color:var(--orange-l);margin-right:.35rem"></i>
+                            Технічний лог
+                        </div>
+                        <div class="log-row__desc">
+                            Записує події: запуски сесій, запити до AI, помилки, TTS-виклики.
+                            Також вмикає кнопки «Діагностика» та «Консоль» у всіх вправах.
+                            Файли: <code style="color:var(--orange-l)">techlog/phone+ДД.ММ.txt</code>
+                        </div>
+                    </div>
+                    <label class="switcher" aria-label="Увімкнути технічний лог">
+                        <input type="checkbox" id="toggle-techlog"
+                               onchange="onToggleTechLog(this.checked)">
+                        <span class="switcher__track" aria-hidden="true"></span>
+                        <span class="switcher__thumb" aria-hidden="true"></span>
+                    </label>
+                </div>
+
+                <!-- Вимикач 2: Навчальний лог -->
+                <div class="log-row">
+                    <div class="log-row__info">
+                        <div class="log-row__title">
+                            <i class="fa-solid fa-graduation-cap" aria-hidden="true" style="color:var(--orange-l);margin-right:.35rem"></i>
+                            Навчальний лог
+                        </div>
+                        <div class="log-row__desc">
+                            Зберігає результати вправ для AI-аналізу прогресу: тема, рівень,
+                            правильність, час відповіді, кількість прослуховувань, використання підказок.
+                            Файли: <code style="color:var(--orange-l)">studylog/listening+ДД.ММ.txt</code>
+                        </div>
+                    </div>
+                    <label class="switcher" aria-label="Увімкнути навчальний лог">
+                        <input type="checkbox" id="toggle-studylog"
+                               onchange="onToggleStudyLog(this.checked)">
+                        <span class="switcher__track" aria-hidden="true"></span>
+                        <span class="switcher__thumb" aria-hidden="true"></span>
+                    </label>
+                </div>
+
+                <!-- URL сервера (опціонально) -->
+                <div class="server-url-wrap" id="server-url-section">
+                    <label for="log-server-url" class="field-label" style="margin-bottom:0">
+                        <i class="fa-solid fa-server" aria-hidden="true"></i>
+                        Сервер логів (необов'язково)
+                    </label>
+                    <div class="input-wrap">
+                        <input type="url" id="log-server-url" class="field"
+                               placeholder="http://localhost:3030"
+                               autocomplete="off" spellcheck="false"
+                               aria-describedby="server-url-hint">
+                    </div>
+                    <p id="server-url-hint" class="text-xs" style="color:rgba(255,255,255,.35);margin-top:.25rem">
+                        Якщо вказано — логи надсилаються на Keenetic-сервер у реальному часі.
+                        Якщо порожньо — зберігаються лише в буфері браузера.
+                    </p>
+                </div>
+
+                <!-- Статистика буфера -->
+                <div class="buf-stats" id="buf-stats-box">
+                    <div class="buf-box">
+                        <div class="buf-box__label"><i class="fa-solid fa-terminal" aria-hidden="true"></i> Техлог</div>
+                        <div class="buf-box__val" id="buf-tech-count">0</div>
+                        <div style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.15rem">записів у буфері</div>
+                    </div>
+                    <div class="buf-box">
+                        <div class="buf-box__label"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> Навчання</div>
+                        <div class="buf-box__val" id="buf-study-count">0</div>
+                        <div style="font-size:.65rem;color:rgba(255,255,255,.3);margin-top:.15rem">записів у буфері</div>
+                    </div>
+                </div>
+
+                <!-- Кнопки експорту -->
+                <div class="export-row">
+                    <button class="btn-export" onclick="doExport('tech')"
+                            aria-label="Завантажити техлог">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i> Техлог
+                    </button>
+                    <button class="btn-export" onclick="doExport('study')"
+                            aria-label="Завантажити навчальний лог">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i> Навчання
+                    </button>
+                </div>
+                <div class="export-row" style="margin-top:.375rem">
+                    <button class="btn-export btn-export--danger" onclick="confirmClear()"
+                            style="grid-column:1/-1"
+                            aria-label="Очистити всі буфери логів">
+                        <i class="fa-solid fa-trash" aria-hidden="true"></i> Очистити буфери
+                    </button>
+                </div>
+
+                </div><!-- /logging-body -->
+            </section>
+
+            <!-- ── Мови навчання (collapsible) ───────────────── -->
+            <section class="card" aria-labelledby="lbl-languages">
+
+                <button id="languages-toggle"
+                        onclick="toggleLanguagesSection()"
+                        aria-expanded="false"
+                        aria-controls="languages-body"
+                        style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;padding:0;color:inherit;">
+                    <label id="lbl-languages" class="field-label" style="cursor:pointer;margin-bottom:0;pointer-events:none;">
+                        <i class="fa-solid fa-language" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
+                        Мови навчання
+                    </label>
+                    <i id="languages-chevron" class="fa-solid fa-chevron-down"
+                       style="color:var(--muted,#8890b0);font-size:13px;transition:transform .25s ease;"></i>
+                </button>
+
+                <div id="languages-body" style="display:none;margin-top:1rem;">
+                    <div class="space-y-3">
+                        <div>
+                            <label for="target-lang" class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                                Мова, яку вивчаю
+                            </label>
+                            <select id="target-lang" class="field" onchange="onLangChange()"
+                                    aria-label="Мова навчання"></select>
+                        </div>
+                        <div>
+                            <label for="native-lang" class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                                Моя рідна мова (пояснення, переклади)
+                            </label>
+                            <select id="native-lang" class="field" onchange="onLangChange()"
+                                    aria-label="Рідна мова"></select>
+                        </div>
+                        <div>
+                            <label for="helper-lang" class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                                Допоміжна мова (лінгвістичний місток)
+                            </label>
+                            <select id="helper-lang" class="field" onchange="onLangChange()"
+                                    aria-label="Допоміжна мова"></select>
+                        </div>
+                    </div>
+                    <p class="text-xs mt-3" style="color:rgba(255,255,255,.3);">
+                        Усі модулі та AI-промпти автоматично перейдуть на обрані мови.
+                        Допоміжна мова — та, яку ви вже знаєте добре і яка лінгвістично близька до мови навчання
+                        (напр. англійська допомагає вивчати іспанську через спільні романські корені та запозичення).
+                    </p>
+                </div>
+
+            </section>
+
+                        <!-- ── Кнопка збереження ───────────────────────────── -->
+            <button class="btn-save" onclick="saveSettings()" aria-label="Зберегти всі налаштування">
+                <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+                Зберегти конфігурацію
+            </button>
+
+        </main>
+    </div>
+
+    <!-- Toast-контейнер -->
+    <div id="toast-container"
+         role="log" aria-live="polite" aria-atomic="false"
+         style="position:fixed; bottom:1.5rem; left:1rem; right:1rem; z-index:50; pointer-events:none;">
+    </div>
+
+    <!-- ── Логіка ─────────────────────────────────────────────── -->
+    <script>
+    (() => {
+        'use strict';
+
+        // ── Collapsible: секція логування ───────────────────────
+        window.toggleLoggingSection = function() {
+            const body    = document.getElementById('logging-body');
+            const chevron = document.getElementById('logging-chevron');
+            const btn     = document.getElementById('logging-toggle');
+            const isOpen  = body.style.display !== 'none';
+            body.style.display    = isOpen ? 'none' : 'block';
+            chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+            btn.setAttribute('aria-expanded', String(!isOpen));
+        };
+
+        window.toggleLanguagesSection = function() {
+            const body    = document.getElementById('languages-body');
+            const chevron = document.getElementById('languages-chevron');
+            const btn     = document.getElementById('languages-toggle');
+            const isOpen  = body.style.display !== 'none';
+            body.style.display    = isOpen ? 'none' : 'block';
+            chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+            btn.setAttribute('aria-expanded', String(!isOpen));
+        };
+
+        // ── Скорочення ─────────────────────────────────────────
+        const $ = id => document.getElementById(id);
+        const SK = SETTINGS_CONFIG.storageKeys;
+        const get = (k, d) => localStorage.getItem(k) ?? d;
+        const set = (k, v) => localStorage.setItem(k, v);
+
+        let currentVoice   = '';
+        let currentTTSMode = 'online';
+
+        // ── Ініціалізація ──────────────────────────────────────
+        window.addEventListener('DOMContentLoaded', () => {
+            buildProviderSelect();
+            buildLanguageSelects();
+
+            const savedProvider = get(SK.provider, 'openai');
+            $('ai-provider').value = savedProvider;
+
+            // Завантажуємо ключі з localStorage (або показуємо статус файлового ключа)
+            $('api-key-openai').value    = get(SK.apiKeyOpenai, '');
+            $('api-key-google').value    = get(SK.apiKeyGoogle, '');
+            $('api-key-anthropic').value = get(SK.apiKeyAnthro, '');
+
+            const speed = get(SK.speed, SETTINGS_CONFIG.speed.default.toString());
+            $('voice-speed').value    = speed;
+            $('speed-val').textContent = speed + '×';
+
+            currentTTSMode = get(SK.ttsMode, 'online');
+            const savedVoice  = get(SK.voice, '');
+            const savedProv   = get(SK.provider, 'openai');
+            const validVoices = (SETTINGS_CONFIG.onlineVoices[savedProv]?.list ?? []).map(v => v.id);
+            currentVoice = validVoices.includes(savedVoice)
+                ? savedVoice
+                : (validVoices[0] || '');
+
+            toggleProviderSettings();
+            updateModelsList(savedProvider);
+            $('ai-model').value = get(SK.model, SETTINGS_CONFIG.models[savedProvider][0].id);
+
+            setTTSMode(currentTTSMode);
+            updateSliderBackground();
+            loadNativeVoices();
+            checkKeyPresence();
+            initLoggingSection();
+            initServiceMode();
+
+            $('voice-speed').addEventListener('input', function () {
+                $('speed-val').textContent = this.value + '×';
+                this.setAttribute('aria-valuenow', this.value);
+                updateSliderBackground();
+            });
+        });
+
+        // ── Будуємо select провайдерів з конфігу ───────────────
+        function buildProviderSelect() {
+            const sel = $('ai-provider');
+            sel.innerHTML = '';
+            SETTINGS_CONFIG.providers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value       = p.id;
+                opt.textContent = p.label;
+                sel.appendChild(opt);
+            });
+        }
+
+        // ── Будуємо селекти мов з SETTINGS_CONFIG.languages ────
+        function buildLanguageSelects() {
+            const langs = SETTINGS_CONFIG.languages;
+            const SK    = SETTINGS_CONFIG.storageKeys;
+
+            // Мова навчання
+            const tSel = $('target-lang');
+            tSel.innerHTML = '';
+            langs.target.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value       = l.id;
+                opt.textContent = `${l.flag}  ${l.label}`;
+                tSel.appendChild(opt);
+            });
+            tSel.value = get(SK.targetLang, 'es');
+
+            // Рідна мова
+            const nSel = $('native-lang');
+            nSel.innerHTML = '';
+            langs.native.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value       = l.id;
+                opt.textContent = l.label;
+                nSel.appendChild(opt);
+            });
+            nSel.value = get(SK.nativeLang, 'uk');
+
+            // Допоміжна мова
+            const hSel = $('helper-lang');
+            hSel.innerHTML = '';
+            langs.helper.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value       = l.id;
+                opt.textContent = l.label;
+                hSel.appendChild(opt);
+            });
+            hSel.value = get(SK.helperLang, 'none');
+        }
+
+        // ── Зміна мов — зберігаємо одразу (без кнопки «Зберегти») ──
+        window.onLangChange = function() {
+            const SK = SETTINGS_CONFIG.storageKeys;
+            set(SK.targetLang, $('target-lang').value);
+            set(SK.nativeLang, $('native-lang').value);
+            set(SK.helperLang, $('helper-lang').value);
+            // Оновлюємо TTS offline: фільтруємо голоси під нову мову
+            loadNativeVoices();
+        };
+
+        // ── Зміна провайдера ───────────────────────────────────
+        window.handleProviderChange = function () {
+            const provider = $('ai-provider').value;
+            // Скидаємо стан полів всіх провайдерів перед перемиканням
+            ['openai', 'google', 'anthropic'].forEach(p => {
+                const input = $(`api-key-${p}`);
+                if (input) {
+                    input.readOnly    = false;
+                    input.style.opacity = '';
+                    input.style.cursor  = '';
+                    const eyeBtn = input.parentElement ? input.parentElement.querySelector('.eye-btn') : null;
+                    if (eyeBtn) eyeBtn.style.display = '';
+                    // Відновлюємо реальне значення з localStorage якщо поле було заблоковане
+                    if (input.value === '••••••••••••••••') {
+                        const lsKeyMap = { openai: SK.apiKeyOpenai, google: SK.apiKeyGoogle, anthropic: SK.apiKeyAnthro };
+                        input.value = get(lsKeyMap[p] || '', '');
+                    }
+                }
+            });
+            toggleProviderSettings();
+            updateModelsList(provider);
+            checkKeyPresence();
+            if (currentTTSMode === 'online') renderOnlineVoices();
+        };
+
+        // ── Перевірка наявності ключа ──────────────────────────
+        window.checkKeyPresence = function () {
+            const provider = $('ai-provider').value;
+            const badge    = $('api-status');
+            const hint     = $('key-hint');
+
+            // Перевіряємо чи є файловий ключ (з sett_set.js)
+            const hardcoded = (typeof isKeyHardcoded === 'function') && isKeyHardcoded(provider);
+
+            if (hardcoded) {
+                // Ключ з файлу — поле read-only, показуємо спеціальний статус
+                const inputId = `api-key-${provider}`;
+                const input   = $(inputId);
+                input.value       = '••••••••••••••••';
+                input.readOnly    = true;
+                input.style.opacity = '0.5';
+                input.style.cursor  = 'not-allowed';
+                // Ховаємо кнопку eye для захардкодженого ключа
+                const eyeBtn = input.parentElement.querySelector('.eye-btn');
+                if (eyeBtn) eyeBtn.style.display = 'none';
+
+                badge.className = 'badge badge--ok';
+                badge.innerHTML = '<i class="fa-solid fa-file-shield" aria-hidden="true"></i><span>Ключ з конфігурації сервера</span>';
+                if (hint) hint.textContent = 'Ключ вказано у файлі sett_set.js — редагування недоступне через інтерфейс';
+            } else {
+                // Звичайний режим — ключ з localStorage
+                const input = $(`api-key-${provider}`);
+                input.readOnly    = false;
+                input.style.opacity = '';
+                input.style.cursor  = '';
+                const eyeBtn = input.parentElement.querySelector('.eye-btn');
+                if (eyeBtn) eyeBtn.style.display = '';
+
+                const key = input.value;
+                if (key && key.trim().length > SETTINGS_CONFIG.minKeyLength) {
+                    badge.className = 'badge badge--ok';
+                    badge.innerHTML = '<i class="fa-solid fa-circle-check" aria-hidden="true"></i><span>Ключ прийнятий</span>';
+                } else {
+                    badge.className = 'badge badge--error';
+                    badge.innerHTML = '<i class="fa-solid fa-circle-xmark" aria-hidden="true"></i><span>Ключ відсутній</span>';
+                }
+                if (hint) hint.textContent = 'Ключ зберігається лише на вашому пристрої';
+            }
+        };
+
+        // ── Показати/приховати пароль ──────────────────────────
+        window.togglePasswordVisibility = function (inputId, btn) {
+            const input = $(inputId);
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            btn.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+            btn.setAttribute('aria-label', isHidden ? 'Приховати ключ' : 'Показати ключ');
+        };
+
+        // ── Показ/приховування полів ───────────────────────────
+        function toggleProviderSettings() {
+            const provider = $('ai-provider').value;
+            document.querySelectorAll('.provider-key').forEach(el => el.classList.add('hidden'));
+            const box = $(`${provider}-key-box`);
+            if (box) box.classList.remove('hidden');
+        }
+
+        // ── Список моделей ─────────────────────────────────────
+        function updateModelsList(provider) {
+            const sel = $('ai-model');
+            sel.innerHTML = '';
+            (SETTINGS_CONFIG.models[provider] ?? []).forEach(m => {
+                const opt = document.createElement('option');
+                opt.value       = m.id;
+                opt.textContent = m.name;
+                sel.appendChild(opt);
+            });
+        }
+
+        // ── Онлайн-голоси ──────────────────────────────────────
+        function renderOnlineVoices() {
+            const provider = $('ai-provider').value;
+            const data     = SETTINGS_CONFIG.onlineVoices[provider] ?? { desc: '', list: [] };
+
+            // Якщо поточний голос не належить цьому провайдеру — скидаємо на перший доступний
+            const validIds = data.list.map(v => v.id);
+            if (validIds.length && !validIds.includes(currentVoice)) {
+                currentVoice = validIds[0];
+            }
+
+            const grid     = $('online-voice-grid');
+            $('online-voice-desc').textContent = data.desc;
+            grid.innerHTML = '';
+            data.list.forEach(v => {
+                const btn = document.createElement('button');
+                btn.type      = 'button';
+                btn.id        = 'v-' + v.id;
+                btn.className = `voice-btn${currentVoice === v.id ? ' active' : ''}`;
+                btn.setAttribute('aria-pressed', currentVoice === v.id ? 'true' : 'false');
+                btn.setAttribute('aria-label', `Голос ${v.name}`);
+                btn.innerHTML = `<i class="fa-solid ${v.icon}" aria-hidden="true"></i> ${v.name}`;
+                btn.addEventListener('click', () => setVoice(v.id));
+                grid.appendChild(btn);
+            });
+        }
+
+        // ── Режим TTS ──────────────────────────────────────────
+        window.setTTSMode = function (mode) {
+            currentTTSMode = mode;
+            ['online', 'offline'].forEach(m => {
+                const btn = $(`mode-${m}`);
+                const isActive = m === mode;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+            $('section-tts-online').classList.toggle('hidden', mode !== 'online');
+            $('section-tts-offline').classList.toggle('hidden', mode !== 'offline');
+            if (mode === 'online') renderOnlineVoices();
+        };
+
+        // ── Системні голоси (офлайн) ───────────────────────────
+        function loadNativeVoices() {
+            const synth = window.speechSynthesis;
+            if (!synth) return;
+            // Фільтруємо голоси по BCP47 обраної мови навчання
+            const langCode = (typeof getLangConfig === 'function')
+                ? getLangConfig().speechLang.slice(0, 2)   // 'es', 'fr', 'de' ...
+                : 'es';
+            const update = () => {
+                const voices = synth.getVoices().filter(v => v.lang.startsWith(langCode));
+                $('native-voice-select').innerHTML =
+                    voices.length
+                        ? voices.map(v => `<option value="${v.name}">${v.name}</option>`).join('')
+                        : '<option>Голоси відсутні</option>';
+                // Відновлюємо збережений голос якщо підходить
+                const saved = get(SK.voiceNative, '');
+                if (saved) $('native-voice-select').value = saved;
+            };
+            synth.onvoiceschanged = update;
+            update();
+        }
+
+        // ── Вибір голосу ───────────────────────────────────────
+        function setVoice(v) {
+            currentVoice = v;
+            document.querySelectorAll('.voice-btn').forEach(btn => {
+                const isActive = btn.id === 'v-' + v;
+                btn.classList.toggle('active', isActive);
+                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        }
+
+        // ── Слайдер ────────────────────────────────────────────
+        function updateSliderBackground() {
+            const s = $('voice-speed');
+            const pct = (s.value - 0.5) / (1.5 - 0.5) * 100;
+            s.style.backgroundSize = pct + '% 100%';
+        }
+
+        // ── Toast ──────────────────────────────────────────────
+        function showToast(message) {
+            const c = $('toast-container');
+            const t = document.createElement('div');
+            t.className = 'toast';
+            t.innerHTML = `<i class="fa-solid fa-floppy-disk" style="color:var(--orange)" aria-hidden="true"></i>
+                           <span style="font-size:.9375rem; font-weight:600;">${message}</span>`;
+            c.appendChild(t);
+            setTimeout(() => {
+                t.style.opacity = '0';
+                setTimeout(() => t.remove(), SETTINGS_CONFIG.toastFadeOut);
+            }, SETTINGS_CONFIG.toastDuration);
+        }
+
+        // ── Сервіс режим ───────────────────────────────────────
+        window.onToggleServiceMode = function(enabled) {
+            const SK = SETTINGS_CONFIG.storageKeys;
+            set(SK.serviceMode, enabled ? '1' : '0');
+            applyServiceModeUI(enabled);
+        };
+
+        function applyServiceModeUI(enabled) {
+            const card  = $('service-mode-card');
+            const badge = $('service-badge');
+            if (enabled) {
+                card.classList.add('service-active');
+                badge.style.display = 'inline-flex';
+                // Автоматично розгортаємо секції логування та мов
+                const logBody  = $('logging-body');
+                const logChevr = $('logging-chevron');
+                const logBtn   = $('logging-toggle');
+                if (logBody && logBody.style.display === 'none') {
+                    logBody.style.display = 'block';
+                    if (logChevr) logChevr.style.transform = 'rotate(180deg)';
+                    if (logBtn) logBtn.setAttribute('aria-expanded', 'true');
+                }
+                const langBody  = $('languages-body');
+                const langChevr = $('languages-chevron');
+                const langBtn   = $('languages-toggle');
+                if (langBody && langBody.style.display === 'none') {
+                    langBody.style.display = 'block';
+                    if (langChevr) langChevr.style.transform = 'rotate(180deg)';
+                    if (langBtn) langBtn.setAttribute('aria-expanded', 'true');
+                }
+            } else {
+                card.classList.remove('service-active');
+                badge.style.display = 'none';
+            }
+        }
+
+        function initServiceMode() {
+            const SK = SETTINGS_CONFIG.storageKeys;
+            const enabled = get(SK.serviceMode, '0') === '1';
+            $('toggle-service-mode').checked = enabled;
+            applyServiceModeUI(enabled);
+        }
+
+        // ── Логування ──────────────────────────────────────────
+        const SKlog = () => SETTINGS_CONFIG.storageKeys;
+
+        window.onToggleTechLog = function(enabled) {
+            set(SKlog().techLogEnabled, enabled ? '1' : '0');
+            updateBufStats();
+        };
+
+        window.onToggleStudyLog = function(enabled) {
+            set(SKlog().studyLogEnabled, enabled ? '1' : '0');
+            updateBufStats();
+        };
+
+        function initLoggingSection() {
+            const techOn  = get(SKlog().techLogEnabled,  '0') === '1';
+            const studyOn = get(SKlog().studyLogEnabled, '0') === '1';
+
+            $('toggle-techlog').checked  = techOn;
+            $('toggle-studylog').checked = studyOn;
+            $('log-server-url').value    = get(SKlog().logServerUrl ?? 'sp_log_server_url', '');
+
+            updateBufStats();
+        }
+
+        function updateBufStats() {
+            if (typeof Logger === 'undefined') return;
+            const stats = Logger.bufferStats();
+            $('buf-tech-count').textContent  = stats.tech.lines;
+            $('buf-study-count').textContent = stats.study.lines;
+        }
+
+        window.doExport = function(type) {
+            if (typeof Logger === 'undefined') {
+                showToast('Logger не підключений'); return;
+            }
+            if (type === 'tech')  Logger.exportTech();
+            if (type === 'study') Logger.exportStudy();
+            showToast(type === 'tech' ? 'Техлог завантажено' : 'Навчальний лог завантажено');
+        };
+
+        window.confirmClear = function() {
+            const stats = typeof Logger !== 'undefined' ? Logger.bufferStats() : { tech:{lines:0}, study:{lines:0} };
+            const total = stats.tech.lines + stats.study.lines;
+            if (total === 0) { showToast('Буфери вже порожні'); return; }
+            if (!confirm(`Очистити всі буфери логів? (${total} записів буде видалено)`)) return;
+            if (typeof Logger !== 'undefined') Logger.clearBuffers();
+            updateBufStats();
+            showToast('Буфери очищено');
+        };
+
+        // ── Збереження (розширено) ─────────────────────────────
+        window.saveSettings = function () {
+            const provider = $('ai-provider').value;
+
+            set(SK.provider,     provider);
+            set(SK.model,        $('ai-model').value);
+
+            // Зберігаємо ключ тільки якщо він НЕ з файлу sett_set.js
+            if (!(typeof isKeyHardcoded === 'function' && isKeyHardcoded('openai'))) {
+                set(SK.apiKeyOpenai, $('api-key-openai').value);
+            }
+            if (!(typeof isKeyHardcoded === 'function' && isKeyHardcoded('google'))) {
+                set(SK.apiKeyGoogle, $('api-key-google').value);
+            }
+            if (!(typeof isKeyHardcoded === 'function' && isKeyHardcoded('anthropic'))) {
+                set(SK.apiKeyAnthro, $('api-key-anthropic').value);
+            }
+
+            set(SK.speed,        $('voice-speed').value);
+            set(SK.ttsMode,      currentTTSMode);
+            set(SK.voice,        currentVoice);
+
+            // Мови (зберігаються також одразу через onLangChange, але дублюємо для надійності)
+            set(SK.targetLang,  $('target-lang').value);
+            set(SK.nativeLang,  $('native-lang').value);
+            set(SK.helperLang,  $('helper-lang').value);
+
+            // Логування
+            set(SK.techLogEnabled,  $('toggle-techlog').checked  ? '1' : '0');
+            set(SK.studyLogEnabled, $('toggle-studylog').checked ? '1' : '0');
+            set(SK.logServerUrl ?? 'sp_log_server_url', $('log-server-url').value.trim());
+
+            // Сервіс режим
+            set(SK.serviceMode, $('toggle-service-mode').checked ? '1' : '0');
+
+            if (currentTTSMode === 'offline') {
+                set(SK.voiceNative, $('native-voice-select').value);
+            }
+
+            showToast('Конфігурацію збережено!');
+            setTimeout(() => window.location.href = SETTINGS_CONFIG.backUrl,
+                       SETTINGS_CONFIG.redirectDelay);
+        };
+
+    })();
+    </script>
+
+</body>
+</html>
