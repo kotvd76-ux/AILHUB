@@ -2076,7 +2076,7 @@ function renderE6() {
   e6State.picked = [];
   e6State.answered = false;
 
-  document.getElementById('e6-instruction').innerHTML = `<strong>${d.instruction || 'Збери усталений вираз'}</strong><br>${d.source || ''}`;
+  document.getElementById('e6-instruction').innerHTML = `<strong>${d.source || d.instruction || ''}</strong>`;
   document.getElementById('e6-built').innerHTML = '<span class="fib-blank">___</span>';
   document.getElementById('e6-uk').textContent = d.uk || '';
   document.getElementById('e6-en').textContent = d.en || '';
