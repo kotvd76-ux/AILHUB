@@ -1249,13 +1249,8 @@ body::before {
       <div class="exercise-label">Вправа 6</div>
       <div class="exercise-title">Tap-order: усталені вирази</div>
       <div class="exercise-desc">Збери усталений вираз або коротку фразу (до 5 слів) у правильному порядку.</div>
-      <div class="fib-sentence" id="e6-instruction" aria-live="polite"></div>
       <div class="fib-sentence" id="e6-built" aria-live="polite"><span class="fib-blank">___</span></div>
       <div class="options-list" id="e6-options" role="list" aria-label="Слова для складання"></div>
-      <div class="translations">
-        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e6-uk"></span></div>
-        <div class="trans-row" id="e6-helper-row" style="display:none"><span class="flag" id="e6-helper-flag" aria-hidden="true"></span><span id="e6-en"></span></div>
-      </div>
       <div class="feedback-box" id="e6-fb" role="alert" aria-live="assertive">
         <div class="fb-icon" id="e6-fb-icon" aria-hidden="true"></div>
         <div class="fb-text"><span class="fb-main" id="e6-fb-msg"></span><span class="fb-explain" id="e6-fb-explain"></span></div>
@@ -1683,7 +1678,8 @@ function getTaskTextForExercise(px) {
     return words.trim();
   }
   if (px === 'e6') {
-    return (document.getElementById('e6-instruction')?.textContent || '').trim();
+    const d = E6_DATA[e6State?.idx];
+    return d ? String(d.correctSentence || '').trim() : '';
   }
   return '';
 }
@@ -2107,11 +2103,7 @@ function renderE6() {
   e6State.picked = [];
   e6State.answered = false;
 
-  document.getElementById('e6-instruction').innerHTML = `<strong>${d.source || d.instruction || ''}</strong>`;
   document.getElementById('e6-built').innerHTML = '<span class="fib-blank">___</span>';
-  document.getElementById('e6-uk').textContent = d.uk || '';
-  document.getElementById('e6-en').textContent = d.en || '';
-  _showHelperRow('e6', d.en);
 
   const tokens = Array.isArray(d.tokens) ? d.tokens : String(d.correctSentence || '').split(' ');
   document.getElementById('e6-options').innerHTML = tokens.map((tok, i) => `
@@ -2723,11 +2715,12 @@ function normalizeTasksByExercise(exNum, tasks) {
   }
 
   if (exNum === 6) {
+    const stripPunct = s => String(s || '').trim().replace(/[.!?,;:]+$/, '').trim();
     return arr.map((t) => {
-      const parts = String(t.correctSentence || '').trim().split(/\s+/).filter(Boolean).slice(0, 5);
+      const parts = stripPunct(t.correctSentence).split(/\s+/).filter(Boolean).slice(0, 5);
       const correctSentence = parts.join(' ');
       const tokens = Array.isArray(t.tokens) && t.tokens.length
-        ? t.tokens.map(v => String(v || '').trim()).filter(Boolean).slice(0, 5)
+        ? t.tokens.map(v => stripPunct(v)).filter(Boolean).slice(0, 5)
         : [...parts];
       return {
         ...t,
