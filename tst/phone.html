@@ -530,7 +530,7 @@
                 return;
             }
             recognition = new SpeechRec();
-            recognition.lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES';
+            recognition.lang = getLangConfig().speechLang;
             recognition.continuous = true;
             recognition.interimResults = true;
 
