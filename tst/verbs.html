@@ -1253,7 +1253,15 @@ body::before {
       <div class="options-list" id="e6-options" role="list" aria-label="Слова для складання"></div>
       <div class="feedback-box" id="e6-fb" role="alert" aria-live="assertive">
         <div class="fb-icon" id="e6-fb-icon" aria-hidden="true"></div>
-        <div class="fb-text"><span class="fb-main" id="e6-fb-msg"></span><span class="fb-explain" id="e6-fb-explain"></span></div>
+        <div class="fb-text">
+          <span class="fb-main" id="e6-fb-msg"></span>
+          <span class="fb-explain" id="e6-fb-explain"></span>
+          <div class="translations" id="e6-fb-trans" style="display:none; margin-top:6px;">
+            <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e6-fb-uk"></span></div>
+            <div class="trans-row" id="e6-fb-helper-row" style="display:none"><span class="flag" id="e6-fb-helper-flag" aria-hidden="true"></span><span id="e6-fb-en"></span></div>
+            <div class="trans-row" id="e6-fb-ukexplain-row" style="display:none"><span class="flag" aria-hidden="true">💡</span><span id="e6-fb-ukexplain" style="font-size:15px; color:var(--muted)"></span></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="action-row">
@@ -2111,6 +2119,7 @@ function renderE6() {
   `).join('') + '<button class="option-btn" onclick="undoE6()">↩️ Назад</button>';
 
   document.getElementById('e6-fb').className = 'feedback-box';
+  document.getElementById('e6-fb-trans').style.display = 'none';
   document.getElementById('e6-next').style.display = 'none';
   updateBar('e6', e6State.idx, e6State.score);
 }
@@ -2129,12 +2138,21 @@ function pickE6(i) {
   if (e6State.picked.length === target.split(' ').length) {
     e6State.answered = true;
     const chosen = e6State.picked.join(' ').trim();
-    const ok = chosen === target;
+    const ok = chosen.toLowerCase() === target.toLowerCase();
     if (ok) e6State.score++;
     showFB('e6', ok, ok ? '✓ Правильно зібрано!' : `✗ Правильно: ${target}`, d.explain || 'Зверни увагу на порядок слів і форму.', chosen, target);
     if (!ok) {
       document.getElementById('e6-built').textContent = target;
     }
+    // Переклади у фідбеку
+    document.getElementById('e6-fb-uk').textContent = d.uk || '';
+    document.getElementById('e6-fb-en').textContent = d.en || '';
+    document.getElementById('e6-fb-trans').style.display = '';
+    _showHelperRow('e6-fb', d.en);
+    const ukExEl = document.getElementById('e6-fb-ukexplain');
+    const ukExRow = document.getElementById('e6-fb-ukexplain-row');
+    if (d.ukExplain) { ukExEl.textContent = d.ukExplain; ukExRow.style.display = ''; }
+    else { ukExRow.style.display = 'none'; }
   }
 }
 
@@ -2715,12 +2733,14 @@ function normalizeTasksByExercise(exNum, tasks) {
   }
 
   if (exNum === 6) {
-    const stripPunct = s => String(s || '').trim().replace(/[.!?,;:]+$/, '').trim();
+    // Strip ALL surrounding/trailing punctuation from a single word/token
+    const cleanWord = s => String(s || '').trim().replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '').trim();
     return arr.map((t) => {
-      const parts = stripPunct(t.correctSentence).split(/\s+/).filter(Boolean).slice(0, 5);
+      const rawParts = String(t.correctSentence || '').trim().split(/\s+/).filter(Boolean).slice(0, 5);
+      const parts = rawParts.map(cleanWord).filter(Boolean);
       const correctSentence = parts.join(' ');
       const tokens = Array.isArray(t.tokens) && t.tokens.length
-        ? t.tokens.map(v => stripPunct(v)).filter(Boolean).slice(0, 5)
+        ? t.tokens.map(v => cleanWord(v)).filter(Boolean).slice(0, 5)
         : [...parts];
       return {
         ...t,

@@ -594,17 +594,19 @@ const GRAMMAR_CONFIG = {
         return (
           `Ти вчитель ${L.targetName}. Згенеруй 5 завдань формату Tap-order transform.\n` +
           lvl +
-          `\nКожне завдання: source (вихідна фраза або речення), tokens (перемішані слова результату), correctSentence, uk, explain.\n` +
+          `\nКожне завдання: source (вихідна фраза або речення), tokens (перемішані слова результату), correctSentence, uk, ukExplain, explain.\n` +
           `КРИТИЧНО ВАЖЛИВО: source ЗАВЖДИ ТІЛЬКИ мовою ${L.targetName}. Ніколи не використовуй іншу мову для source.\n` +
           `Складність трансформацій має строго відповідати рівню ${level}.\n` +
           'ОБОВ\'ЯЗКОВО: щонайменше 3 з 5 завдань мають бути усталеними виразами/колокаціями рівня.\n' +
           'ОБОВ\'ЯЗКОВО: correctSentence коротке — максимум 5 слів.\n' +
-          'tokens мають складати correctSentence без зайвих слів.\n' +
+          'tokens мають складати correctSentence без зайвих слів і без розділових знаків.\n' +
+          'uk — простий переклад фрази українською.\n' +
+          'ukExplain — коротке тлумачення значення фрази українською (1 речення).\n' +
           (L.helper.id !== 'none' ? `Додай en мовою ${L.helper.nameEn}.\n` : '') +
           'JSON only:\n' +
           (L.helper.id !== 'none'
-            ? '{"tasks":[{"source":"...","tokens":["..."],"correctSentence":"...","uk":"...","en":"...","explain":"7–12 слів"}]}'
-            : '{"tasks":[{"source":"...","tokens":["..."],"correctSentence":"...","uk":"...","explain":"7–12 слів"}]}'
+            ? '{"tasks":[{"source":"...","tokens":["..."],"correctSentence":"...","uk":"...","ukExplain":"...","en":"...","explain":"7–12 слів"}]}'
+            : '{"tasks":[{"source":"...","tokens":["..."],"correctSentence":"...","uk":"...","ukExplain":"...","explain":"7–12 слів"}]}'
           )
         );
       },
