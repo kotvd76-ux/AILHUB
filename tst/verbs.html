@@ -1253,7 +1253,14 @@ body::before {
       <div class="options-list" id="e6-options" role="list" aria-label="Слова для складання"></div>
       <div class="feedback-box" id="e6-fb" role="alert" aria-live="assertive">
         <div class="fb-icon" id="e6-fb-icon" aria-hidden="true"></div>
-        <div class="fb-text"><span class="fb-main" id="e6-fb-msg"></span><span class="fb-explain" id="e6-fb-explain"></span></div>
+        <div class="fb-text">
+          <span class="fb-main" id="e6-fb-msg"></span>
+          <span class="fb-explain" id="e6-fb-explain"></span>
+          <div class="translations" id="e6-fb-trans" style="display:none; margin-top:6px;">
+            <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e6-fb-uk"></span></div>
+            <div class="trans-row" id="e6-fb-helper-row" style="display:none"><span class="flag" id="e6-fb-helper-flag" aria-hidden="true"></span><span id="e6-fb-en"></span></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="action-row">
@@ -2111,6 +2118,7 @@ function renderE6() {
   `).join('') + '<button class="option-btn" onclick="undoE6()">↩️ Назад</button>';
 
   document.getElementById('e6-fb').className = 'feedback-box';
+  document.getElementById('e6-fb-trans').style.display = 'none';
   document.getElementById('e6-next').style.display = 'none';
   updateBar('e6', e6State.idx, e6State.score);
 }
@@ -2135,6 +2143,11 @@ function pickE6(i) {
     if (!ok) {
       document.getElementById('e6-built').textContent = target;
     }
+    // Показати переклади у фідбеку
+    document.getElementById('e6-fb-uk').textContent = d.uk || '';
+    document.getElementById('e6-fb-en').textContent = d.en || '';
+    document.getElementById('e6-fb-trans').style.display = d.uk ? '' : 'none';
+    _showHelperRow('e6-fb', d.en);
   }
 }
 
