@@ -406,15 +406,39 @@ const GRAMMAR_CONFIG = {
         'дитина в перший день у новому садочку',
       ],
 
-      focuses: [
-        'Акцент на прикметниках що ЗМІНЮЮТЬ значення: listo/malo/rico/aburrido/seguro/bueno',
-        'Акцент на estar + стан vs ser + риса (cansado/alto, nervioso/tranquilo)',
-        'Акцент на ser + матеріал, походження, призначення',
-        'Акцент на estar + місцезнаходження і ser + де відбувається подія',
-        'Акцент на пасивному стані: estar + дієприкметник (roto, abierto, cerrado)',
-        'Змішаний: 3 × estar (стан/місце/пасив) і 2 × ser (характеристика/іменник)',
-        'Контекст A1–A2: лише базові дієслова ser/estar з простими прикметниками',
-      ],
+      get focuses() {
+        const L = _vLang();
+        const lang = (L.target && L.target.id) ? L.target.id : 'es';
+        if (lang === 'es') return [
+          'Акцент на прикметниках що ЗМІНЮЮТЬ значення: listo/malo/rico/aburrido/seguro/bueno',
+          'Акцент на estar + стан vs ser + риса (cansado/alto, nervioso/tranquilo)',
+          'Акцент на ser + матеріал, походження, призначення',
+          'Акцент на estar + місцезнаходження і ser + де відбувається подія',
+          'Акцент на пасивному стані: estar + дієприкметник (roto, abierto, cerrado)',
+          'Змішаний: 3 × estar (стан/місце/пасив) і 2 × ser (характеристика/іменник)',
+          'Контекст A1–A2: лише базові дієслова ser/estar з простими прикметниками',
+        ];
+        if (lang === 'en') return [
+          'Phrasal verbs: give up/in/out, pick up, turn on/off, look after/for',
+          'Articles: a/an vs the vs zero article (first mention vs. known entity)',
+          'Prepositions of time: in/on/at (months, days, clock times)',
+          'Prepositions of place: in/on/at/by (location vs. surface vs. point)',
+          'Quantifiers: some/any/much/many/a lot of/a few/a little',
+        ];
+        if (lang === 'fr') return [
+          'Pronoms COD vs COI (le/la/les vs lui/leur)',
+          'Pronoms en vs y (de + nom vs à + lieu)',
+          'Accord du participe passé avec avoir (COD placé avant)',
+          'Pronoms disjoints après préposition (avec moi/toi/lui/elle)',
+          'Double pronom (me le, lui en, y en)',
+        ];
+        return [
+          `Contextual grammar choice in ${L.targetName}: contrast of two similar forms`,
+          `Prepositions in ${L.targetName}: selecting the correct one by context`,
+          `Articles or determiners in ${L.targetName}`,
+          `Pronouns and their placement in ${L.targetName}`,
+        ];
+      },
 
       aiPrompt(level) {
         const L   = _vLang();
