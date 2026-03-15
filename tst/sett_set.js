@@ -411,9 +411,11 @@ function selectOfflineVoice(voices, lang) {
 
 // ── Глобальна функція озвучення тексту ──────────────────────
 // Автоматично визначає мову, очищує Markdown.
-// Параметр forceLang — примусова мова (BCP-47), якщо відома заздалегідь.
+// forceLang  — примусова мова (BCP-47), якщо відома заздалегідь.
+// callbacks  — { onLoading, onStart, onEnd } — необов'язкові UI-хуки.
+// speedOverride — замінює sp_speed з localStorage (для повільного режиму).
 // Використовувати у всіх модулях замість локальних speak-функцій.
-async function speakText(text, forceLang) {
+async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOverride } = {}) {
     if (!text) { console.warn('[speakText] text порожній'); return; }
     const clean    = stripMarkdown(text);
     if (!clean) { console.warn('[speakText] після stripMarkdown порожній'); return; }
@@ -422,19 +424,26 @@ async function speakText(text, forceLang) {
     const SK       = SETTINGS_CONFIG.storageKeys;
     const ttsMode  = localStorage.getItem(SK.ttsMode) || 'offline';
     const provider = localStorage.getItem(SK.provider) || 'openai';
-    const speed    = parseFloat(localStorage.getItem(SK.speed)) || SETTINGS_CONFIG.speed.default;
+    const speed    = speedOverride ?? (parseFloat(localStorage.getItem(SK.speed)) || SETTINGS_CONFIG.speed.default);
     const voice    = localStorage.getItem(SK.voice) || 'alloy';
     const apiKey   = getApiKey(provider);
 
     // Online TTS — тільки OpenAI і тільки для мови навчання (не для кирилиці)
     if (ttsMode === 'online' && provider === 'openai' && apiKey && !/[Ѐ-ӿ]/.test(clean)) {
+        if (onLoading) onLoading();
         try {
             const r = await fetch('https://api.openai.com/v1/audio/speech', {
                 method: 'POST',
                 headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ model: 'tts-1', voice, input: clean, speed: Math.max(0.25, Math.min(4, speed)) })
             });
-            if (r.ok) { new Audio(URL.createObjectURL(await r.blob())).play(); return; }
+            if (r.ok) {
+                const audio = new Audio(URL.createObjectURL(await r.blob()));
+                audio.onplay  = () => { if (onStart) onStart(); };
+                audio.onended = () => { if (onEnd)  onEnd();  };
+                audio.play();
+                return;
+            }
         } catch (_) { /* fallback до offline */ }
     }
 
@@ -462,8 +471,8 @@ async function speakText(text, forceLang) {
     else { console.warn('[speakText] жодного голосу для мови:', lang); }
 
     u.onerror = e => console.error('[speakText] utterance error:', e.error);
-    u.onstart = () => console.log('[speakText] озвучення почалось');
-    u.onend   = () => console.log('[speakText] озвучення завершено');
+    u.onstart = () => { console.log('[speakText] озвучення почалось'); if (onStart) onStart(); };
+    u.onend   = () => { console.log('[speakText] озвучення завершено'); if (onEnd)  onEnd();  };
 
     console.log('[speakText] speak() викликано, voice:', u.voice?.name || 'default', 'lang:', u.lang);
     window.speechSynthesis.speak(u);
