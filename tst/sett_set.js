@@ -389,6 +389,26 @@ function detectSpeechLang(text) {
     return getLangConfig().speechLang; // мова навчання: 'es-ES', 'en-GB' тощо
 }
 
+// ── Вибір офлайн-голосу (єдине місце логіки) ─────────────────
+// Повертає найкращий SpeechSynthesisVoice для заданої мови:
+//   1. Збережений device-голос з налаштувань (SK.voiceNative)
+//   2. Google-голос для мови
+//   3. Будь-який голос для мови
+//   4. null — браузерний дефолт
+// voices — масив з window.speechSynthesis.getVoices()
+// lang   — BCP-47 рядок, наприклад 'es-ES'
+function selectOfflineVoice(voices, lang) {
+    const SK        = SETTINGS_CONFIG.storageKeys;
+    const savedId   = localStorage.getItem(SK.voiceNative);
+    if (savedId) {
+        const match = voices.find(v => v.name === savedId || v.voiceURI === savedId);
+        if (match) return match;
+    }
+    const prefix = lang.split('-')[0];
+    const google = voices.find(v => v.lang?.startsWith(prefix) && v.name.includes('Google'));
+    return google || voices.find(v => v.lang?.startsWith(prefix)) || null;
+}
+
 // ── Глобальна функція озвучення тексту ──────────────────────
 // Автоматично визначає мову, очищує Markdown.
 // Параметр forceLang — примусова мова (BCP-47), якщо відома заздалегідь.
@@ -436,32 +456,10 @@ async function speakText(text, forceLang) {
     u.lang   = lang;
     u.rate   = speed;
 
-    // Вибір голосу:
-    // SK.voiceNative = офлайн-голос пристрою, збережений у налаштуваннях (target lang voice)
-    // SK.voice       = онлайн-голос (alloy, shimmer тощо) — не є системним голосом
-    // Для цільової мови беремо спочатку device-voice (voiceNative), потім online-id як запасний.
-    // Для рідної мови (кирилиця) — також device-voice.
-    const isNativeLang    = /[Ѐ-ӿ]/.test(clean);
-    const deviceVoiceId   = localStorage.getItem(SK.voiceNative); // офлайн голос з налаштувань
-    const onlineVoiceId   = localStorage.getItem(SK.voice);       // online-голос (alloy тощо)
-    const voiceId         = !isNativeLang
-        ? (deviceVoiceId || onlineVoiceId)
-        : deviceVoiceId;
-
-    if (voiceId) {
-        const match = voices.find(v => v.name === voiceId || v.voiceURI === voiceId);
-        if (match) { u.voice = match; console.log('[speakText] голос знайдено:', match.name); }
-        else { console.warn('[speakText] голос НЕ знайдено:', voiceId); }
-    }
-
-    // Якщо голос не знайдено — пріоритет Google-голосу для мови, потім будь-який
-    if (!u.voice) {
-        const langPrefix = lang.split('-')[0];
-        const google     = voices.find(v => v.lang?.startsWith(langPrefix) && v.name.includes('Google'));
-        const fallback   = google || voices.find(v => v.lang?.startsWith(langPrefix));
-        if (fallback) { u.voice = fallback; console.log('[speakText] fallback голос:', fallback.name, fallback.lang); }
-        else { console.warn('[speakText] жодного голосу для мови:', lang); }
-    }
+    // Вибір голосу через централізований хелпер selectOfflineVoice()
+    const selected = selectOfflineVoice(voices, lang);
+    if (selected) { u.voice = selected; console.log('[speakText] голос:', selected.name); }
+    else { console.warn('[speakText] жодного голосу для мови:', lang); }
 
     u.onerror = e => console.error('[speakText] utterance error:', e.error);
     u.onstart = () => console.log('[speakText] озвучення почалось');
