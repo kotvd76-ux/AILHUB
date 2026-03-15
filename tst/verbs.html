@@ -1162,8 +1162,8 @@ body::before {
     </div>
     <div class="card">
       <div class="exercise-label">Вправа 4</div>
-      <div class="exercise-title">Ser / Estar — контекст (3 варіанти)</div>
-      <div class="exercise-desc">Обери правильну форму ser/estar із 3 варіантів у контексті.</div>
+      <div class="exercise-title" id="e4-title">Ser / Estar — контекст (3 варіанти)</div>
+      <div class="exercise-desc" id="e4-desc">Обери правильну форму ser/estar із 3 варіантів у контексті.</div>
       <div class="fib-sentence" id="e4-sentence"></div>
       <div class="swipe-hint" id="e4-hint"></div>
       <div class="options-list" id="e4-options" role="list" aria-label="Вибір відповіді"></div>
@@ -1893,8 +1893,39 @@ function nextE3() { e3State.idx++; if(e3State.idx>=E3_DATA.length){showResult('e
 
 // ══════════════════════════════════════════════
 // EXERCISE 4
+// ── Мовозалежні тексти вправи 4 ───────────────
+const E4_LABELS = {
+  es: {
+    title: 'Ser / Estar — контекст (3 варіанти)',
+    desc:  'Обери правильну форму ser/estar із 3 варіантів у контексті.',
+    cfg:   'Ser / Estar — контекст (3 варіанти)',
+  },
+  en: {
+    title: 'Phrasal Verbs & Articles (3 варіанти)',
+    desc:  'Обери правильне фразове дієслово або артикль із 3 варіантів у контексті.',
+    cfg:   'Phrasal Verbs & Articles (3 варіанти)',
+  },
+  fr: {
+    title: 'Займенники / Узгодження (3 варіанти)',
+    desc:  'Обери правильний займенник або форму із 3 варіантів у контексті.',
+    cfg:   'Займенники / Узгодження (3 варіанти)',
+  },
+};
+
+function updateE4Labels() {
+  const langId = (typeof getLangConfig === 'function') ? getLangConfig().target.id : 'es';
+  const L = E4_LABELS[langId] || E4_LABELS.es;
+  const titleEl = document.getElementById('e4-title');
+  const descEl  = document.getElementById('e4-desc');
+  if (titleEl) titleEl.textContent = L.title;
+  if (descEl)  descEl.textContent  = L.desc;
+  const exCfg = CFG.exercises.find(e => e.id === 'context3');
+  if (exCfg) exCfg.label = L.cfg;
+}
+
 // ══════════════════════════════════════════════
 function renderE4() {
+  updateE4Labels();
   const d = E4_DATA[e4State.idx];
   beginAttempt('e4');
   document.getElementById('e4-sentence').innerHTML = (d.sentence || '').replace('___','<span class="fib-blank">___</span>');
@@ -2315,7 +2346,8 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
     levelSelect.value = selectedLevel;
   }
 
-  // Build main app dropdown (hidden until Start)
+  // Оновлюємо заголовок/опис вправи 4 відповідно до мови, потім будуємо dropdown
+  updateE4Labels();
   buildDropdown();
 
   log('grammar.html ініціалізовано');
@@ -2724,6 +2756,18 @@ function normalizeTasksByExercise(exNum, tasks) {
         opts,
       };
     }).filter(t => t.nativeWord && t.correct);
+  }
+
+  if (exNum === 4) {
+    return arr.map(t => {
+      const opts = Array.isArray(t.opts) ? t.opts.map(o => String(o).trim()).filter(Boolean) : [];
+      const rawCorrect = String(t.correct || '').trim();
+      // Знаходимо точний збіг, потім без урахування регістру — захист від AI-аномалій
+      const correct = opts.find(o => o === rawCorrect)
+        || opts.find(o => o.toLowerCase() === rawCorrect.toLowerCase())
+        || rawCorrect;
+      return { ...t, opts, correct };
+    }).filter(t => t.correct && t.opts.length >= 2);
   }
 
   return arr;
