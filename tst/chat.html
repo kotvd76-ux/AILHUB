@@ -221,6 +221,11 @@ const speak = async (text, forceLang) => {
     const { speed, speechLang } = getSettings();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = speechLang; u.rate = speed || 0.85;
+    // Намагаємось знайти Google-голос для кращої якості
+    const voices     = window.speechSynthesis.getVoices();
+    const langPrefix = (speechLang || 'es').split('-')[0];
+    const google     = voices.find(v => v.lang?.startsWith(langPrefix) && v.name.includes('Google'));
+    if (google) u.voice = google;
     window.speechSynthesis.speak(u);
   }
 };
