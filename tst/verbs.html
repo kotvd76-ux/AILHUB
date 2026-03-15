@@ -1508,13 +1508,21 @@ async function speakSpanish(text, onEnd) {
 }
 
 function speakOffline(text, speed, lang, onEnd) {
+  const targetLang      = lang || 'es-ES';
   const nativeVoiceName = getGlobalSetting('voiceNative') || '';
   const utt = new SpeechSynthesisUtterance(text);
-  utt.lang  = lang || 'es-ES';
+  utt.lang  = targetLang;
   utt.rate  = speed || 0.9;
+  const voices = window.speechSynthesis.getVoices();
   if (nativeVoiceName) {
-    const found = window.speechSynthesis.getVoices().find(v => v.name === nativeVoiceName);
+    const found = voices.find(v => v.name === nativeVoiceName);
     if (found) utt.voice = found;
+  }
+  // Якщо збережений голос не знайдено — пріоритет Google-голосу для мови
+  if (!utt.voice) {
+    const langPrefix  = targetLang.split('-')[0];
+    const googleVoice = voices.find(v => v.lang?.startsWith(langPrefix) && v.name.includes('Google'));
+    utt.voice         = googleVoice || voices.find(v => v.lang?.startsWith(langPrefix)) || null;
   }
   utt.onend   = () => { if (onEnd) onEnd(); };
   utt.onerror = () => { if (onEnd) onEnd(); };

@@ -436,11 +436,17 @@ async function speakText(text, forceLang) {
     u.lang   = lang;
     u.rate   = speed;
 
-    // Вибір голосу: для рідної мови — sp_voice_native, для мови навчання — sp_voice
-    const isNativeLang = /[Ѐ-ӿ]/.test(clean);
-    const voiceId = isNativeLang
-        ? localStorage.getItem(SK.voiceNative)
-        : localStorage.getItem(SK.voice);
+    // Вибір голосу:
+    // SK.voiceNative = офлайн-голос пристрою, збережений у налаштуваннях (target lang voice)
+    // SK.voice       = онлайн-голос (alloy, shimmer тощо) — не є системним голосом
+    // Для цільової мови беремо спочатку device-voice (voiceNative), потім online-id як запасний.
+    // Для рідної мови (кирилиця) — також device-voice.
+    const isNativeLang    = /[Ѐ-ӿ]/.test(clean);
+    const deviceVoiceId   = localStorage.getItem(SK.voiceNative); // офлайн голос з налаштувань
+    const onlineVoiceId   = localStorage.getItem(SK.voice);       // online-голос (alloy тощо)
+    const voiceId         = !isNativeLang
+        ? (deviceVoiceId || onlineVoiceId)
+        : deviceVoiceId;
 
     if (voiceId) {
         const match = voices.find(v => v.name === voiceId || v.voiceURI === voiceId);
@@ -448,9 +454,11 @@ async function speakText(text, forceLang) {
         else { console.warn('[speakText] голос НЕ знайдено:', voiceId); }
     }
 
-    // Якщо голос не знайдено — шукаємо будь-який що підходить за мовою
+    // Якщо голос не знайдено — пріоритет Google-голосу для мови, потім будь-який
     if (!u.voice) {
-        const fallback = voices.find(v => v.lang && v.lang.startsWith(lang.split('-')[0]));
+        const langPrefix = lang.split('-')[0];
+        const google     = voices.find(v => v.lang?.startsWith(langPrefix) && v.name.includes('Google'));
+        const fallback   = google || voices.find(v => v.lang?.startsWith(langPrefix));
         if (fallback) { u.voice = fallback; console.log('[speakText] fallback голос:', fallback.name, fallback.lang); }
         else { console.warn('[speakText] жодного голосу для мови:', lang); }
     }

@@ -1016,10 +1016,18 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
         utterance.lang  = LISTEN_CONFIG.speechLang;
         utterance.rate  = speed;
 
+        const voices          = window.speechSynthesis.getVoices();
         const nativeVoiceName = getNativeVoice();
         if (nativeVoiceName) {
-            const found = window.speechSynthesis.getVoices().find(v => v.name === nativeVoiceName);
+            const found = voices.find(v => v.name === nativeVoiceName);
             if (found) utterance.voice = found;
+        }
+
+        // Якщо збережений голос не знайдено — пріоритет Google-голосу для мови
+        if (!utterance.voice) {
+            const langPrefix   = LISTEN_CONFIG.speechLang.split('-')[0];
+            const googleVoice  = voices.find(v => v.lang?.startsWith(langPrefix) && v.name.includes('Google'));
+            utterance.voice    = googleVoice || voices.find(v => v.lang?.startsWith(langPrefix)) || null;
         }
 
         utterance.onstart = () => setPlayState('playing');
