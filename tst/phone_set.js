@@ -38,8 +38,10 @@ const AI_EXERCISE_CONFIG = {
             example: "Yo vivo en Madrid. Cambia a pasado."
         },
         'describe': {
-            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Опис сцени. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Опиши коротку сцену відповідно до профілю рівня. Попроси користувача описати її детальніше мовою ${L.targetName}.${L.helperClause}`; },
-            example: "Una mujer leyendo un libro en el parque. ¿Qué más ves?"
+            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English',helperClause:''}; return `Вправа: Опис зображення. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Учню показано картинку. ПРАВИЛА: 1) НЕ описуй картинку — лише попроси учня описати її мовою ${L.targetName} (2-3 речення відповідно до рівня). 2) Після відповіді учня — дай КОРОТКИЙ фідбек на помилки та запитай одну додаткову деталь. 3) НЕ пиши вступів і привітань.${L.helperClause}`; },
+            sceneSystemPrompt: 'You are a creative scene generator for educational purposes. Return ONLY a scene description, no questions, no extra text.',
+            scenePromptInstruction: (level) => `Generate a vivid scene description for an English learning illustration. Level: ${level}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in English. Return ONLY the scene description. Example: "A young woman sitting on a park bench reading a book on a sunny afternoon, with pigeons nearby"`,
+            example: "Look at the picture. Please describe what you see. Give 2-3 sentences."
         },
         'explain_word': {
             system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Поясни слово. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Загадай слово мовою ${L.targetName} відповідно до рівня складності і попроси пояснити його значення ${L.targetName}, не називаючи саме слово.${L.helperClause}`; },
