@@ -692,7 +692,7 @@
             const container = document.getElementById('scene-image');
             container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">ГЕНЕРУЄМО СЦЕНУ...</div>`;
 
-            const prompt = `Educational illustration for English learning, simple clear scene, no text: ${desc}`;
+            const prompt = `Simple educational scene illustration, no text: ${desc}`;
             const imageModelSetting = localStorage.getItem('sp_image_model') || 'pollinations';
 
             // ── Hugging Face Inference API (прямий виклик, HF підтримує CORS) ──
