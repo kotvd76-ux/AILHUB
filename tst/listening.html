@@ -766,9 +766,10 @@
         // Fallback: читаємо з localStorage
         const sk = SK();
         const keyMap = {
-            openai:    sk.apiKeyOpenai || 'sp_api_key_openai',
-            google:    sk.apiKeyGoogle || 'sp_api_key_google',
-            anthropic: sk.apiKeyAnthro || 'sp_api_key_anthropic',
+            openai:       sk.apiKeyOpenai       || 'sp_api_key_openai',
+            google:       sk.apiKeyGoogle       || 'sp_api_key_google',
+            anthropic:    sk.apiKeyAnthro       || 'sp_api_key_anthropic',
+            pollinations: sk.apiKeyPollinations || 'sp_api_key_pollinations',
         };
         return ls(keyMap[provider] || `sp_api_key_${provider}`, '').trim();
     }
@@ -823,8 +824,8 @@
         const personality = ls('sp_personality', LISTEN_CONFIG.defaultPersonality);
         const strictness  = ls('sp_strictness',  LISTEN_CONFIG.defaultStrictness);
 
-        log(`Провайдер: ${provider} | Модель: ${model} | Ключ: ${apiKey ? apiKey.slice(0,8)+'…' : '❌ ВІДСУТНІЙ'}`);
-        if (!apiKey) throw new Error(`API-ключ для провайдера "${provider}" не вказано у налаштуваннях.`);
+        log(`Провайдер: ${provider} | Модель: ${model} | Ключ: ${apiKey ? apiKey.slice(0,8)+'…' : provider === 'pollinations' ? '(анонімний)' : '❌ ВІДСУТНІЙ'}`);
+        if (!apiKey && provider !== 'pollinations') throw new Error(`API-ключ для провайдера "${provider}" не вказано у налаштуваннях.`);
 
         // ── Мовна конфігурація ──────────────────────────────
         const LC = (typeof getLangConfig === 'function') ? getLangConfig() : {
@@ -884,6 +885,10 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
             headers['x-api-key']         = apiKey;
             headers['anthropic-version'] = '2023-06-01';
             body = { model, max_tokens: 2000, messages: [{ role: 'user', content: prompt + ' Output ONLY JSON content.' }] };
+        } else if (provider === 'pollinations') {
+            url  = 'https://gen.pollinations.ai/v1/chat/completions';
+            if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+            body = { model, messages: [{ role: 'system', content: prompt }] };
         } else {
             throw new Error(`Невідомий провайдер: ${provider}`);
         }
@@ -902,16 +907,16 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
         log(`Відповідь отримана (${response.status})`, 'success');
         Logger.tech('listening', 'ai_response', 'Tasks received', {
             provider, model,
-            tokens_in:  provider === 'openai' ? (result.usage?.prompt_tokens ?? null) : provider === 'anthropic' ? (result.usage?.input_tokens ?? null) : (result.usageMetadata?.promptTokenCount ?? null),
-            tokens_out: provider === 'openai' ? (result.usage?.completion_tokens ?? null) : provider === 'anthropic' ? (result.usage?.output_tokens ?? null) : (result.usageMetadata?.candidatesTokenCount ?? null),
+            tokens_in:  (provider === 'openai' || provider === 'pollinations') ? (result.usage?.prompt_tokens ?? null) : provider === 'anthropic' ? (result.usage?.input_tokens ?? null) : (result.usageMetadata?.promptTokenCount ?? null),
+            tokens_out: (provider === 'openai' || provider === 'pollinations') ? (result.usage?.completion_tokens ?? null) : provider === 'anthropic' ? (result.usage?.output_tokens ?? null) : (result.usageMetadata?.candidatesTokenCount ?? null),
             request_num: _listenAiRequestCount,
         });
 
         let content;
         try {
-            if      (provider === 'google')    content = result.candidates[0].content.parts[0].text;
-            else if (provider === 'openai')    content = result.choices[0].message.content;
-            else if (provider === 'anthropic') content = result.content[0].text;
+            if      (provider === 'google')                             content = result.candidates[0].content.parts[0].text;
+            else if (provider === 'openai' || provider === 'pollinations') content = result.choices[0].message.content;
+            else if (provider === 'anthropic')                          content = result.content[0].text;
         } catch (e) {
             log(`Помилка розбору структури відповіді: ${e.message}`, 'error');
             log(`Відповідь API: ${JSON.stringify(result).substring(0, 200)}`, 'warn');

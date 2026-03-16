@@ -2572,7 +2572,8 @@ async function goGenerateEx(exNum, retryCount = 0) {
   const apiKey   = (typeof getApiKey === 'function') ? getApiKey(provider)
                  : (localStorage.getItem(`sp_api_key_${provider}`) || '');
 
-  if (!apiKey) {
+  // Pollinations може працювати без ключа (анонімний доступ)
+  if (!apiKey && provider !== 'pollinations') {
     showCardError(exIdx, 'API-ключ не вказано.<br>Перейдіть до <b>Налаштувань</b> та введіть ключ.');
     return;
   }
@@ -2692,6 +2693,23 @@ async function goGenerateEx(exNum, retryCount = 0) {
       const _dAnth = await res.json();
       Logger.tech('verbs', 'ai_response', 'Exercise generated', { provider: 'anthropic', model, tokens_in: _dAnth.usage?.input_tokens ?? null, tokens_out: _dAnth.usage?.output_tokens ?? null, request_num: _verbsAiRequestCount });
       responseText = _dAnth.content[0].text;
+
+    } else if (provider === 'pollinations') {
+      const polHeaders = { 'Content-Type': 'application/json' };
+      if (apiKey) polHeaders['Authorization'] = `Bearer ${apiKey}`;
+      const res = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: polHeaders,
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+        })
+      });
+      if (res.status === 503 || res.status === 529) throw new Error(`RETRY:${res.status}`);
+      if (!res.ok) throw new Error(`Pollinations HTTP ${res.status}`);
+      const _dPol = await res.json();
+      Logger.tech('verbs', 'ai_response', 'Exercise generated', { provider: 'pollinations', model, tokens_in: _dPol.usage?.prompt_tokens ?? null, tokens_out: _dPol.usage?.completion_tokens ?? null, request_num: _verbsAiRequestCount });
+      responseText = _dPol.choices[0].message.content;
     }
 
     const clean  = responseText.replace(/```json|```/g, '').trim();
