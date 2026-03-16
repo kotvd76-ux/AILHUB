@@ -695,7 +695,7 @@
             const prompt = `Educational illustration for English learning, simple clear scene, no text: ${desc}`;
             const imageModelSetting = localStorage.getItem('sp_image_model') || 'pollinations';
 
-            // ── Hugging Face Inference API ──────────────────────
+            // ── Hugging Face Inference API (прямий виклик, HF підтримує CORS) ──
             if (imageModelSetting.startsWith('hf:')) {
                 const hfModel = imageModelSetting.slice(3);
                 const hfToken = localStorage.getItem('sp_api_key_hf') || '';
@@ -707,10 +707,14 @@
                     let hfOk = false;
                     for (let attempt = 1; attempt <= 3; attempt++) {
                         try {
-                            const res = await fetch('/hf-proxy', {
+                            const hfUrl = `https://api-inference.huggingface.co/models/${hfModel}`;
+                            const res = await fetch(hfUrl, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ model: hfModel, inputs: prompt, hf_token: hfToken })
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${hfToken}`
+                                },
+                                body: JSON.stringify({ inputs: prompt })
                             });
                             if (res.status === 503) {
                                 const body = await res.json().catch(() => ({}));
@@ -744,7 +748,8 @@
             const seed = Math.floor(Math.random() * 9999);
             const polImgKey   = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
             const polImgModel = localStorage.getItem('sp_pollinations_img_model') || 'flux';
-            const polImgKeyParam = polImgKey ? `&key=${encodeURIComponent(polImgKey)}` : '';
+            // image.pollinations.ai використовує ?token=pk_..., не ?key=
+            const polImgKeyParam = polImgKey ? `&token=${encodeURIComponent(polImgKey)}` : '';
             const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true&model=${polImgModel}${polImgKeyParam}`;
             const polRetryDelays = [5000, 10000, 15000]; // 5с → 10с → 15с для 429
             for (let attempt = 1; attempt <= 3; attempt++) {
