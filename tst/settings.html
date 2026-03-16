@@ -692,8 +692,31 @@
                     Використовується у вправі «Опиши картинку»
                 </p>
 
-                <!-- Pollinations ключ — показується коли вибрано pollinations -->
+                <!-- Pollinations ключ + модель — показується коли вибрано pollinations -->
                 <div id="pollinations-img-key-box" class="hidden" style="margin-top:1rem">
+                    <label class="field-label" style="margin-bottom:0.4rem">
+                        Модель зображення
+                    </label>
+                    <select id="pollinations-img-model" class="field" style="margin-bottom:1rem">
+                        <optgroup label="Flux (рекомендовано)">
+                            <option value="flux">Flux Schnell — швидко, якісно (дефолт)</option>
+                            <option value="flux-2-dev">FLUX.2 Dev — висока якість</option>
+                            <option value="kontext">FLUX.1 Kontext — редагування</option>
+                            <option value="klein">FLUX.2 Klein 4B — компактна</option>
+                        </optgroup>
+                        <optgroup label="Seedream">
+                            <option value="seedream">Seedream 4.0</option>
+                            <option value="seedream-pro">Seedream 4.5 Pro</option>
+                            <option value="seedream5">Seedream 5.0 Lite</option>
+                        </optgroup>
+                        <optgroup label="Інші">
+                            <option value="dirtberry">Dirtberry</option>
+                            <option value="dirtberry-pro">Dirtberry Pro</option>
+                            <option value="zimage">Z-Image Turbo</option>
+                            <option value="p-image">Pruna p-image</option>
+                        </optgroup>
+                    </select>
+
                     <label class="field-label" style="margin-bottom:0.4rem">
                         Pollinations Publishable Key
                     </label>
@@ -1037,6 +1060,7 @@
             $('api-key-anthropic').value        = get(SK.apiKeyAnthro, '');
             $('api-key-pollinations').value     = get(SK.apiKeyPollinations, '');
             $('api-key-pollinations-img').value = get(SK.apiKeyPollinations, '');
+            $('pollinations-img-model').value   = get(SK.pollinationsImageModel, 'flux');
             $('api-key-hf').value               = get(SK.apiKeyHf, '');
 
             const savedImageModel = get(SK.imageModel, 'pollinations');
@@ -1457,6 +1481,7 @@
                 const polAiVal  = $('api-key-pollinations').value.trim();
                 set(SK.apiKeyPollinations, polImgVal || polAiVal);
             }
+            set(SK.pollinationsImageModel, $('pollinations-img-model').value);
             set(SK.apiKeyHf,    $('api-key-hf').value);
         set(SK.imageModel,  $('image-model-select').value);
 
