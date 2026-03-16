@@ -162,7 +162,8 @@ let _chatAiRequestCount = 0;
 const callAI = async (messages, system, maxTokens) => {
   maxTokens = maxTokens || 1000;
   const { provider, model, apiKey } = getSettings();
-  if (!apiKey) throw new Error('API ключ для ' + provider + ' не вказано. Відкрийте налаштування.');
+  // Pollinations може працювати без ключа (анонімний доступ)
+  if (!apiKey && provider !== 'pollinations') throw new Error('API ключ для ' + provider + ' не вказано. Відкрийте налаштування.');
   _chatAiRequestCount++;
   addLog('callAI ' + provider + '/' + model, 'info');
 
@@ -191,6 +192,24 @@ const callAI = async (messages, system, maxTokens) => {
     if (!r.ok) { addLog('Gemini '+r.status, 'error'); throw new Error('Gemini error'); }
     Logger.tech('chat', 'ai_response', 'AI response received', { provider: 'google', model, tokens_in: d.usageMetadata?.promptTokenCount ?? null, tokens_out: d.usageMetadata?.candidatesTokenCount ?? null, request_num: _chatAiRequestCount });
     return d.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+  if (provider === 'pollinations') {
+    const polKey = getApiKey('pollinations');
+    const headers = { 'Content-Type': 'application/json' };
+    if (polKey) headers['Authorization'] = 'Bearer ' + polKey;
+    const r = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'system', content: system }, ...messages],
+        max_tokens: maxTokens,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) { addLog('Pollinations ' + r.status + ': ' + ((d.error || {}).message || ''), 'error'); throw new Error((d.error || {}).message || 'Pollinations error'); }
+    Logger.tech('chat', 'ai_response', 'AI response received', { provider: 'pollinations', model, tokens_in: d.usage?.prompt_tokens ?? null, tokens_out: d.usage?.completion_tokens ?? null, request_num: _chatAiRequestCount });
+    return (d.choices || [])[0]?.message?.content || '';
   }
   /* Anthropic */
   const r = await fetch('https://api.anthropic.com/v1/messages', {
