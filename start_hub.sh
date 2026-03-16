@@ -10,6 +10,10 @@ sleep 2
 PYTHON=/opt/bin/python3
 SCRIPT=/opt/share/nginx/html/main.py
 
+# ── API ключі ─────────────────────────────────────────────────
+# HuggingFace токен для /hf-proxy. Отримати: https://huggingface.co/settings/tokens
+export HF_TOKEN=""
+
 # ── Запуск інстансів ─────────────────────────────────────────
 # Формат: python3 main.py <user_dir> <port>
 # Логи кожного інстансу пишуться у власну директорію
