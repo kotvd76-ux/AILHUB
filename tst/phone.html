@@ -742,9 +742,10 @@
             // ── Pollinations.ai (fallback або основний варіант) ──
             addLog('Генерація зображення. Сервіс: Pollinations.ai');
             const seed = Math.floor(Math.random() * 9999);
-            const polImgKey = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
+            const polImgKey   = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
+            const polImgModel = localStorage.getItem('sp_pollinations_img_model') || 'flux';
             const polImgKeyParam = polImgKey ? `&key=${encodeURIComponent(polImgKey)}` : '';
-            const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true&model=flux${polImgKeyParam}`;
+            const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true&model=${polImgModel}${polImgKeyParam}`;
             const polRetryDelays = [5000, 10000, 15000]; // 5с → 10с → 15с для 429
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
