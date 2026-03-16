@@ -694,7 +694,7 @@
                             const res = await fetch('/hf-proxy', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ model: hfModel, inputs: prompt })
+                                body: JSON.stringify({ model: hfModel, inputs: prompt, hf_token: hfToken })
                             });
                             if (res.status === 503) {
                                 const body = await res.json().catch(() => ({}));
