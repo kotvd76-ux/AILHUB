@@ -653,6 +653,25 @@
                 <p id="key-hint" class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
                     Ключ зберігається лише на вашому пристрої
                 </p>
+
+                <!-- Hugging Face — для генерації зображень (вправа "Опиши картинку") -->
+                <label class="field-label" style="margin-top:1.25rem">
+                    Hugging Face Token
+                    <span style="font-weight:400;opacity:0.55;font-size:0.75rem"> — генерація зображень</span>
+                </label>
+                <div class="input-wrap">
+                    <input type="password" id="api-key-hf" class="field"
+                           autocomplete="off" autocapitalize="none" spellcheck="false"
+                           placeholder="hf_..."
+                           aria-label="Hugging Face API Token">
+                    <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                            onclick="togglePasswordVisibility('api-key-hf', this)">
+                        <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                    </button>
+                </div>
+                <p class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
+                    Безкоштовний токен: <span style="opacity:0.7">huggingface.co/settings/tokens</span>
+                </p>
             </section>
 
             <!-- ── Озвучка (TTS) ──────────────────────────────── -->
@@ -956,6 +975,7 @@
             $('api-key-openai').value    = get(SK.apiKeyOpenai, '');
             $('api-key-google').value    = get(SK.apiKeyGoogle, '');
             $('api-key-anthropic').value = get(SK.apiKeyAnthro, '');
+            $('api-key-hf').value        = get(SK.apiKeyHf, '');
 
             const speed = get(SK.speed, SETTINGS_CONFIG.speed.default.toString());
             $('voice-speed').value    = speed;
@@ -1355,6 +1375,7 @@
             if (!(typeof isKeyHardcoded === 'function' && isKeyHardcoded('anthropic'))) {
                 set(SK.apiKeyAnthro, $('api-key-anthropic').value);
             }
+            set(SK.apiKeyHf, $('api-key-hf').value);
 
             set(SK.speed,        $('voice-speed').value);
             set(SK.ttsMode,      currentTTSMode);

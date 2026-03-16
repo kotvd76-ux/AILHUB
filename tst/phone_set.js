@@ -41,7 +41,7 @@ const AI_EXERCISE_CONFIG = {
             system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English',helperClause:''}; return `Вправа: Опис зображення. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Учню показано картинку. ПРАВИЛА: 1) НЕ описуй картинку — лише попроси учня описати її мовою ${L.targetName} (2-3 речення відповідно до рівня). 2) Після відповіді учня — дай КОРОТКИЙ фідбек на помилки та запитай одну додаткову деталь. 3) НЕ пиши вступів і привітань.${L.helperClause}`; },
             sceneSystemPrompt: 'You are a creative scene generator for educational purposes. Return ONLY a scene description, no questions, no extra text.',
             scenePromptInstruction: (level) => `Generate a vivid scene description for an English learning illustration. Level: ${level}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in English. Return ONLY the scene description. Example: "A young woman sitting on a park bench reading a book on a sunny afternoon, with pigeons nearby"`,
-            imageService: 'pollinations',  // free image generation, no API key required
+            imageModel: 'black-forest-labs/FLUX.1-schnell',  // Hugging Face Inference API
             example: "Look at the picture. Please describe what you see. Give 2-3 sentences."
         },
         'explain_word': {
