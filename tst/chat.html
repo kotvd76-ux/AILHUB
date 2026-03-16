@@ -864,16 +864,16 @@ function App() {
         <div style={{flex:1,display:'flex',justifyContent:'center'}}>
           {tlOn && (
             <button onClick={()=>window.toggleDbg()} aria-label="Консоль діагностики" title="Діагностика"
-              style={{display:'flex',alignItems:'center',gap:6,height:40,padding:'0 14px',borderRadius:10,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.3)',color:'#f59e0b',cursor:'pointer',fontSize:'0.88rem',fontWeight:600}}>
-              🔧 Діагностика
+              style={{display:'flex',alignItems:'center',justifyContent:'center',width:40,height:40,borderRadius:10,background:'rgba(245,158,11,0.12)',border:'1px solid rgba(245,158,11,0.3)',color:'#f59e0b',cursor:'pointer',fontSize:'1rem',flexShrink:0}}>
+              🔧
             </button>
           )}
         </div>
 
         {/* Праворуч — глобальні налаштування */}
         <a href="settings.html" aria-label="Глобальні налаштування" title="Налаштування"
-          style={{display:'flex',alignItems:'center',gap:7,height:40,paddingLeft:12,paddingRight:10,borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'#8892b0',textDecoration:'none',fontSize:'0.88rem',fontWeight:600,flexShrink:0,whiteSpace:'nowrap'}}>
-          ⚙ Налаштування
+          style={{display:'flex',alignItems:'center',justifyContent:'center',width:40,height:40,borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'#8892b0',textDecoration:'none',fontSize:'1.1rem',flexShrink:0}}>
+          ⚙
         </a>
       </header>
       <main style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'24px 16px'}}>

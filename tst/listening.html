@@ -521,7 +521,9 @@
 <div id="loader" role="status" aria-live="polite" aria-label="Завантаження">
     <div class="spinner" aria-hidden="true"></div>
     <p id="loader-text">AI створює сесію…</p>
-    <button onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted)">Журнал запиту</button>
+    <button id="loader-diag-link" onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted);display:none">
+        <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> Журнал запиту
+    </button>
 </div>
 
 <!-- ════════════════════ Debug console ════════════════════ -->
@@ -688,7 +690,7 @@
         // Показуємо кнопки діагностики якщо сервіс режим або техлог увімкнено
         const _diagVisible = localStorage.getItem('sp_service_mode') === '1'
             || localStorage.getItem('sp_techlog_enabled') === '1';
-        document.querySelectorAll('#diag-btn-home, #diag-btn-train').forEach(b => {
+        document.querySelectorAll('#diag-btn-home, #diag-btn-train, #loader-diag-link').forEach(b => {
             b.style.display = _diagVisible ? '' : 'none';
         });
 
