@@ -692,6 +692,27 @@
                     Використовується у вправі «Опиши картинку»
                 </p>
 
+                <!-- Pollinations ключ — показується коли вибрано pollinations -->
+                <div id="pollinations-img-key-box" class="hidden" style="margin-top:1rem">
+                    <label class="field-label" style="margin-bottom:0.4rem">
+                        Pollinations Publishable Key
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-pollinations-img" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="pk_..."
+                               aria-label="Pollinations.ai API ключ для зображень">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-pollinations-img', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
+                        Необов'язково — без ключа анонімний доступ (обмежений rate limit).<br>
+                        Отримати: <span style="opacity:0.7">enter.pollinations.ai</span>
+                    </p>
+                </div>
+
                 <!-- HF токен — показується тільки для HF моделей -->
                 <div id="hf-key-box" class="hidden" style="margin-top:1rem">
                     <label class="field-label" style="margin-bottom:0.4rem">
@@ -1011,11 +1032,12 @@
             $('ai-provider').value = savedProvider;
 
             // Завантажуємо ключі з localStorage (або показуємо статус файлового ключа)
-            $('api-key-openai').value       = get(SK.apiKeyOpenai, '');
-            $('api-key-google').value       = get(SK.apiKeyGoogle, '');
-            $('api-key-anthropic').value    = get(SK.apiKeyAnthro, '');
-            $('api-key-pollinations').value = get(SK.apiKeyPollinations, '');
-            $('api-key-hf').value           = get(SK.apiKeyHf, '');
+            $('api-key-openai').value           = get(SK.apiKeyOpenai, '');
+            $('api-key-google').value           = get(SK.apiKeyGoogle, '');
+            $('api-key-anthropic').value        = get(SK.apiKeyAnthro, '');
+            $('api-key-pollinations').value     = get(SK.apiKeyPollinations, '');
+            $('api-key-pollinations-img').value = get(SK.apiKeyPollinations, '');
+            $('api-key-hf').value               = get(SK.apiKeyHf, '');
 
             const savedImageModel = get(SK.imageModel, 'pollinations');
             $('image-model-select').value = savedImageModel;
@@ -1054,8 +1076,10 @@
         // ── Генерація зображень ─────────────────────────────────
         window.handleImageModelChange = function() {
             const val = $('image-model-select').value;
-            const isHf = val.startsWith('hf:');
+            const isHf  = val.startsWith('hf:');
+            const isPol = val === 'pollinations';
             $('hf-key-box').classList.toggle('hidden', !isHf);
+            $('pollinations-img-key-box').classList.toggle('hidden', !isPol);
         };
 
         // ── Будуємо select провайдерів з конфігу ───────────────
@@ -1427,7 +1451,11 @@
                 set(SK.apiKeyAnthro, $('api-key-anthropic').value);
             }
             if (!(typeof isKeyHardcoded === 'function' && isKeyHardcoded('pollinations'))) {
-                set(SK.apiKeyPollinations, $('api-key-pollinations').value);
+                // Обидва поля пишуть в один і той самий sp_api_key_pollinations.
+                // Пріоритет: поле у секції зображень (якщо заповнене), інакше — поле провайдера.
+                const polImgVal = $('api-key-pollinations-img').value.trim();
+                const polAiVal  = $('api-key-pollinations').value.trim();
+                set(SK.apiKeyPollinations, polImgVal || polAiVal);
             }
             set(SK.apiKeyHf,    $('api-key-hf').value);
         set(SK.imageModel,  $('image-model-select').value);
