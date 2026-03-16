@@ -676,40 +676,40 @@
             const container = document.getElementById('scene-image');
             container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">ГЕНЕРУЄМО СЦЕНУ...</div>`;
 
-            const hfToken = localStorage.getItem('sp_api_key_hf') || '';
-            const imageModel = window.AI_EXERCISE_CONFIG?.exercises?.describe?.imageModel || 'black-forest-labs/FLUX.1-schnell';
             const prompt = `Educational illustration for English learning, simple clear scene, no text: ${desc}`;
+            const imageModelSetting = localStorage.getItem('sp_image_model') || 'pollinations';
 
-            // Hugging Face Inference API (якщо є токен)
-            if (hfToken) {
-                addLog(`Генерація зображення. Модель: ${imageModel}`);
-                try {
-                    const res = await fetch(`https://api-inference.huggingface.co/models/${imageModel}`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${hfToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ inputs: prompt })
-                    });
-                    if (!res.ok) {
-                        const err = await res.text();
-                        addLog(`HF error ${res.status}: ${err.slice(0, 120)}`, 'error');
-                        throw new Error('HF API error');
+            // ── Hugging Face Inference API ──────────────────────
+            if (imageModelSetting.startsWith('hf:')) {
+                const hfModel = imageModelSetting.slice(3);
+                const hfToken = localStorage.getItem('sp_api_key_hf') || '';
+                addLog(`Генерація зображення. Модель: ${hfModel}`);
+                if (!hfToken) {
+                    addLog('HF токен не вказано в налаштуваннях → Pollinations', 'error');
+                } else {
+                    try {
+                        const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${hfToken}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ inputs: prompt })
+                        });
+                        if (!res.ok) {
+                            const err = await res.text();
+                            addLog(`HF error ${res.status}: ${err.slice(0, 120)}`, 'error');
+                            throw new Error('HF API error');
+                        }
+                        const blob = await res.blob();
+                        container.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="w-full h-full object-cover rounded-lg">`;
+                        addLog('Картинку згенеровано', 'success');
+                        return;
+                    } catch (e) {
+                        addLog(`HF помилка: ${e.message} → Pollinations`, 'error');
                     }
-                    const blob = await res.blob();
-                    const imgUrl = URL.createObjectURL(blob);
-                    container.innerHTML = `<img src="${imgUrl}" class="w-full h-full object-cover rounded-lg">`;
-                    addLog('Картинку згенеровано', 'success');
-                    return;
-                } catch (e) {
-                    addLog(`HF помилка: ${e.message}. Fallback → Pollinations`, 'error');
                 }
-            } else {
-                addLog('HF токен не вказано → Pollinations.ai');
             }
 
-            // Fallback: Pollinations.ai (без API ключа)
+            // ── Pollinations.ai (fallback або основний варіант) ──
+            addLog('Генерація зображення. Сервіс: Pollinations.ai');
             const seed = Math.floor(Math.random() * 9999);
             const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true`;
             return new Promise((resolve) => {
@@ -718,7 +718,7 @@
                     img.className = 'w-full h-full object-cover rounded-lg';
                     container.innerHTML = '';
                     container.appendChild(img);
-                    addLog('Картинку згенеровано (Pollinations)', 'success');
+                    addLog('Картинку згенеровано', 'success');
                     resolve();
                 };
                 img.onerror = () => {

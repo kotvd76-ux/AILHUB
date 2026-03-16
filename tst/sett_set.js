@@ -155,6 +155,7 @@ const SETTINGS_CONFIG = {
         apiKeyGoogle: 'sp_api_key_google',
         apiKeyAnthro: 'sp_api_key_anthropic',
         apiKeyHf:     'sp_api_key_hf',
+        imageModel:   'sp_image_model',
         speed:        'sp_speed',
         ttsMode:      'sp_tts_mode',
         voice:        'sp_voice',
