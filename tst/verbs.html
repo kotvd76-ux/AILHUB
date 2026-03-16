@@ -733,6 +733,13 @@ body::before {
 }
 #debug-console.active { display: block; }
 
+/* ── Діагностична кнопка — активний стан під час AI-запиту ── */
+@keyframes diagPulse {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.55; transform:scale(1.18); }
+}
+.diag-ai-active { animation: diagPulse .9s ease-in-out infinite !important; color: var(--accent) !important; }
+
 /* ── HEADER ACTIONS ──────────────────────────── */
 .header-actions {
   display: flex;
@@ -916,11 +923,18 @@ body::before {
         <div style="font-size:0.6rem; text-transform:uppercase; letter-spacing:.1em; color:#475569; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif;">Налаштування сесії</div>
       </div>
     </div>
-    <a id="sel-settings-link" href="settings.html"
-       style="width:2.5rem; height:2.5rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; color:#94a3b8; text-decoration:none;"
-       class="glass-card-ph">
-      <i class="fa-solid fa-cog"></i>
-    </a>
+    <div style="display:flex;align-items:center;gap:0.5rem;">
+      <button id="sel-diag-btn" onclick="toggleDebug()" class="hdr-btn hdr-btn-debug glass-card-ph"
+              style="display:none;width:2.5rem;height:2.5rem;border-radius:0.75rem;padding:0;justify-content:center"
+              aria-label="Журнал діагностики" title="Діагностика">
+        <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+      </button>
+      <a id="sel-settings-link" href="settings.html"
+         style="width:2.5rem; height:2.5rem; border-radius:0.75rem; display:flex; align-items:center; justify-content:center; color:#94a3b8; text-decoration:none;"
+         class="glass-card-ph" title="Налаштування">
+        <i class="fa-solid fa-gear"></i>
+      </a>
+    </div>
   </header>
 
   <!-- Selectors -->
@@ -996,7 +1010,7 @@ body::before {
         <i class="fa-solid fa-gear" aria-hidden="true"></i> Налаштування
       </button>
       <button onclick="toggleDebug()" class="hdr-btn hdr-btn-debug" aria-label="Відкрити журнал діагностики">
-        <i class="fa-solid fa-bug" aria-hidden="true"></i> Діагностика
+        <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> Діагностика
       </button>
     </div>
   </header>
@@ -2344,6 +2358,11 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
   const serviceModeOn  = localStorage.getItem(SK.serviceMode   || 'sp_service_mode')    === '1';
   if (!techLogEnabled && !serviceModeOn) {
     document.querySelectorAll('.hdr-btn-debug').forEach(b => b.style.display = 'none');
+    const selDiag = document.getElementById('sel-diag-btn');
+    if (selDiag) selDiag.style.display = 'none';
+  } else {
+    const selDiag = document.getElementById('sel-diag-btn');
+    if (selDiag) selDiag.style.display = '';
   }
 
   // Build dropdowns in selection screen
@@ -2383,7 +2402,10 @@ function showCardLoading(exIdx) {
     loader.className = 'card-loading';
     loader.innerHTML = `
       <div class="card-spinner"></div>
-      <div class="card-loading-text">AI генерує завдання…</div>`;
+      <div class="card-loading-text">AI генерує завдання…</div>
+      <button onclick="toggleDebug()" style="background:none;border:none;color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding:.25rem .5rem;">
+        <i class="fa-solid fa-heart-pulse"></i> Журнал запиту
+      </button>`;
     wrap.insertBefore(loader, actionRow || null);
   }
   loader.style.display = 'flex';
@@ -2614,6 +2636,7 @@ async function goGenerateEx(exNum, retryCount = 0) {
 
   if (btn) { btn.disabled = true; btn.classList.add('loading'); }
   if (retryCount === 0) showCardLoading(exIdx);
+  document.querySelectorAll('.hdr-btn-debug, #sel-diag-btn').forEach(b => b.classList.add('diag-ai-active'));
 
   try {
     let responseText = '';
@@ -2695,6 +2718,7 @@ async function goGenerateEx(exNum, retryCount = 0) {
     log(`Помилка ex${exNum}: ${err.message}`, 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
+    document.querySelectorAll('.hdr-btn-debug, #sel-diag-btn').forEach(b => b.classList.remove('diag-ai-active'));
   }
 }
 

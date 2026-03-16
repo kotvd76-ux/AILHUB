@@ -498,6 +498,13 @@
         }
         #debug-console.active { display: block; }
 
+        /* ── Діагностична кнопка — активний стан під час AI-запиту ── */
+        @keyframes diagPulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:.55; transform:scale(1.18); }
+        }
+        .diag-ai-active { animation: diagPulse .9s ease-in-out infinite !important; color: var(--yellow) !important; }
+
         /* ── HIDDEN ── */
         .hidden { display: none !important; }
 
@@ -534,6 +541,14 @@
             <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
         </a>
         <h1 class="home-title">🎧 Аудіювання</h1>
+        <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
+            <button id="diag-btn-home" onclick="toggleDebug()" class="btn btn-icon" style="display:none;color:var(--yellow)" aria-label="Журнал діагностики" title="Діагностика">
+                <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
+            </button>
+            <a id="settings-btn" href="settings.html" class="btn btn-icon" aria-label="Налаштування" title="Налаштування AI">
+                <i class="fa-solid fa-gear" aria-hidden="true"></i>
+            </a>
+        </div>
     </header>
 
     <div class="card home-card">
@@ -550,15 +565,6 @@
         <button onclick="startTraining()" class="btn btn-primary" aria-label="Розпочати тренування">
             <i class="fa-solid fa-bolt" aria-hidden="true"></i> Почати
         </button>
-
-        <div class="home-footer">
-            <button id="settings-btn" onclick="" class="link-btn" style="color:var(--blue)">
-                <i class="fa-solid fa-gear" aria-hidden="true"></i> Налаштування AI
-            </button>
-            <button id="diag-btn-home" onclick="toggleDebug()" class="link-btn" style="color:var(--text-muted);display:none" aria-label="Відкрити журнал діагностики">
-                <i class="fa-solid fa-bug" aria-hidden="true"></i> Діагностика
-            </button>
-        </div>
     </div>
 </main>
 
@@ -573,9 +579,12 @@
             <div id="progress-fill" class="progress-fill" style="width:0%"></div>
         </div>
         <div class="score-badge" id="score-badge" aria-label="Рахунок">0</div>
-        <button id="diag-btn-train" onclick="toggleDebug()" class="btn btn-icon" style="display:none" aria-label="Журнал діагностики" title="Відкрити лог">
-            <i class="fa-solid fa-bug" aria-hidden="true"></i>
+        <button id="diag-btn-train" onclick="toggleDebug()" class="btn btn-icon" style="display:none;color:var(--yellow)" aria-label="Журнал діагностики" title="Діагностика">
+            <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
         </button>
+        <a href="settings.html" class="btn btn-icon" aria-label="Налаштування" title="Налаштування AI">
+            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+        </a>
     </div>
 
     <!-- Player Card -->
@@ -672,8 +681,9 @@
 
     // ── Ініціалізація UI ──────────────────────────────────────────────────────
     function initFromConfig() {
-        document.getElementById('back-link').href       = LISTEN_CONFIG.homePage;
-        document.getElementById('settings-btn').onclick = () => location.href = LISTEN_CONFIG.settingsPage;
+        document.getElementById('back-link').href = LISTEN_CONFIG.homePage;
+        const settBtn = document.getElementById('settings-btn');
+        if (settBtn && settBtn.tagName === 'A') settBtn.href = LISTEN_CONFIG.settingsPage;
 
         // Показуємо кнопки діагностики якщо сервіс режим або техлог увімкнено
         const _diagVisible = localStorage.getItem('sp_service_mode') === '1'
@@ -782,6 +792,7 @@
 
         log(`Запуск: Тема=${theme}, Рівень=${levelVal}`);
         document.getElementById('loader').classList.add('active');
+        document.querySelectorAll('#diag-btn-home, #diag-btn-train').forEach(b => b.classList.add('diag-ai-active'));
 
         try {
             tasks = await fetchAITasks(theme, levelVal, wordCount);
@@ -797,6 +808,7 @@
             toggleDebug();
         } finally {
             document.getElementById('loader').classList.remove('active');
+            document.querySelectorAll('#diag-btn-home, #diag-btn-train').forEach(b => b.classList.remove('diag-ai-active'));
         }
     }
 
