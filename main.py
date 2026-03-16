@@ -205,6 +205,65 @@ def list_audio(module):
     response.content_type = 'application/json'
     return json.dumps(files)
 
+# ── Pollinations image proxy (POST /pol-image) ───────────────
+# Браузер надсилає: { prompt, model?, seed?, width?, height? }
+# Роут передає запит до image.pollinations.ai і повертає зображення.
+# Токен береться з env POLLINATIONS_TOKEN або з тіла запиту (поле token).
+@route('/pol-image', method=['POST', 'OPTIONS'])
+def pol_image_proxy():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.set_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    if request.method == 'OPTIONS':
+        return ''
+
+    try:
+        data   = request.json or {}
+        prompt = data.get('prompt', '').strip()
+        if not prompt:
+            response.status = 400
+            response.content_type = 'application/json'
+            return json.dumps({"error": "prompt is required"})
+
+        model  = data.get('model',  'flux')
+        seed   = int(data.get('seed',   0))
+        width  = int(data.get('width',  480))
+        height = int(data.get('height', 320))
+
+        # Токен: env змінна пріоритетна, потім з запиту (для сумісності)
+        token = os.environ.get('POLLINATIONS_TOKEN', '').strip() or data.get('token', '').strip()
+
+        import urllib.parse
+        params = f'width={width}&height={height}&seed={seed}&nologo=true&model={model}'
+        if token:
+            params += f'&token={urllib.parse.quote(token)}'
+
+        url = f'https://image.pollinations.ai/prompt/{urllib.parse.quote(prompt)}?{params}'
+
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw          = resp.read()
+            content_type = resp.headers.get('Content-Type', 'image/jpeg')
+
+        response.content_type = content_type
+        return raw
+
+    except urllib.error.HTTPError as e:
+        response.status = e.code
+        response.content_type = 'application/json'
+        try:
+            body = e.read().decode()
+        except Exception:
+            body = str(e)
+        return json.dumps({"error": body})
+
+    except Exception as e:
+        response.status = 500
+        response.content_type = 'application/json'
+        return json.dumps({"error": str(e)})
+
+
 # ── HuggingFace proxy (POST /hf-proxy) ───────────────────────
 # Браузер не може викликати HF API через CORS — цей роут діє як посередник.
 # Фронтенд надсилає: { model, inputs, parameters? }

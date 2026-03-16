@@ -750,25 +750,36 @@
                 }
             }
 
-            // ── Pollinations.ai (fallback або основний варіант) ──
-            addLog('Генерація зображення. Сервіс: Pollinations.ai');
+            // ── Pollinations.ai — через серверний проксі /pol-image ──
+            // Роутер передає запит до image.pollinations.ai і повертає зображення.
+            // Токен зберігається на сервері (env POLLINATIONS_TOKEN) або
+            // передається з браузера як fallback (з localStorage).
+            addLog('Генерація зображення. Сервіс: Pollinations.ai (через роутер)');
             const seed = Math.floor(Math.random() * 9999);
             const polImgKey   = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
             const polImgModel = localStorage.getItem('sp_pollinations_img_model') || 'flux';
-            // image.pollinations.ai приймає ?token=pk_... для аутентифікації
-            const polImgKeyParam = polImgKey ? `&token=${encodeURIComponent(polImgKey)}` : '';
-            const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true&model=${polImgModel}${polImgKeyParam}`;
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    const res = await fetchWithTimeout(imgUrl, {}, 45000); // 45с таймаут
+                    const res = await fetchWithTimeout('/pol-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt,
+                            model:  polImgModel,
+                            seed,
+                            width:  480,
+                            height: 320,
+                            token:  polImgKey,  // сервер використає env POLLINATIONS_TOKEN якщо є
+                        })
+                    }, 60000); // 60с таймаут (сервер має свої 60с до Pollinations)
                     if (!res.ok) {
-                        // Чекаємо між спробами тільки для 429 (rate limit)
                         if (res.status === 429 && attempt < 3) {
                             const waitSec = attempt * 10;
                             container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">RATE LIMIT — ЧЕКАЄМО ${waitSec}С...</div>`;
                             await new Promise(r => setTimeout(r, waitSec * 1000));
                         }
-                        throw new Error(`Pollinations ${res.status}`);
+                        const errBody = await res.json().catch(() => ({}));
+                        throw new Error(`Pollinations ${res.status}: ${errBody.error || ''}`);
                     }
                     const blob = await res.blob();
                     container.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="w-full h-full object-cover rounded-lg">`;
