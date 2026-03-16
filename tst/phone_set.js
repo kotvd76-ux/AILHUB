@@ -38,8 +38,9 @@ const AI_EXERCISE_CONFIG = {
             example: "Yo vivo en Madrid. Cambia a pasado."
         },
         'describe': {
-            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Опис сцени. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Опиши коротку сцену відповідно до профілю рівня. Попроси користувача описати її детальніше мовою ${L.targetName}.${L.helperClause}`; },
-            example: "Una mujer leyendo un libro en el parque. ¿Qué más ves?"
+            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English',helperClause:''}; return `Вправа: Опис зображення. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Учню показано картинку. ПРАВИЛА: 1) НЕ описуй картинку — лише попроси учня описати її мовою ${L.targetName} (2-3 речення відповідно до рівня). 2) Після відповіді учня — дай КОРОТКИЙ фідбек на помилки та запитай одну додаткову деталь. 3) НЕ пиши вступів і привітань.${L.helperClause}`; },
+            scenePromptInstruction: (level) => `Generate a SHORT scene description for an English learning exercise. Level: ${level}. Requirements: simple everyday scene, max 12 words, in English. Return ONLY the scene description, no questions, no extra text. Example: "A woman reading a book in a sunny park"`,
+            example: "Look at the picture. Please describe what you see. Give 2-3 sentences."
         },
         'explain_word': {
             system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Поясни слово. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Загадай слово мовою ${L.targetName} відповідно до рівня складності і попроси пояснити його значення ${L.targetName}, не називаючи саме слово.${L.helperClause}`; },

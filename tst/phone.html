@@ -405,7 +405,11 @@
             if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
 
             addLog(`Запуск ${typeText}. Модель: ${config.model}`, "success");
-            initAI();
+            if (type === 'describe') {
+                initDescribeExercise();
+            } else {
+                initAI();
+            }
         }
 
         async function initAI() {
@@ -421,6 +425,48 @@
             const systemInstruction = basePrompt + (typeof sysRaw === "function" ? sysRaw(lvl) : (sysRaw || "")) + themeClause;
             
             conversation = [{ role: 'system', content: systemInstruction }];
+            lastTaskText = '';
+            lastAiFeedbackText = '';
+            addLog(`Промпт: ${systemInstruction}`);
+            callAI();
+        }
+
+        async function initDescribeExercise() {
+            const set = window.AI_EXERCISE_CONFIG;
+            const taskSet = set?.exercises['describe'];
+            const lvl = currentLevel || 'B1';
+
+            // Крок 1: прихований запит — отримати короткий опис сцени для Imagen
+            const sceneInstruction = taskSet?.scenePromptInstruction
+                ? taskSet.scenePromptInstruction(lvl)
+                : `Generate a short scene description for an English learning exercise. Level: ${lvl}. Max 12 words. Return ONLY the scene description.`;
+
+            addLog("Генеруємо опис сцени...");
+            let sceneDesc = '';
+            try {
+                sceneDesc = await fetchAI([
+                    { role: 'system', content: 'You are a creative scene generator for educational purposes. Return ONLY a short scene description, no extra text.' },
+                    { role: 'user', content: sceneInstruction }
+                ]);
+                sceneDesc = sceneDesc.trim().replace(/^["']|["']$/g, '');
+                addLog(`Сцена: ${sceneDesc}`);
+            } catch (e) {
+                addLog(`Помилка генерації сцени: ${e.message}`, 'error');
+                sceneDesc = 'A person sitting at a table in a cafe';
+            }
+
+            // Крок 2: генеруємо картинку з отриманого опису
+            await generateScene(sceneDesc);
+
+            // Крок 3: ініціалізуємо розмову — AI просить описати картинку
+            const basePrompt = set?.baseSystemPrompt || '';
+            const sysRaw = taskSet?.system;
+            const themeClause = currentTheme ? `\n\nТЕМА СЕСІЇ (використовуй для контексту): ${currentTheme}` : '';
+            const systemInstruction = basePrompt + (typeof sysRaw === 'function' ? sysRaw(lvl) : (sysRaw || '')) + themeClause;
+
+            conversation = [{ role: 'system', content: systemInstruction }];
+            // Передаємо контекст про показану картинку (не видно учню)
+            conversation.push({ role: 'user', content: `[Система: учню показано зображення — "${sceneDesc}". Розпочни вправу: попроси описати картинку.]` });
             lastTaskText = '';
             lastAiFeedbackText = '';
             addLog(`Промпт: ${systemInstruction}`);
@@ -446,7 +492,7 @@
                 addMessage('ai', response);
                 speakText(response);
 
-                if (currentType === 'describe' && conversation.length <= 3) generateScene(response);
+                // image generation is handled separately in initDescribeExercise()
             } catch (err) {
                 addLog(`Критична помилка: ${err.message}`, "error");
             } finally {
@@ -627,23 +673,31 @@
         }
 
         async function generateScene(desc) {
-            const activeKey = config.apiKeys[config.provider] || config.apiKeys.google;
+            // Always use Google key for Imagen (image generation requires Google API)
+            const activeKey = config.apiKeys.google || config.apiKeys[config.provider];
             const container = document.getElementById('scene-image');
             container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">ГЕНЕРУЄМО СЦЕНУ...</div>`;
-            
+
             try {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${activeKey}`;
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${activeKey}`;
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ instances: [{ prompt: `Minimalist educational illustration: ${desc}` }] })
+                    body: JSON.stringify({
+                        instances: [{ prompt: `Educational illustration for English learning, simple clear scene: ${desc}` }],
+                        parameters: { sampleCount: 1 }
+                    })
                 });
                 const data = await res.json();
-                container.innerHTML = `<img src="data:image/png;base64,${data.predictions[0].bytesBase64Encoded}" class="w-full h-full object-cover">`;
+                if (!res.ok) {
+                    addLog(`Imagen error: ${JSON.stringify(data)}`, 'error');
+                    throw new Error('Imagen API error');
+                }
+                container.innerHTML = `<img src="data:image/png;base64,${data.predictions[0].bytesBase64Encoded}" class="w-full h-full object-cover rounded-lg">`;
                 addLog("Картинку згенеровано", "success");
             } catch (e) {
                 container.innerHTML = `<span class="text-slate-600 text-xs italic">Зображення недоступне</span>`;
-                addLog("Помилка генерації картинки", "error");
+                addLog(`Помилка генерації картинки: ${e.message}`, "error");
             }
         }
 
