@@ -691,13 +691,10 @@
                     let hfOk = false;
                     for (let attempt = 1; attempt <= 3; attempt++) {
                         try {
-                            const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+                            const res = await fetch('/hf-proxy', {
                                 method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${hfToken}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ inputs: prompt })
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ model: hfModel, inputs: prompt })
                             });
                             if (res.status === 503) {
                                 const body = await res.json().catch(() => ({}));
