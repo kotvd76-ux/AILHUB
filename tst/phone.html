@@ -116,7 +116,7 @@
     <div id="phone-ai-loader" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.9);flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;">
         <div style="width:64px;height:64px;border:5px solid rgba(249,115,22,.2);border-top-color:#f97316;border-radius:50%;animation:spin .8s linear infinite"></div>
         <p style="font-size:1.25rem;font-weight:900;color:#fff;text-align:center">AI готує вправу…</p>
-        <button onclick="toggleLogs()" style="background:none;border:none;color:#64748b;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;display:flex;align-items:center;gap:.4rem">
+        <button id="phone-loader-diag-link" onclick="toggleLogs()" style="background:none;border:none;color:#64748b;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;display:none;align-items:center;gap:.4rem">
             <i class="fa-solid fa-heart-pulse"></i> Журнал запиту
         </button>
     </div>
@@ -669,6 +669,8 @@
             if (_phoneDiagBtn) _phoneDiagBtn.style.display = _phoneServiceMode ? 'block' : 'none';
             const _phoneDiagHdrBtn = document.getElementById('phone-diag-hdr-btn');
             if (_phoneDiagHdrBtn) _phoneDiagHdrBtn.style.display = _phoneServiceMode ? '' : 'none';
+            const _phoneLoaderDiagLink = document.getElementById('phone-loader-diag-link');
+            if (_phoneLoaderDiagLink) _phoneLoaderDiagLink.style.display = _phoneServiceMode ? 'flex' : 'none';
         };
     </script>
 </body>

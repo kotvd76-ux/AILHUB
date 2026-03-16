@@ -1006,11 +1006,11 @@ body::before {
     </a>
     <div class="header-title" aria-label="Граматика — Spanish AI Hub">Граматика <span>ES</span></div>
     <div class="header-actions">
-      <button id="settings-btn" class="hdr-btn hdr-btn-settings" aria-label="Глобальні налаштування AI">
-        <i class="fa-solid fa-gear" aria-hidden="true"></i> Налаштування
+      <button id="settings-btn" class="hdr-btn hdr-btn-settings" aria-label="Глобальні налаштування AI" title="Налаштування">
+        <i class="fa-solid fa-gear" aria-hidden="true"></i>
       </button>
-      <button onclick="toggleDebug()" class="hdr-btn hdr-btn-debug" aria-label="Відкрити журнал діагностики">
-        <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i> Діагностика
+      <button onclick="toggleDebug()" class="hdr-btn hdr-btn-debug" aria-label="Відкрити журнал діагностики" title="Діагностика">
+        <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i>
       </button>
     </div>
   </header>
@@ -2400,12 +2400,12 @@ function showCardLoading(exIdx) {
   if (!loader) {
     loader = document.createElement('div');
     loader.className = 'card-loading';
+    const _verbsDiagVisible = localStorage.getItem('sp_service_mode') === '1'
+      || localStorage.getItem('sp_techlog_enabled') === '1';
     loader.innerHTML = `
       <div class="card-spinner"></div>
       <div class="card-loading-text">AI генерує завдання…</div>
-      <button onclick="toggleDebug()" style="background:none;border:none;color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding:.25rem .5rem;">
-        <i class="fa-solid fa-heart-pulse"></i> Журнал запиту
-      </button>`;
+      ${_verbsDiagVisible ? `<button onclick="toggleDebug()" style="background:none;border:none;color:var(--muted);font-family:inherit;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;display:flex;align-items:center;gap:.3rem;padding:.25rem .5rem;"><i class="fa-solid fa-heart-pulse"></i> Журнал запиту</button>` : ''}`;
     wrap.insertBefore(loader, actionRow || null);
   }
   loader.style.display = 'flex';
