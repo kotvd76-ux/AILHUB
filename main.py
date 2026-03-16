@@ -4,6 +4,7 @@ import re
 import sys
 import json
 from datetime import datetime
+import urllib.request
 
 # ── Параметри з командного рядка ─────────────────────────────
 # Використання: python3 main.py <user_dir> <port>
@@ -203,6 +204,69 @@ def list_audio(module):
     )
     response.content_type = 'application/json'
     return json.dumps(files)
+
+# ── HuggingFace proxy (POST /hf-proxy) ───────────────────────
+# Браузер не може викликати HF API через CORS — цей роут діє як посередник.
+# Фронтенд надсилає: { model, inputs, parameters? }
+# Роут перенаправляє запит до HF і повертає відповідь клієнту.
+@route('/hf-proxy', method=['POST', 'OPTIONS'])
+def hf_proxy():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header('Access-Control-Allow-Methods', 'POST, OPTIONS')
+    response.set_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+    if request.method == 'OPTIONS':
+        return ''  # preflight CORS
+
+    try:
+        data  = request.json or {}
+        model = data.get('model', '').strip()
+        if not model or not re.match(r'^[\w\-\.\/]+$', model):
+            response.status = 400
+            response.content_type = 'application/json'
+            return json.dumps({"error": "invalid or missing model"})
+
+        # Беремо HF_TOKEN з env або з тіла запиту (якщо переданий фронтендом)
+        hf_token = os.environ.get('HF_TOKEN', '') or data.get('hf_token', '')
+
+        payload = {}
+        if 'inputs' in data:
+            payload['inputs'] = data['inputs']
+        if 'parameters' in data:
+            payload['parameters'] = data['parameters']
+
+        url     = f'https://api-inference.huggingface.co/models/{model}'
+        headers = {'Content-Type': 'application/json'}
+        if hf_token:
+            headers['Authorization'] = f'Bearer {hf_token}'
+
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode(),
+            headers=headers,
+            method='POST'
+        )
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw          = resp.read()
+            content_type = resp.headers.get('Content-Type', 'application/json')
+
+        response.content_type = content_type
+        return raw
+
+    except urllib.error.HTTPError as e:
+        response.status = e.code
+        response.content_type = 'application/json'
+        try:
+            body = e.read().decode()
+        except Exception:
+            body = str(e)
+        return json.dumps({"error": body})
+
+    except Exception as e:
+        response.status = 500
+        response.content_type = 'application/json'
+        return json.dumps({"error": str(e)})
+
 
 # ── Статичні файли (має бути ОСТАННІМ роутом) ─────────────────
 @route('/<filename:path>')

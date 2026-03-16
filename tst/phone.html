@@ -245,9 +245,10 @@
                 provider:    localStorage.getItem(SK.provider)      || 'google',
                 model:       localStorage.getItem(SK.model)         || 'gemini-2.5-flash',
                 apiKeys: {
-                    openai:    (typeof getApiKey === 'function') ? getApiKey('openai')    : (localStorage.getItem(SK.apiKeyOpenai) || ''),
-                    google:    (typeof getApiKey === 'function') ? getApiKey('google')    : (localStorage.getItem(SK.apiKeyGoogle) || ''),
-                    anthropic: (typeof getApiKey === 'function') ? getApiKey('anthropic') : (localStorage.getItem(SK.apiKeyAnthro) || '')
+                    openai:       (typeof getApiKey === 'function') ? getApiKey('openai')       : (localStorage.getItem(SK.apiKeyOpenai) || ''),
+                    google:       (typeof getApiKey === 'function') ? getApiKey('google')       : (localStorage.getItem(SK.apiKeyGoogle) || ''),
+                    anthropic:    (typeof getApiKey === 'function') ? getApiKey('anthropic')    : (localStorage.getItem(SK.apiKeyAnthro) || ''),
+                    pollinations: (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem(SK.apiKeyPollinations || 'sp_api_key_pollinations') || ''),
                 },
                 speed:       parseFloat(localStorage.getItem(SK.speed) || '0.9'),
                 voiceNative: localStorage.getItem(SK.voiceNative) || ''
@@ -504,7 +505,8 @@
         async function fetchAI(messages, customSystem = null) {
             _phoneAiRequestCount++;
             const activeKey = config.apiKeys[config.provider];
-            if (!activeKey) throw new Error('Немає API ключа для: ' + config.provider);
+            // Pollinations може працювати без ключа (анонімний доступ)
+            if (!activeKey && config.provider !== 'pollinations') throw new Error('Немає API ключа для: ' + config.provider);
 
             // Витягуємо системний промпт
             const sys = customSystem || (messages[0]?.role === 'system' ? messages[0].content : '');
@@ -546,6 +548,20 @@
                 if (!res.ok) { addLog(`Claude error: ${JSON.stringify(_dAnth)}`, 'error'); throw new Error('API error'); }
                 Logger.tech('phone', 'ai_response', 'AI response received', { provider: 'anthropic', model: config.model, tokens_in: _dAnth.usage?.input_tokens ?? null, tokens_out: _dAnth.usage?.output_tokens ?? null, request_num: _phoneAiRequestCount });
                 return _dAnth.content[0].text;
+            }
+            if (config.provider === 'pollinations') {
+                const allMsgs = sys ? [{ role: 'system', content: sys }, ...chatMsgs] : chatMsgs;
+                const polHeaders = { 'Content-Type': 'application/json' };
+                if (activeKey) polHeaders['Authorization'] = `Bearer ${activeKey}`;
+                const res = await fetch('https://gen.pollinations.ai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: polHeaders,
+                    body: JSON.stringify({ model: config.model, messages: allMsgs })
+                });
+                const _dPol = await res.json();
+                if (!res.ok) { addLog(`Pollinations error: ${JSON.stringify(_dPol)}`, 'error'); throw new Error('API error'); }
+                Logger.tech('phone', 'ai_response', 'AI response received', { provider: 'pollinations', model: config.model, tokens_in: _dPol.usage?.prompt_tokens ?? null, tokens_out: _dPol.usage?.completion_tokens ?? null, request_num: _phoneAiRequestCount });
+                return _dPol.choices[0].message.content;
             }
             throw new Error('Невідомий провайдер: ' + config.provider);
         }
@@ -691,13 +707,10 @@
                     let hfOk = false;
                     for (let attempt = 1; attempt <= 3; attempt++) {
                         try {
-                            const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
+                            const res = await fetch('/hf-proxy', {
                                 method: 'POST',
-                                headers: {
-                                    'Authorization': `Bearer ${hfToken}`,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({ inputs: prompt })
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ model: hfModel, inputs: prompt, hf_token: hfToken })
                             });
                             if (res.status === 503) {
                                 const body = await res.json().catch(() => ({}));
@@ -739,8 +752,12 @@
                     addLog('Картинку згенеровано', 'success');
                     return;
                 } catch (e) {
-                    addLog(`Pollinations помилка (спроба ${attempt}/2): ${e.message}`, 'error');
-                    if (attempt < 2) await new Promise(r => setTimeout(r, 3000));
+                    addLog(`Pollinations помилка (спроба ${attempt}/3): ${e.message}`, 'error');
+                    if (attempt < 3) {
+                        const waitSec = polRetryDelays[attempt - 1] / 1000;
+                        container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">RATE LIMIT — ЧЕКАЄМО ${waitSec}С...</div>`;
+                        await new Promise(r => setTimeout(r, polRetryDelays[attempt - 1]));
+                    }
                 }
             }
             container.innerHTML = `<span class="text-slate-600 text-xs italic">Зображення недоступне</span>`;

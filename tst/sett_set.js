@@ -9,9 +9,10 @@
 // ти єдиний користувач: вводити ключ у браузері не потрібно.
 // Якщо поле порожнє — береться ключ з localStorage (як раніше).
 const HARDCODED_KEYS = {
-    openai:    '',   // напр. 'sk-proj-...'
-    google:    '',   // напр. 'AIzaSy...'
-    anthropic: '',   // напр. 'sk-ant-...'
+    openai:       '',   // напр. 'sk-proj-...'
+    google:       '',   // напр. 'AIzaSy...'
+    anthropic:    '',   // напр. 'sk-ant-...'
+    pollinations: '',   // напр. 'pk_...' — publishable key з enter.pollinations.ai
 };
 
 const SETTINGS_CONFIG = {
@@ -62,9 +63,10 @@ const SETTINGS_CONFIG = {
 
     // ── Провайдери ШІ ────────────────────────────────────────
     providers: [
-        { id: 'openai',    label: 'OpenAI (ChatGPT)',   icon: 'fa-robot' },
-        { id: 'google',    label: 'Google Gemini',       icon: 'fa-google' },
-        { id: 'anthropic', label: 'Anthropic Claude',    icon: 'fa-brain'  }
+        { id: 'openai',       label: 'OpenAI (ChatGPT)',    icon: 'fa-robot'  },
+        { id: 'google',       label: 'Google Gemini',        icon: 'fa-google' },
+        { id: 'anthropic',    label: 'Anthropic Claude',     icon: 'fa-brain'  },
+        { id: 'pollinations', label: 'Pollinations.ai',      icon: 'fa-leaf'   },
     ],
 
     // ── Моделі для кожного провайдера ────────────────────────
@@ -81,6 +83,16 @@ const SETTINGS_CONFIG = {
         anthropic: [
             { id: 'claude-sonnet-4-6',          name: 'Claude Sonnet 4.6 (Найпотужніша)' },
             { id: 'claude-haiku-4-5-20251001',  name: 'Claude Haiku 4.5 (Швидка)'        }
+        ],
+        pollinations: [
+            { id: 'openai',        name: 'OpenAI GPT-4o mini (дефолт)' },
+            { id: 'openai-large',  name: 'OpenAI GPT-4o (велика)'      },
+            { id: 'claude',        name: 'Claude Sonnet'                },
+            { id: 'claude-large',  name: 'Claude Opus'                  },
+            { id: 'gemini',        name: 'Gemini Flash'                 },
+            { id: 'gemini-large',  name: 'Gemini Pro'                   },
+            { id: 'deepseek',      name: 'DeepSeek V3'                  },
+            { id: 'mistral',       name: 'Mistral'                      },
         ]
     },
 
@@ -104,6 +116,23 @@ const SETTINGS_CONFIG = {
             desc: 'Claude Optimized',
             list: [
                 { id: 'claude-soft', name: 'Soft', icon: 'fa-feather' }
+            ]
+        },
+        pollinations: {
+            desc: 'Pollinations TTS (OpenAI-сумісний)',
+            list: [
+                { id: 'alloy',     name: 'Alloy',     icon: 'fa-person'        },
+                { id: 'shimmer',   name: 'Shimmer',   icon: 'fa-person-dress'  },
+                { id: 'nova',      name: 'Nova',      icon: 'fa-star'          },
+                { id: 'echo',      name: 'Echo',      icon: 'fa-circle-dot'    },
+                { id: 'fable',     name: 'Fable',     icon: 'fa-book'          },
+                { id: 'onyx',      name: 'Onyx',      icon: 'fa-gem'           },
+                { id: 'coral',     name: 'Coral',     icon: 'fa-fish'          },
+                { id: 'sage',      name: 'Sage',      icon: 'fa-leaf'          },
+                { id: 'rachel',    name: 'Rachel',    icon: 'fa-user'          },
+                { id: 'bella',     name: 'Bella',     icon: 'fa-user'          },
+                { id: 'dorothy',   name: 'Dorothy',   icon: 'fa-user'          },
+                { id: 'sarah',     name: 'Sarah',     icon: 'fa-user'          },
             ]
         }
     },
@@ -154,7 +183,9 @@ const SETTINGS_CONFIG = {
         apiKeyOpenai: 'sp_api_key_openai',
         apiKeyGoogle: 'sp_api_key_google',
         apiKeyAnthro: 'sp_api_key_anthropic',
-        apiKeyHf:     'sp_api_key_hf',
+        apiKeyHf:           'sp_api_key_hf',
+        apiKeyPollinations:      'sp_api_key_pollinations',
+        pollinationsImageModel:  'sp_pollinations_img_model',
         imageModel:   'sp_image_model',
         speed:        'sp_speed',
         ttsMode:      'sp_tts_mode',
@@ -177,9 +208,10 @@ const SETTINGS_CONFIG = {
 
     // ── Плейсхолдери для полів API-ключів ────────────────────
     apiPlaceholders: {
-        openai:    'sk-...',
-        google:    'AIzaSy...',
-        anthropic: 'sk-ant-...'
+        openai:       'sk-...',
+        google:       'AIzaSy...',
+        anthropic:    'sk-ant-...',
+        pollinations: 'pk_...',
     },
 
     // ── Мінімальна довжина ключа для валідації ───────────────
@@ -251,9 +283,10 @@ function getApiKey(provider) {
     if (hardcoded) return hardcoded;
 
     const storageKeyMap = {
-        openai:    SETTINGS_CONFIG.storageKeys.apiKeyOpenai,
-        google:    SETTINGS_CONFIG.storageKeys.apiKeyGoogle,
-        anthropic: SETTINGS_CONFIG.storageKeys.apiKeyAnthro,
+        openai:       SETTINGS_CONFIG.storageKeys.apiKeyOpenai,
+        google:       SETTINGS_CONFIG.storageKeys.apiKeyGoogle,
+        anthropic:    SETTINGS_CONFIG.storageKeys.apiKeyAnthro,
+        pollinations: SETTINGS_CONFIG.storageKeys.apiKeyPollinations,
     };
     const lsKey = storageKeyMap[provider] || `sp_api_key_${provider}`;
     return (localStorage.getItem(lsKey) || '').trim();
@@ -430,23 +463,56 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
     const voice    = localStorage.getItem(SK.voice) || 'alloy';
     const apiKey   = getApiKey(provider);
 
-    // Online TTS — тільки OpenAI і тільки для мови навчання (не для кирилиці)
-    if (ttsMode === 'online' && provider === 'openai' && apiKey && !/[Ѐ-ӿ]/.test(clean)) {
-        if (onLoading) onLoading();
-        try {
-            const r = await fetch('https://api.openai.com/v1/audio/speech', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: 'tts-1', voice, input: clean, speed: Math.max(0.25, Math.min(4, speed)) })
-            });
-            if (r.ok) {
-                const audio = new Audio(URL.createObjectURL(await r.blob()));
-                audio.onplay  = () => { if (onStart) onStart(); };
-                audio.onended = () => { if (onEnd)  onEnd();  };
-                audio.play();
-                return;
-            }
-        } catch (_) { /* fallback до offline */ }
+    // Online TTS — тільки для мови навчання (не для кирилиці)
+    if (ttsMode === 'online' && !/[Ѐ-ӿ]/.test(clean)) {
+
+        // OpenAI TTS
+        if (provider === 'openai' && apiKey) {
+            if (onLoading) onLoading();
+            try {
+                const r = await fetch('https://api.openai.com/v1/audio/speech', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: 'tts-1', voice, input: clean, speed: Math.max(0.25, Math.min(4, speed)) })
+                });
+                if (r.ok) {
+                    const url = URL.createObjectURL(await r.blob());
+                    const audio = new Audio(url);
+                    audio.onplay  = () => { if (onStart) onStart(); };
+                    audio.onended = () => { URL.revokeObjectURL(url); if (onEnd) onEnd(); };
+                    audio.play();
+                    return;
+                }
+            } catch (_) { /* fallback до offline */ }
+        }
+
+        // Pollinations TTS (OpenAI-сумісний, анонімний або з pk_ ключем)
+        if (provider === 'pollinations') {
+            if (onLoading) onLoading();
+            try {
+                const polKey = getApiKey('pollinations');
+                const headers = { 'Content-Type': 'application/json' };
+                if (polKey) headers['Authorization'] = 'Bearer ' + polKey;
+                const r = await fetch('https://gen.pollinations.ai/v1/audio/speech', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        input: clean,
+                        voice: voice || 'nova',
+                        speed: Math.max(0.25, Math.min(4, speed)),
+                        response_format: 'mp3'
+                    })
+                });
+                if (r.ok) {
+                    const url = URL.createObjectURL(await r.blob());
+                    const audio = new Audio(url);
+                    audio.onplay  = () => { if (onStart) onStart(); };
+                    audio.onended = () => { URL.revokeObjectURL(url); if (onEnd) onEnd(); };
+                    audio.play();
+                    return;
+                }
+            } catch (_) { /* fallback до offline */ }
+        }
     }
 
     // Offline TTS (Web Speech API)
