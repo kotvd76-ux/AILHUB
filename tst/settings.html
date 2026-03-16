@@ -583,35 +583,6 @@
 
         <main class="space-y-5" role="main">
 
-            <!-- ── Сервіс режим ──────────────────────────────── -->
-            <section class="card card--service" id="service-mode-card" aria-labelledby="lbl-service-mode">
-                <div class="service-mode-row">
-                    <div style="flex:1">
-                        <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;">
-                            <label id="lbl-service-mode" class="field-label"
-                                   style="color:#f59e0b;margin-bottom:0;cursor:pointer;"
-                                   for="toggle-service-mode">
-                                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true" style="margin-right:.35rem;opacity:.85"></i>
-                                Сервіс режим
-                            </label>
-                            <span id="service-badge" class="service-badge" style="display:none;">
-                                <i class="fa-solid fa-circle" style="font-size:.45rem"></i> АКТИВНИЙ
-                            </span>
-                        </div>
-                        <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:0;line-height:1.45;">
-                            Вмикає по всьому хабу: кнопки «Діагностика» в усіх модулях,
-                            кнопку «Сервіс» на головній сторінці, перемикачі мови та логування.
-                        </p>
-                    </div>
-                    <label class="switcher" aria-label="Увімкнути сервіс режим" style="flex-shrink:0">
-                        <input type="checkbox" id="toggle-service-mode"
-                               onchange="onToggleServiceMode(this.checked)">
-                        <span class="switcher__track" aria-hidden="true"></span>
-                        <span class="switcher__thumb" aria-hidden="true"></span>
-                    </label>
-                </div>
-            </section>
-
             <!-- ── Провайдер ──────────────────────────────────── -->
             <section class="card card--accent" aria-labelledby="lbl-provider">
                 <label id="lbl-provider" for="ai-provider" class="field-label">Оберіть провайдера</label>
@@ -729,10 +700,37 @@
                         <span>Швидко 1.5×</span>
                     </div>
                 </div>
+
+                <!-- Сервіс режим -->
+                <div class="service-mode-row" id="service-mode-card" style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.08);">
+                    <div style="flex:1">
+                        <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;">
+                            <label id="lbl-service-mode" class="field-label"
+                                   style="color:#f59e0b;margin-bottom:0;cursor:pointer;"
+                                   for="toggle-service-mode">
+                                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true" style="margin-right:.35rem;opacity:.85"></i>
+                                Сервіс режим
+                            </label>
+                            <span id="service-badge" class="service-badge" style="display:none;">
+                                <i class="fa-solid fa-circle" style="font-size:.45rem"></i> АКТИВНИЙ
+                            </span>
+                        </div>
+                        <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:0;line-height:1.45;">
+                            Вмикає по всьому хабу: кнопки «Діагностика» в усіх модулях,
+                            кнопку «Сервіс» на головній сторінці, перемикачі мови та логування.
+                        </p>
+                    </div>
+                    <label class="switcher" aria-label="Увімкнути сервіс режим" style="flex-shrink:0">
+                        <input type="checkbox" id="toggle-service-mode"
+                               onchange="onToggleServiceMode(this.checked)">
+                        <span class="switcher__track" aria-hidden="true"></span>
+                        <span class="switcher__thumb" aria-hidden="true"></span>
+                    </label>
+                </div>
             </section>
 
             <!-- ── Логування ──────────────────────────────────── -->
-            <section class="card" aria-labelledby="lbl-logging">
+            <section class="card" id="section-logging" aria-labelledby="lbl-logging">
 
                 <!-- Заголовок-тригер (collapsible) -->
                 <button id="logging-toggle"
@@ -848,7 +846,7 @@
             </section>
 
             <!-- ── Мови навчання (collapsible) ───────────────── -->
-            <section class="card" aria-labelledby="lbl-languages">
+            <section class="card" id="section-languages" aria-labelledby="lbl-languages">
 
                 <button id="languages-toggle"
                         onclick="toggleLanguagesSection()"
@@ -1251,11 +1249,14 @@
         };
 
         function applyServiceModeUI(enabled) {
-            const card  = $('service-mode-card');
             const badge = $('service-badge');
+            const sectionLogging   = $('section-logging');
+            const sectionLanguages = $('section-languages');
+
             if (enabled) {
-                card.classList.add('service-active');
                 badge.style.display = 'inline-flex';
+                if (sectionLogging)   sectionLogging.style.display   = '';
+                if (sectionLanguages) sectionLanguages.style.display = '';
                 // Автоматично розгортаємо секції логування та мов
                 const logBody  = $('logging-body');
                 const logChevr = $('logging-chevron');
@@ -1274,8 +1275,9 @@
                     if (langBtn) langBtn.setAttribute('aria-expanded', 'true');
                 }
             } else {
-                card.classList.remove('service-active');
                 badge.style.display = 'none';
+                if (sectionLogging)   sectionLogging.style.display   = 'none';
+                if (sectionLanguages) sectionLanguages.style.display = 'none';
             }
         }
 
