@@ -690,13 +690,17 @@
                     try {
                         const res = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
                             method: 'POST',
-                            headers: { 'Authorization': `Bearer ${hfToken}`, 'Content-Type': 'application/json' },
+                            headers: {
+                                'Authorization': `Bearer ${hfToken}`,
+                                'Content-Type': 'application/json',
+                                'x-wait-for-model': 'true'
+                            },
                             body: JSON.stringify({ inputs: prompt })
                         });
                         if (!res.ok) {
                             const err = await res.text();
-                            addLog(`HF error ${res.status}: ${err.slice(0, 120)}`, 'error');
-                            throw new Error('HF API error');
+                            addLog(`HF error ${res.status}: ${err.slice(0, 200)}`, 'error');
+                            throw new Error(`HF ${res.status}`);
                         }
                         const blob = await res.blob();
                         container.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="w-full h-full object-cover rounded-lg">`;
@@ -711,23 +715,17 @@
             // ── Pollinations.ai (fallback або основний варіант) ──
             addLog('Генерація зображення. Сервіс: Pollinations.ai');
             const seed = Math.floor(Math.random() * 9999);
-            const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true`;
-            return new Promise((resolve) => {
-                const img = new Image();
-                img.onload = () => {
-                    img.className = 'w-full h-full object-cover rounded-lg';
-                    container.innerHTML = '';
-                    container.appendChild(img);
-                    addLog('Картинку згенеровано', 'success');
-                    resolve();
-                };
-                img.onerror = () => {
-                    container.innerHTML = `<span class="text-slate-600 text-xs italic">Зображення недоступне</span>`;
-                    addLog('Помилка генерації картинки', 'error');
-                    resolve();
-                };
-                img.src = imgUrl;
-            });
+            const imgUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=480&height=320&seed=${seed}&nologo=true&model=flux`;
+            try {
+                const res = await fetch(imgUrl);
+                if (!res.ok) throw new Error(`Pollinations ${res.status}`);
+                const blob = await res.blob();
+                container.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="w-full h-full object-cover rounded-lg">`;
+                addLog('Картинку згенеровано', 'success');
+            } catch (e) {
+                container.innerHTML = `<span class="text-slate-600 text-xs italic">Зображення недоступне</span>`;
+                addLog(`Помилка генерації: ${e.message}`, 'error');
+            }
         }
 
         window.onload = async () => {
