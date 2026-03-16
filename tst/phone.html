@@ -439,7 +439,7 @@
             // Крок 1: прихований запит — отримати короткий опис сцени для Imagen
             const sceneInstruction = taskSet?.scenePromptInstruction
                 ? taskSet.scenePromptInstruction(lvl)
-                : `Generate a short scene description for an English learning exercise. Level: ${lvl}. Max 12 words. Return ONLY the scene description.`;
+                : `Generate a vivid scene description for an English learning illustration. Level: ${lvl}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in English. Return ONLY the scene description, no questions.`;
 
             addLog("Генеруємо опис сцени...");
             let sceneDesc = '';
