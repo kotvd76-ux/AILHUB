@@ -80,6 +80,13 @@
         .btn-glow {
             box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
         }
+
+        /* Діагностична кнопка — активний стан під час AI-запиту */
+        @keyframes diagPulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50%      { opacity:.55; transform:scale(1.18); }
+        }
+        .diag-ai-active { animation: diagPulse .9s ease-in-out infinite !important; color: #f59e0b !important; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col max-w-2xl mx-auto p-4">
@@ -95,10 +102,25 @@
                 <p id="header-subtitle" class="text-[10px] uppercase tracking-widest text-slate-500 font-black">Налаштування сесії</p>
             </div>
         </div>
-        <a href="settings.html" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-zinc-400">
-            <i class="fa-solid fa-cog"></i>
-        </a>
+        <div class="flex items-center gap-2">
+            <button id="phone-diag-hdr-btn" onclick="toggleLogs()" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center" style="display:none;color:#f59e0b;border-color:rgba(245,158,11,.3)" aria-label="Журнал діагностики" title="Діагностика">
+                <i class="fa-solid fa-heart-pulse"></i>
+            </button>
+            <a href="settings.html" class="w-10 h-10 rounded-xl glass-card flex items-center justify-center text-zinc-400" title="Налаштування">
+                <i class="fa-solid fa-gear"></i>
+            </a>
+        </div>
     </header>
+
+    <!-- AI Loader overlay (показується під час запиту до ШІ) -->
+    <div id="phone-ai-loader" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(2,6,23,.9);flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;padding:2rem;">
+        <div style="width:64px;height:64px;border:5px solid rgba(249,115,22,.2);border-top-color:#f97316;border-radius:50%;animation:spin .8s linear infinite"></div>
+        <p style="font-size:1.25rem;font-weight:900;color:#fff;text-align:center">AI готує вправу…</p>
+        <button onclick="toggleLogs()" style="background:none;border:none;color:#64748b;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;display:flex;align-items:center;gap:.4rem">
+            <i class="fa-solid fa-heart-pulse"></i> Журнал запиту
+        </button>
+    </div>
+    <style>@keyframes spin { to { transform:rotate(360deg); } }</style>
 
     <!-- 1. Selection Screen -->
     <div id="selection-screen" class="flex flex-col flex-grow justify-center space-y-8 animate-in fade-in duration-500">
@@ -405,20 +427,30 @@
             callAI();
         }
 
+        function _phoneSetAiActive(on) {
+            const loader = document.getElementById('phone-ai-loader');
+            const diagBtn = document.getElementById('phone-diag-hdr-btn');
+            if (loader) loader.style.display = on ? 'flex' : 'none';
+            if (diagBtn) { diagBtn.classList.toggle('diag-ai-active', on); }
+        }
+
         // --- API & AI logic ---
         async function callAI(userMsg = null) {
             if (userMsg) conversation.push({ role: 'user', content: userMsg });
-            
+
             addLog("Запит до ШІ...");
+            _phoneSetAiActive(true);
             try {
                 const response = await fetchAI(conversation);
                 conversation.push({ role: 'assistant', content: response });
                 addMessage('ai', response);
                 speakText(response);
-                
+
                 if (currentType === 'describe' && conversation.length <= 3) generateScene(response);
             } catch (err) {
                 addLog(`Критична помилка: ${err.message}`, "error");
+            } finally {
+                _phoneSetAiActive(false);
             }
         }
 
@@ -476,10 +508,11 @@
             addLog("Аналіз відповіді...");
             const set = window.AI_EXERCISE_CONFIG;
             const feedbackSystem = set?.feedback?.system || "Ти вчитель іспанської.";
-            
+
             const lastTask = conversation[conversation.length - 1].content;
             const prompt = `Завдання було: ${lastTask}. Учень відповів: "${transcript}". Проаналізуй і виправ помилки українською мовою.`;
-            
+
+            _phoneSetAiActive(true);
             try {
                 const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
                 document.getElementById('feedback-content').innerText = feedback;
@@ -489,6 +522,8 @@
             } catch (err) {
                 addLog("Помилка аналізу, продовжуємо", "error");
                 confirmFeedback();
+            } finally {
+                _phoneSetAiActive(false);
             }
         }
 
@@ -627,11 +662,13 @@
             updateGameOptions();
             addLog(`Тренажер готовий до роботи (дефолтний рівень: ${currentLevel})`);
 
-            // Показуємо кнопку діагностики якщо сервіс режим або техлог увімкнено
+            // Показуємо кнопки діагностики якщо сервіс режим або техлог увімкнено
             const _phoneServiceMode = localStorage.getItem('sp_service_mode') === '1'
                 || localStorage.getItem('sp_techlog_enabled') === '1';
             const _phoneDiagBtn = document.getElementById('phone-diag-btn');
             if (_phoneDiagBtn) _phoneDiagBtn.style.display = _phoneServiceMode ? 'block' : 'none';
+            const _phoneDiagHdrBtn = document.getElementById('phone-diag-hdr-btn');
+            if (_phoneDiagHdrBtn) _phoneDiagHdrBtn.style.display = _phoneServiceMode ? '' : 'none';
         };
     </script>
 </body>
