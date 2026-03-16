@@ -445,7 +445,7 @@
             let sceneDesc = '';
             try {
                 sceneDesc = await fetchAI([
-                    { role: 'system', content: 'You are a creative scene generator for educational purposes. Return ONLY a short scene description, no extra text.' },
+                    { role: 'system', content: taskSet?.sceneSystemPrompt || 'You are a creative scene generator for educational purposes. Return ONLY a scene description, no extra text.' },
                     { role: 'user', content: sceneInstruction }
                 ]);
                 sceneDesc = sceneDesc.trim().replace(/^["']|["']$/g, '');
