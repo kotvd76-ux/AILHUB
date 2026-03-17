@@ -703,6 +703,41 @@
                     .finally(() => clearTimeout(timer));
             };
 
+            // ── Google Gemini 2.5 Flash Image (Nano Banana) — прямий виклик ──
+            if (imageModelSetting === 'gemini-image') {
+                const googleKey = (typeof getApiKey === 'function') ? getApiKey('google') : (localStorage.getItem('sp_api_key_google') || '');
+                addLog('Генерація зображення. Модель: gemini-2.5-flash-image (Nano Banana)');
+                if (!googleKey) {
+                    addLog('Google API ключ не вказано в налаштуваннях → Pollinations', 'error');
+                } else {
+                    try {
+                        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleKey}`;
+                        const res = await fetchWithTimeout(geminiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ parts: [{ text: prompt }] }],
+                                generationConfig: { responseModalities: ['IMAGE'] }
+                            })
+                        }, 60000);
+                        if (!res.ok) {
+                            const err = await res.text();
+                            addLog(`Gemini Image error ${res.status}: ${err.slice(0, 200)}`, 'error');
+                            throw new Error(`Gemini ${res.status}`);
+                        }
+                        const data = await res.json();
+                        const imgPart = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+                        if (!imgPart) throw new Error('Gemini: no image in response');
+                        const { mimeType, data: b64 } = imgPart.inlineData;
+                        container.innerHTML = `<img src="data:${mimeType};base64,${b64}" class="w-full h-full object-cover rounded-lg">`;
+                        addLog('Картинку згенеровано (Gemini)', 'success');
+                        return;
+                    } catch (e) {
+                        addLog(`Gemini Image помилка: ${e.message} → Pollinations`, 'error');
+                    }
+                }
+            }
+
             // ── Hugging Face Inference API (прямий виклик, HF підтримує CORS) ──
             if (imageModelSetting.startsWith('hf:')) {
                 const hfModel = imageModelSetting.slice(3);
