@@ -72,7 +72,7 @@
             font-weight: 800;
             font-size: 1rem;
             cursor: pointer;
-            transition: transform .15s, opacity .15s, box-shadow .15s;
+            transition: transform .4s, opacity .4s, box-shadow .4s;
             text-decoration: none;
             -webkit-tap-highlight-color: transparent;
         }
@@ -254,7 +254,7 @@
             align-items: center;
             justify-content: center;
             box-shadow: 0 8px 32px rgba(240,192,64,.25);
-            transition: transform .15s, box-shadow .15s;
+            transition: transform .4s, box-shadow .4s;
             flex-shrink: 0;
         }
         .play-btn:active { transform: scale(.92); }
@@ -354,7 +354,7 @@
             text-align: justify;
             hyphens: auto;
             cursor: pointer;
-            transition: border-color .15s, background .15s, transform .1s;
+            transition: border-color .4s, background .4s, transform .3s;
             line-height: 1.05;
             word-wrap: break-word;
             overflow-wrap: break-word;
@@ -597,10 +597,10 @@
 
         <div class="controls-row">
             <button id="btn-slow" onclick="toggleSlowMode()" class="btn btn-ghost" aria-pressed="false" aria-label="Повільне відтворення">
-                <i class="fa-solid fa-gauge-simple-low" aria-hidden="true"></i> Повільно
+                <i class="fa-solid fa-gauge-simple-low" aria-hidden="true"></i>
             </button>
             <button onclick="toggleTranscript()" class="btn btn-ghost" aria-label="Показати текст" aria-expanded="false" id="btn-transcript">
-                <i class="fa-solid fa-eye" aria-hidden="true"></i> Текст
+                <i class="fa-solid fa-eye" aria-hidden="true"></i>
             </button>
         </div>
 
