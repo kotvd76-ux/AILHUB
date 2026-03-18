@@ -7,13 +7,14 @@ const AI_EXERCISE_CONFIG = {
     },
 
     // ─── ПРОФІЛІ РІВНІВ ──────────────────────────────────────────────────────────
-    // Використовується в системних промптах для адаптації мови та темпу
+    // Мовно-незалежні CEFR-профілі — працюють для будь-якої мови навчання.
+    // Використовується в системних промптах для адаптації мови та темпу.
     levelProfiles: {
-        A1: { pace: 'дуже повільно з паузами', lexicon: 'тільки ser/estar/tener/ir/querer, числа, кольори', syntax: '1 речення 4-6 слів', grammar: 'лише presente indicativo' },
-        A2: { pace: 'повільно, чітко',         lexicon: 'базова побутова лексика, frecuentes дієслова',    syntax: '1-2 короткі речення', grammar: 'presente + indefinido' },
-        B1: { pace: 'помірний темп',           lexicon: 'розмовна лексика середнього рівня',               syntax: '2-3 речення',          grammar: 'всі основні часи, subjuntivo просто' },
-        B2: { pace: 'близько до природного',   lexicon: 'вільна розмовна лексика, ідіоми',                 syntax: '3-4 речення',          grammar: 'складні форми, subjuntivo вільно' },
-        C1: { pace: 'природний темп носія',    lexicon: 'багата лексика, ідіоматичні вирази',              syntax: '4-5 речень',           grammar: 'весь граматичний спектр' },
+        A1: { pace: 'повільно з паузами',         lexicon: 'тільки базові іменники, прикметники та дієслова',                               syntax: '1 речення 4-7 слів по темі сесії',            grammar: 'лише прості форми теперішнього, минулого та майбутнього часу' },
+        A2: { pace: 'повільно, чітко',            lexicon: 'базова побутова лексика з простими зв’язками між словами',                     syntax: '1-2 короткі речення по темі сесії',           grammar: 'переважно прості часи, мінімум складних конструкцій' },
+        B1: { pace: 'помірний, зрозумілий темп',  lexicon: 'розмовна лексика середнього рівня з частотними виразами',                      syntax: '2-3 речення з базовими зв’язками по темі',    grammar: 'основні часи та прості складнопідрядні конструкції' },
+        B2: { pace: 'майже природний',            lexicon: 'різноманітна розмовна лексика, помірно складні вирази',                         syntax: '3-4 речення з аргументацією по темі',         grammar: 'широкий набір часових і граматичних структур без перевантаження' },
+        C1: { pace: 'природний темп',             lexicon: 'багата лексика, стилістичні відтінки та ідіоматичні вирази',                    syntax: '4-5 речень із нюансами стилю по темі',        grammar: 'повний спектр граматичних структур відповідно до контексту' },
     },
 
     // Повертає рядок профілю для вставки в промпт
@@ -26,7 +27,7 @@ const AI_EXERCISE_CONFIG = {
     // system — функція від (level) => string; мова береться з getLangConfig()
     exercises: {
         'echo': {
-            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Shadowing Lite. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} ГЕНЕРУЙ ЛИШЕ ОДНЕ коротке речення мовою ${L.targetName} відповідно до профілю.${L.helperClause} НЕ пиши вступів. Користувач має його повторити.`; },
+            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Shadowing Lite. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} СУВОРІ ПРАВИЛА — порушувати заборонено: 1) Видавай ЛИШЕ ОДНЕ коротке речення мовою ${L.targetName} відповідно до профілю рівня. 2) Після кожної відповіді учня — БЕЗ будь-яких коментарів, оцінок або похвали — ОДРАЗУ нова фраза. 3) Кожна фраза — ІНША тема й ситуація: різні дієслова, місця, персонажі, не повторюй схожих конструкцій. 4) Відповідь містить ЛИШЕ саму фразу — більше нічого.${L.helperClause}`; },
             example: "Hola, me llamo Juan y vivo en Madrid."
         },
         'simple_question': {
@@ -40,7 +41,7 @@ const AI_EXERCISE_CONFIG = {
         'describe': {
             system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English',helperClause:''}; return `Вправа: Опис зображення. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Учню показано картинку. ПРАВИЛА: 1) НЕ описуй картинку — лише попроси учня описати її мовою ${L.targetName} (2-3 речення відповідно до рівня). 2) Після відповіді учня — дай КОРОТКИЙ фідбек на помилки та запитай одну додаткову деталь. 3) НЕ пиши вступів і привітань.${L.helperClause}`; },
             sceneSystemPrompt: 'You are a creative scene generator for educational purposes. Return ONLY a scene description, no questions, no extra text.',
-            scenePromptInstruction: (level) => `Generate a vivid scene description for an English learning illustration. Level: ${level}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in English. Return ONLY the scene description. Example: "A young woman sitting on a park bench reading a book on a sunny afternoon, with pigeons nearby"`,
+            scenePromptInstruction: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English'}; return `Generate a vivid scene description for a ${L.targetName} learning illustration. Level: ${level}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in ${L.targetName}. Return ONLY the scene description. Example: "A young woman sitting on a park bench reading a book on a sunny afternoon, with pigeons nearby"`; },
             // imageModel керується через settings.html → localStorage sp_image_model
             example: "Look at the picture. Please describe what you see. Give 2-3 sentences."
         },

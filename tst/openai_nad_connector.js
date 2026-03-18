@@ -92,7 +92,7 @@ class OpenAIRealtimeConnector {
                 instructions:        this._systemPrompt,
                 input_audio_format:  'pcm16',
                 output_audio_format: 'pcm16',
-                input_audio_transcription: { model: 'whisper-1', language: 'es' },
+                input_audio_transcription: { model: 'whisper-1', language: (typeof getLangConfig === 'function') ? getLangConfig().target.id : 'es' },
                 turn_detection: {
                     type:               'server_vad',
                     threshold:           0.5,

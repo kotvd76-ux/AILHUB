@@ -745,6 +745,26 @@
                     </p>
                 </div>
 
+                <!-- Google Gemini ключ — показується для gemini-image -->
+                <div id="gemini-img-key-box" class="hidden" style="margin-top:1rem">
+                    <label class="field-label" style="margin-bottom:0.4rem">
+                        Google Gemini API Key
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-google-img" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="AIza..."
+                               aria-label="Google Gemini API ключ для генерації зображень">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-google-img', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
+                        Той самий ключ що і для Gemini-чату. Отримати: <span style="opacity:0.7">aistudio.google.com</span>
+                    </p>
+                </div>
+
                 <!-- HF токен — показується тільки для HF моделей -->
                 <div id="hf-key-box" class="hidden" style="margin-top:1rem">
                     <label class="field-label" style="margin-bottom:0.4rem">
@@ -1071,6 +1091,7 @@
             $('api-key-pollinations-img').value = get(SK.apiKeyPollinations, '');
             $('pollinations-img-model').value   = get(SK.pollinationsImageModel, 'flux');
             $('api-key-hf').value               = get(SK.apiKeyHf, '');
+            $('api-key-google-img').value       = get(SK.apiKeyGoogle, '');
 
             const savedImageModel = get(SK.imageModel, 'pollinations');
             $('image-model-select').value = savedImageModel;
@@ -1108,11 +1129,13 @@
 
         // ── Генерація зображень ─────────────────────────────────
         window.handleImageModelChange = function() {
-            const val = $('image-model-select').value;
-            const isHf  = val.startsWith('hf:');
-            const isPol = val === 'pollinations';
+            const val      = $('image-model-select').value;
+            const isHf     = val.startsWith('hf:');
+            const isPol    = val === 'pollinations';
+            const isGemini = val === 'gemini-image';
             $('hf-key-box').classList.toggle('hidden', !isHf);
             $('pollinations-img-key-box').classList.toggle('hidden', !isPol);
+            $('gemini-img-key-box').classList.toggle('hidden', !isGemini);
         };
 
         // ── Будуємо select провайдерів з конфігу ───────────────
@@ -1492,7 +1515,10 @@
             }
             set(SK.pollinationsImageModel, $('pollinations-img-model').value);
             set(SK.apiKeyHf,    $('api-key-hf').value);
-        set(SK.imageModel,  $('image-model-select').value);
+            // Gemini image key — той самий sp_api_key_google (якщо заповнено з img-поля)
+            const geminiImgVal = $('api-key-google-img').value.trim();
+            if (geminiImgVal) set(SK.apiKeyGoogle, geminiImgVal);
+            set(SK.imageModel,  $('image-model-select').value);
 
             set(SK.speed,        $('voice-speed').value);
             set(SK.ttsMode,      currentTTSMode);

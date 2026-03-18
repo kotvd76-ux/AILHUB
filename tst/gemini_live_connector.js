@@ -83,11 +83,11 @@ class GeminiLiveConnector {
             : 'Charon';
         const storedVoice = GEMINI_VOICES.includes(rawVoice) ? rawVoice : 'Charon';
 
-        // Додаємо англомовну інструкцію щодо мови на початок промпту
-        const langPrefix = 'IMPORTANT: The user speaks ONLY Spanish (es-ES). ' +
-            'All user audio input is in Spanish language. ' +
-            'Never transcribe user speech as Ukrainian or English. ' +
-            'Always interpret user audio as Spanish, even if pronunciation is imperfect.\n\n';
+        // Додаємо інструкцію щодо мови на початок промпту — динамічно з getLangConfig()
+        const _lc = (typeof getLangConfig === 'function') ? getLangConfig() : { targetName: 'Spanish', speechLang: 'es-ES' };
+        const langPrefix = `IMPORTANT: The user speaks ONLY ${_lc.targetName} (${_lc.speechLang}). ` +
+            `All user audio input is in ${_lc.targetName} language. ` +
+            `Always interpret user audio as ${_lc.targetName}, even if pronunciation is imperfect.\n\n`;
 
         this._send({
             setup: {
