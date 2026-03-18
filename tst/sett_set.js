@@ -57,6 +57,46 @@ const SETTINGS_CONFIG = {
         { value: 'C1', label: 'C1 — Просунутий'        },
     ],
 
+    // ── Глобальні CEFR-профілі (єдине джерело для всіх модулів) ──
+    // Використовувати через getExerciseLevelProfile(level).
+    levelProfiles: {
+        A1: {
+            pace: 'Дуже повільно й чітко',
+            lexicon: 'лише базова лексика',
+            grammar: 'найпростіші граматичні форми',
+            sentences: '1 речення 4–6 слів',
+            constraints: 'без складних конструкцій',
+        },
+        A2: {
+            pace: 'Повільно й чітко',
+            lexicon: 'базова побутова лексика',
+            grammar: 'прості форми теперішнього, минулого й майбутнього',
+            sentences: '1–2 короткі речення по 5–8 слів',
+            constraints: 'мінімум складних структур',
+        },
+        B1: {
+            pace: 'Помірний навчальний темп',
+            lexicon: 'розмовна лексика середнього рівня',
+            grammar: 'основні часові й модальні форми',
+            sentences: '2–3 речення по 7–11 слів',
+            constraints: 'базові складнопідрядні',
+        },
+        B2: {
+            pace: 'Майже природний темп',
+            lexicon: 'різноманітна лексика та сталі вирази',
+            grammar: 'широкий набір граматичних структур',
+            sentences: '3–4 речення по 10–15 слів',
+            constraints: 'аргументація й складні підрядні',
+        },
+        C1: {
+            pace: 'Природний темп носія',
+            lexicon: 'багата ідіоматична та абстрактна лексика',
+            grammar: 'повний спектр граматики',
+            sentences: '4–6 речень по 14–20 слів',
+            constraints: 'складний синтаксис і точне нюансування',
+        },
+    },
+
     // Режим теми для модуля граматики за замовчуванням:
     // 'random' — випадкова тема, якщо користувач не обрав вручну.
     grammarThemeDefaultMode: 'random',
@@ -389,6 +429,26 @@ function getExerciseLevels(allowedLevels) {
         ];
     if (!allowedLevels || !allowedLevels.length) return all;
     return all.filter(l => allowedLevels.includes(l.value));
+}
+
+// ── Глобальні CEFR-профілі (єдине джерело для модулів) ─────────
+// Повертає об'єкт профілів за рівнями A1–C1.
+function getExerciseLevelProfiles() {
+    const fallback = {
+        A1: { pace: 'Дуже повільно й чітко', lexicon: 'лише базова лексика', grammar: 'найпростіші граматичні форми', sentences: '1 речення 4–6 слів', constraints: 'без складних конструкцій' },
+        A2: { pace: 'Повільно й чітко', lexicon: 'базова побутова лексика', grammar: 'прості форми теперішнього, минулого й майбутнього', sentences: '1–2 короткі речення по 5–8 слів', constraints: 'мінімум складних структур' },
+        B1: { pace: 'Помірний навчальний темп', lexicon: 'розмовна лексика середнього рівня', grammar: 'основні часові й модальні форми', sentences: '2–3 речення по 7–11 слів', constraints: 'базові складнопідрядні' },
+        B2: { pace: 'Майже природний темп', lexicon: 'різноманітна лексика та сталі вирази', grammar: 'широкий набір граматичних структур', sentences: '3–4 речення по 10–15 слів', constraints: 'аргументація й складні підрядні' },
+        C1: { pace: 'Природний темп носія', lexicon: 'багата ідіоматична та абстрактна лексика', grammar: 'повний спектр граматики', sentences: '4–6 речень по 14–20 слів', constraints: 'складний синтаксис і точне нюансування' },
+    };
+    return SETTINGS_CONFIG?.levelProfiles || fallback;
+}
+
+// Повертає профіль для конкретного CEFR-рівня.
+function getExerciseLevelProfile(level = 'B1') {
+    const profiles = getExerciseLevelProfiles();
+    const key = String(level || 'B1').trim().toUpperCase();
+    return profiles[key] || profiles.B1 || profiles.A2 || Object.values(profiles)[0];
 }
 
 
