@@ -32,7 +32,11 @@ const AI_EXERCISE_CONFIG = {
         'describe': {
             system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English',helperClause:''}; return `Вправа: Опис зображення. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} Учню показано картинку. ПРАВИЛА: 1) НЕ описуй картинку — лише попроси учня описати її мовою ${L.targetName} (2-3 речення відповідно до рівня). 2) Після відповіді учня — дай КОРОТКИЙ фідбек на помилки та запитай одну додаткову деталь. 3) НЕ пиши вступів і привітань.${L.helperClause}`; },
             sceneSystemPrompt: 'You are a creative scene generator for educational purposes. Return ONLY a scene description, no questions, no extra text.',
-            scenePromptInstruction: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English'}; return `Generate a vivid scene description for a ${L.targetName} learning illustration. Level: ${level}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in ${L.targetName}. Return ONLY the scene description. Example: "A young woman sitting on a park bench reading a book on a sunny afternoon, with pigeons nearby"`; },
+            scenePromptInstruction: (level, theme = '') => {
+                const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'English'};
+                const topicClause = theme ? ` Theme: ${theme}.` : '';
+                return `Create a vivid scene description for a ${L.targetName} learning illustration.${topicClause} Level: ${level}. Include 3-4 concrete details (people, place, action, time of day or weather) directly related to the theme. The description must be 20-30 words, written ONLY in ${L.targetName}. Return ONLY the scene description.`;
+            },
             // imageModel керується через settings.html → localStorage sp_image_model
             example: "Look at the picture. Please describe what you see. Give 2-3 sentences."
         },

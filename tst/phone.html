@@ -444,11 +444,13 @@
             const set = window.AI_EXERCISE_CONFIG;
             const taskSet = set?.exercises['describe'];
             const lvl = currentLevel || 'B1';
+            const langCfg = (typeof getLangConfig === 'function') ? getLangConfig() : { targetName: 'English' };
+            const targetLangName = langCfg.targetName || 'English';
 
             // Крок 1: прихований запит — отримати короткий опис сцени для Imagen
             const sceneInstruction = taskSet?.scenePromptInstruction
-                ? taskSet.scenePromptInstruction(lvl)
-                : `Generate a vivid scene description for an English learning illustration. Level: ${lvl}. Include 2-3 details (people, place, action, time of day or weather), 20-30 words, in English. Return ONLY the scene description, no questions.`;
+                ? taskSet.scenePromptInstruction(lvl, currentTheme)
+                : `Create a vivid scene description for a ${targetLangName} learning illustration.${currentTheme ? ` Theme: ${currentTheme}.` : ''} Level: ${lvl}. Include 3-4 concrete details (people, place, action, time of day or weather) directly related to the theme. The description must be 20-30 words, written ONLY in ${targetLangName}. Return ONLY the scene description.`;
 
             addLog("Генеруємо опис сцени...");
             let sceneDesc = '';
