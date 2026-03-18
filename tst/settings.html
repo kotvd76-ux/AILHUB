@@ -745,23 +745,44 @@
                     </p>
                 </div>
 
-                <!-- Google Gemini ключ — показується для gemini-image -->
-                <div id="gemini-img-key-box" class="hidden" style="margin-top:1rem">
+                <!-- OpenAI ключ для зображень — показується для openai:* моделей -->
+                <div id="openai-img-key-box" class="hidden" style="margin-top:1rem">
                     <label class="field-label" style="margin-bottom:0.4rem">
-                        Google Gemini API Key
+                        OpenAI API Key <span style="opacity:.5;font-weight:400">(для генерації зображень)</span>
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-openai-img" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="sk-..."
+                               aria-label="OpenAI API ключ для генерації зображень">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-openai-img', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
+                        Якщо порожньо — використовується основний OpenAI ключ з налаштувань AI.
+                    </p>
+                </div>
+
+                <!-- Google ключ для зображень — показується для google:* та gemini-image моделей -->
+                <div id="google-img-key-box" class="hidden" style="margin-top:1rem">
+                    <label class="field-label" style="margin-bottom:0.4rem">
+                        Google API Key <span style="opacity:.5;font-weight:400">(для генерації зображень)</span>
                     </label>
                     <div class="input-wrap">
                         <input type="password" id="api-key-google-img" class="field"
                                autocomplete="off" autocapitalize="none" spellcheck="false"
-                               placeholder="AIza..."
-                               aria-label="Google Gemini API ключ для генерації зображень">
+                               placeholder="AIzaSy..."
+                               aria-label="Google API ключ для генерації зображень">
                         <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
                                 onclick="togglePasswordVisibility('api-key-google-img', this)">
                             <i class="fa-solid fa-eye" aria-hidden="true"></i>
                         </button>
                     </div>
                     <p class="text-xs mt-2" style="color: rgba(255,255,255,.4);">
-                        Той самий ключ що і для Gemini-чату. Отримати: <span style="opacity:0.7">aistudio.google.com</span>
+                        Якщо порожньо — використовується основний Google ключ з налаштувань AI.
+                        Отримати: <span style="opacity:0.7">aistudio.google.com</span>
                     </p>
                 </div>
 
@@ -1091,7 +1112,8 @@
             $('api-key-pollinations-img').value = get(SK.apiKeyPollinations, '');
             $('pollinations-img-model').value   = get(SK.pollinationsImageModel, 'flux');
             $('api-key-hf').value               = get(SK.apiKeyHf, '');
-            $('api-key-google-img').value       = get(SK.apiKeyGoogle, '');
+            $('api-key-openai-img').value        = get(SK.apiKeyOpenaiImg, '');
+            $('api-key-google-img').value        = get(SK.apiKeyGoogleImg, '');
 
             const savedImageModel = get(SK.imageModel, 'pollinations');
             $('image-model-select').value = savedImageModel;
@@ -1132,10 +1154,12 @@
             const val      = $('image-model-select').value;
             const isHf     = val.startsWith('hf:');
             const isPol    = val === 'pollinations';
-            const isGemini = val === 'gemini-image';
+            const isOpenai = val.startsWith('openai:');
+            const isGoogle = val.startsWith('google:') || val === 'gemini-image';
             $('hf-key-box').classList.toggle('hidden', !isHf);
             $('pollinations-img-key-box').classList.toggle('hidden', !isPol);
-            $('gemini-img-key-box').classList.toggle('hidden', !isGemini);
+            $('openai-img-key-box').classList.toggle('hidden', !isOpenai);
+            $('google-img-key-box').classList.toggle('hidden', !isGoogle);
         };
 
         // ── Будуємо select провайдерів з конфігу ───────────────
@@ -1514,10 +1538,9 @@
                 set(SK.apiKeyPollinations, polImgVal || polAiVal);
             }
             set(SK.pollinationsImageModel, $('pollinations-img-model').value);
-            set(SK.apiKeyHf,    $('api-key-hf').value);
-            // Gemini image key — той самий sp_api_key_google (якщо заповнено з img-поля)
-            const geminiImgVal = $('api-key-google-img').value.trim();
-            if (geminiImgVal) set(SK.apiKeyGoogle, geminiImgVal);
+            set(SK.apiKeyHf,       $('api-key-hf').value);
+            set(SK.apiKeyOpenaiImg, $('api-key-openai-img').value.trim());
+            set(SK.apiKeyGoogleImg, $('api-key-google-img').value.trim());
             set(SK.imageModel,  $('image-model-select').value);
 
             set(SK.speed,        $('voice-speed').value);

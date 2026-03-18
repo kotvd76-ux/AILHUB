@@ -777,7 +777,8 @@
 
             // ── Google Gemini 2.5 Flash Image (Nano Banana) — прямий виклик ──
             if (imageModelSetting === 'gemini-image') {
-                const googleKey = (typeof getApiKey === 'function') ? getApiKey('google') : (localStorage.getItem('sp_api_key_google') || '');
+                const googleKey = (localStorage.getItem('sp_api_key_google_img') || '').trim()
+                               || ((typeof getApiKey === 'function') ? getApiKey('google') : (localStorage.getItem('sp_api_key_google') || ''));
                 addLog('Генерація зображення. Модель: gemini-2.5-flash-image (Nano Banana)');
                 if (!googleKey) {
                     addLog('Google API ключ не вказано в налаштуваннях → Pollinations', 'error');
@@ -860,7 +861,9 @@
             // ── OpenAI Images API ────────────────────────────────
             if (imageModelSetting.startsWith('openai:')) {
                 const oaiModel = imageModelSetting.slice(7);
-                const oaiKey = getConfig().apiKeys.openai;
+                const SK = (typeof SETTINGS_CONFIG !== 'undefined') ? SETTINGS_CONFIG.storageKeys : {};
+                const oaiKey = (localStorage.getItem(SK.apiKeyOpenaiImg || 'sp_api_key_openai_img') || '').trim()
+                            || getConfig().apiKeys.openai;
                 addLog(`Генерація зображення. Модель: ${oaiModel}`);
                 if (!oaiKey) {
                     addLog('OpenAI ключ не вказано → Pollinations', 'error');
@@ -889,7 +892,9 @@
             // ── Google Imagen API ────────────────────────────────
             if (imageModelSetting.startsWith('google:')) {
                 const gModel = imageModelSetting.slice(7);
-                const gKey = getConfig().apiKeys.google;
+                const SK2 = (typeof SETTINGS_CONFIG !== 'undefined') ? SETTINGS_CONFIG.storageKeys : {};
+                const gKey = (localStorage.getItem(SK2.apiKeyGoogleImg || 'sp_api_key_google_img') || '').trim()
+                           || getConfig().apiKeys.google;
                 addLog(`Генерація зображення. Модель: ${gModel}`);
                 if (!gKey) {
                     addLog('Google API ключ не вказано → Pollinations', 'error');
