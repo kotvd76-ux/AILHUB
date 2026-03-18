@@ -857,11 +857,68 @@
                 }
             }
 
-            // ── Pollinations.ai — через серверний проксі /pol-image ──
-            // Роутер передає запит до image.pollinations.ai і повертає зображення.
-            // Токен зберігається на сервері (env POLLINATIONS_TOKEN) або
-            // передається з браузера як fallback (з localStorage).
-            addLog('Генерація зображення. Сервіс: Pollinations.ai (через роутер)');
+            // ── OpenAI Images API ────────────────────────────────
+            if (imageModelSetting.startsWith('openai:')) {
+                const oaiModel = imageModelSetting.slice(7);
+                const oaiKey = getConfig().apiKeys.openai;
+                addLog(`Генерація зображення. Модель: ${oaiModel}`);
+                if (!oaiKey) {
+                    addLog('OpenAI ключ не вказано → Pollinations', 'error');
+                } else {
+                    try {
+                        const res = await fetch('https://api.openai.com/v1/images/generations', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${oaiKey}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ model: oaiModel, prompt, n: 1, size: '1024x1024' })
+                        });
+                        if (!res.ok) { const err = await res.text(); throw new Error(`OpenAI ${res.status}: ${err.slice(0,200)}`); }
+                        const data = await res.json();
+                        const imgData = data.data?.[0];
+                        const src = imgData?.url || (imgData?.b64_json ? `data:image/png;base64,${imgData.b64_json}` : null);
+                        if (!src) throw new Error('OpenAI: відповідь без зображення');
+                        container.innerHTML = `<img src="${src}" class="w-full h-full object-cover rounded-lg">`;
+                        addLog('Картинку згенеровано', 'success');
+                        return;
+                    } catch (e) {
+                        addLog(`OpenAI помилка: ${e.message}`, 'error');
+                        addLog('OpenAI → Pollinations');
+                    }
+                }
+            }
+
+            // ── Google Imagen API ────────────────────────────────
+            if (imageModelSetting.startsWith('google:')) {
+                const gModel = imageModelSetting.slice(7);
+                const gKey = getConfig().apiKeys.google;
+                addLog(`Генерація зображення. Модель: ${gModel}`);
+                if (!gKey) {
+                    addLog('Google API ключ не вказано → Pollinations', 'error');
+                } else {
+                    try {
+                        const res = await fetch(
+                            `https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateImages?key=${gKey}`,
+                            {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ prompt: { text: prompt }, imageCount: 1 })
+                            }
+                        );
+                        if (!res.ok) { const err = await res.text(); throw new Error(`Google Imagen ${res.status}: ${err.slice(0,200)}`); }
+                        const data = await res.json();
+                        const b64 = data.generatedImages?.[0]?.image?.imageBytes;
+                        if (!b64) throw new Error('Google Imagen: відповідь без зображення');
+                        container.innerHTML = `<img src="data:image/png;base64,${b64}" class="w-full h-full object-cover rounded-lg">`;
+                        addLog('Картинку згенеровано', 'success');
+                        return;
+                    } catch (e) {
+                        addLog(`Google Imagen помилка: ${e.message}`, 'error');
+                        addLog('Google Imagen → Pollinations');
+                    }
+                }
+            }
+
+            // ── Pollinations.ai (fallback або основний варіант) ──
+            addLog('Генерація зображення. Сервіс: Pollinations.ai');
             const seed = Math.floor(Math.random() * 9999);
             const polImgKey   = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
             const polImgModel = localStorage.getItem('sp_pollinations_img_model') || 'flux';
