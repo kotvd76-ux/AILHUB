@@ -202,6 +202,9 @@
                 <p id="stt-status" class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Торкніться, щоб говорити</p>
                 <p id="transcript-preview" class="text-xs italic text-orange-400 mt-1 max-w-xs mx-auto min-h-[1.25rem]"></p>
             </div>
+            <button id="replay-btn" onclick="replayLastPhrase()" class="hidden flex items-center gap-2 px-4 py-2 rounded-2xl glass-card text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-orange-400 active:scale-95 transition-all" title="Повторити останню фразу ШІ">
+                <i class="fa-solid fa-rotate-right text-xs"></i> Повторити фразу
+            </button>
         </div>
     </div>
 
@@ -235,6 +238,7 @@
         let phoneCompletedTurns = 0;
         let lastTaskText = '';
         let lastAiFeedbackText = '';
+        let lastAiMessage = '';
         
         // --- Config from Storage (через sett_set.js storageKeys) ---
         function getConfig() {
@@ -404,6 +408,8 @@
             document.getElementById('selection-screen').classList.add('hidden');
             document.getElementById('exercise-screen').classList.remove('hidden');
             document.getElementById('exercise-screen').classList.add('flex');
+            document.getElementById('replay-btn').classList.add('hidden');
+            lastAiMessage = '';
 
             if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
 
@@ -492,8 +498,10 @@
             try {
                 const response = await fetchAI(conversation);
                 conversation.push({ role: 'assistant', content: response });
+                lastAiMessage = response;
                 addMessage('ai', response);
                 speakText(response);
+                document.getElementById('replay-btn').classList.remove('hidden');
 
                 // image generation is handled separately in initDescribeExercise()
             } catch (err) {
@@ -720,6 +728,10 @@
                 sttManualStopRequested = false;
                 recognition.stop();
             };
+        }
+
+        function replayLastPhrase() {
+            if (lastAiMessage) speakText(lastAiMessage);
         }
 
         document.getElementById('record-btn').onclick = () => {
