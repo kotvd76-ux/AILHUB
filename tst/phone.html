@@ -250,8 +250,8 @@
                 <button id="clear-draft-btn" onclick="clearDraftTranscript()" class="side-action-btn absolute left-1 bottom-1 bg-slate-900 border border-slate-500 text-slate-200 hover:border-orange-400 hover:text-orange-300 active:scale-95 transition-all" title="Стерти поточний текст відповіді" aria-label="Стерти поточний текст відповіді">
                     <i class="fa-solid fa-eraser text-base"></i><span>Стерти</span>
                 </button>
-                <div class="absolute inset-x-0 bottom-0 flex justify-center">
-                    <div class="relative w-32 h-32 flex items-center justify-center">
+                <div class="absolute inset-x-0 bottom-0 flex justify-center pointer-events-none">
+                    <div class="relative w-32 h-32 flex items-center justify-center pointer-events-auto">
                         <div id="mic-ring" class="hidden recording-ring"></div>
                         <button id="record-btn" aria-label="Почати або зупинити запис голосу" class="mic-btn-accessible rounded-full bg-orange-600 flex items-center justify-center active:scale-95 transition-all z-10">
                             <i id="mic-icon" class="fa-solid fa-microphone text-4xl text-white"></i>
@@ -288,6 +288,7 @@
         let conversation = [];
         let recognition = null;
         let currentTranscript = "";
+        let finalizedParts = [];
         let sttSessionActive = false;
         let sttManualStopRequested = false;
         let phoneAttemptStartedAt = 0;
@@ -713,7 +714,7 @@
             recognition.lang = getLangConfig().speechLang;
             recognition.continuous = !isMobile;
             recognition.interimResults = !isMobile;
-            let finalizedParts = [];
+            finalizedParts = [];
 
             const mergeTranscriptPart = (parts, chunk) => {
                 const normalized = (chunk || "").replace(/\s+/g, " ").trim();
@@ -811,6 +812,7 @@
 
         function clearDraftTranscript() {
             currentTranscript = "";
+            finalizedParts = [];
             document.getElementById('transcript-preview').innerText = "";
             updateDraftClearButton();
         }
@@ -823,6 +825,7 @@
             } else {
                 window.speechSynthesis.cancel();
                 currentTranscript = "";
+                finalizedParts = [];
                 document.getElementById('transcript-preview').innerText = "";
                 updateDraftClearButton();
                 document.getElementById('feedback-sheet').classList.add('hidden');
