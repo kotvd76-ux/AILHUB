@@ -81,41 +81,6 @@
             box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
         }
 
-        .vision-assist-panel {
-            background: rgba(15, 23, 42, 0.96);
-            border: 2px solid rgba(251, 146, 60, 0.6);
-            box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.9), 0 10px 24px rgba(2, 6, 23, 0.5);
-        }
-
-        .vision-assist-prompt {
-            background: #fff;
-            color: #0f172a;
-            font-size: 1.125rem;
-            line-height: 1.6;
-            font-weight: 800;
-            letter-spacing: 0.01em;
-            border: 2px solid #f97316;
-        }
-
-        .vision-assist-label {
-            font-size: 0.8rem;
-            letter-spacing: 0.12em;
-            color: #fbbf24;
-        }
-
-        .mic-btn-accessible {
-            width: 7rem;
-            height: 7rem;
-            border: 4px solid rgba(255, 255, 255, 0.22);
-            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.25), 0 18px 30px rgba(249, 115, 22, 0.22);
-        }
-
-        .mic-btn-accessible:focus-visible,
-        .replay-btn-accessible:focus-visible {
-            outline: 4px solid #fde68a;
-            outline-offset: 4px;
-        }
-
         /* Діагностична кнопка — активний стан під час AI-запиту */
         @keyframes diagPulse {
             0%,100% { opacity:1; transform:scale(1); }
@@ -226,25 +191,19 @@
         </div>
 
         <!-- Interactive Mic Controls -->
-        <div class="vision-assist-panel p-6 rounded-[2.5rem] flex flex-col items-center gap-5 mb-4">
-            <div class="w-full max-w-xl">
-                <p class="vision-assist-label font-black uppercase mb-2 text-center">Поточне запрошення до вправи</p>
-                <p id="exercise-invite" class="vision-assist-prompt rounded-3xl px-5 py-4 text-center" role="status" aria-live="polite">
-                    Тут зʼявиться фраза від ШІ.
-                </p>
-            </div>
-            <div class="relative w-32 h-32 flex items-center justify-center">
+        <div class="glass-card p-6 rounded-[3.5rem] flex flex-col items-center gap-4 mb-4">
+            <div class="relative w-24 h-24 flex items-center justify-center">
                 <div id="mic-ring" class="hidden recording-ring"></div>
-                <button id="record-btn" aria-label="Почати або зупинити запис голосу" class="mic-btn-accessible rounded-full bg-orange-600 flex items-center justify-center active:scale-95 transition-all z-10">
-                    <i id="mic-icon" class="fa-solid fa-microphone text-4xl text-white"></i>
+                <button id="record-btn" class="w-20 h-20 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/20 active:scale-95 transition-all z-10">
+                    <i id="mic-icon" class="fa-solid fa-microphone text-3xl text-white"></i>
                 </button>
             </div>
             <div class="text-center">
-                <p id="stt-status" class="text-sm font-black text-slate-200 uppercase tracking-[0.08em]">Натисніть велику кнопку, щоб говорити</p>
-                <p id="transcript-preview" class="text-base italic text-orange-300 mt-2 max-w-md mx-auto min-h-[1.5rem]"></p>
+                <p id="stt-status" class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Торкніться, щоб говорити</p>
+                <p id="transcript-preview" class="text-xs italic text-orange-400 mt-1 max-w-xs mx-auto min-h-[1.25rem]"></p>
             </div>
-            <button id="replay-btn" onclick="replayLastPhrase()" class="replay-btn-accessible hidden flex items-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 border-2 border-orange-400 text-sm font-black uppercase tracking-[0.08em] text-orange-200 hover:text-white hover:bg-orange-600 active:scale-95 transition-all" title="Повторити останню фразу ШІ" aria-label="Повторити останню фразу ШІ">
-                <i class="fa-solid fa-rotate-right text-base"></i> Повторити фразу
+            <button id="replay-btn" onclick="replayLastPhrase()" class="hidden flex items-center gap-2 px-4 py-2 rounded-2xl glass-card text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-orange-400 active:scale-95 transition-all" title="Повторити останню фразу ШІ">
+                <i class="fa-solid fa-rotate-right text-xs"></i> Повторити фразу
             </button>
         </div>
     </div>
@@ -450,7 +409,6 @@
             document.getElementById('exercise-screen').classList.remove('hidden');
             document.getElementById('exercise-screen').classList.add('flex');
             document.getElementById('replay-btn').classList.add('hidden');
-            updateExerciseInvite('Готуємо першу фразу вправи…');
             lastAiMessage = '';
 
             if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
@@ -538,7 +496,6 @@
             if (userMsg) conversation.push({ role: 'user', content: userMsg });
 
             addLog("Запит до ШІ...");
-            updateExerciseInvite('ШІ формує наступне завдання…');
             _phoneSetAiActive(true);
             try {
                 const response = await fetchAI(conversation);
@@ -796,13 +753,6 @@
         };
 
         // --- Helpers ---
-        function updateExerciseInvite(text = '') {
-            const invite = document.getElementById('exercise-invite');
-            if (!invite) return;
-            const normalized = (text || '').replace(/\s+/g, ' ').trim();
-            invite.innerText = normalized || 'Тут зʼявиться фраза від ШІ.';
-        }
-
         function addMessage(sender, text) {
             const area = document.getElementById('scroll-area');
             const div = document.createElement('div');
@@ -810,7 +760,6 @@
             div.innerHTML = `<p>${text}</p>`;
             area.appendChild(div);
             area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
-            if (sender === 'ai') updateExerciseInvite(text);
         }
 
         async function generateScene(desc) {
