@@ -626,10 +626,18 @@
                 addLog("STT не підтримується", "error");
                 return;
             }
+
+            // Mobile browsers (Android/iOS) do not support continuous=true reliably:
+            // they auto-stop after silence and restart, which causes duplicate words.
+            // On mobile: single-shot mode (continuous=false, interimResults=false) —
+            // recognition stops automatically after the first utterance and submits.
+            // On desktop: continuous mode — user manually presses stop to submit.
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
             recognition = new SpeechRec();
             recognition.lang = getLangConfig().speechLang;
-            recognition.continuous = true;
-            recognition.interimResults = true;
+            recognition.continuous = !isMobile;
+            recognition.interimResults = !isMobile;
 
             recognition.onstart = () => {
                 isRecording = true;
@@ -642,7 +650,13 @@
             };
 
             recognition.onresult = (e) => {
-                currentTranscript = Array.from(e.results).map(r => r[0].transcript).join('');
+                if (isMobile) {
+                    // Single-shot: take only the one final result
+                    currentTranscript = e.results[0][0].transcript;
+                } else {
+                    // Continuous: accumulate all interim+final segments
+                    currentTranscript = Array.from(e.results).map(r => r[0].transcript).join('');
+                }
                 document.getElementById('transcript-preview').innerText = currentTranscript;
             };
 
@@ -652,7 +666,7 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
                 document.getElementById('stt-status').innerText = "ТОРКНІТЬСЯ, ЩОБ ГОВОРИТИ";
                 addLog("Запис завершено");
-                
+
                 if (currentTranscript.trim()) {
                     addMessage('user', currentTranscript);
                     runFeedback(currentTranscript);
