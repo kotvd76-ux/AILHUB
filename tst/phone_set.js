@@ -26,7 +26,7 @@ const AI_EXERCISE_CONFIG = {
     // system — функція від (level) => string; мова береться з getLangConfig()
     exercises: {
         'echo': {
-            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Shadowing Lite. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} ГЕНЕРУЙ ЛИШЕ ОДНЕ коротке речення мовою ${L.targetName} відповідно до профілю.${L.helperClause} НЕ пиши вступів. Користувач має його повторити.`; },
+            system: (level) => { const L = (typeof getLangConfig==='function') ? getLangConfig() : {targetName:'Spanish',helperClause:''}; return `Вправа: Shadowing Lite. ${AI_EXERCISE_CONFIG.getLevelInstruction(level)} СУВОРІ ПРАВИЛА — порушувати заборонено: 1) Видавай ЛИШЕ ОДНЕ коротке речення мовою ${L.targetName} відповідно до профілю рівня. 2) Після кожної відповіді учня — БЕЗ будь-яких коментарів, оцінок або похвали — ОДРАЗУ нова фраза. 3) Кожна фраза — ІНША тема й ситуація: різні дієслова, місця, персонажі, не повторюй схожих конструкцій. 4) Відповідь містить ЛИШЕ саму фразу — більше нічого.${L.helperClause}`; },
             example: "Hola, me llamo Juan y vivo en Madrid."
         },
         'simple_question': {
