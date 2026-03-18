@@ -37,39 +37,19 @@ const LISTEN_CONFIG = {
     ],
 
     // ─── ПРОФІЛІ РІВНІВ ДЛЯ AI-ПРОМПТУ ─────────────────────────────────────────
-    // Використовується при генерації завдань — передається в системний промпт
-    // щоб AI підлаштовував складність лексики, граматики та стиль мовлення для TTS
-    levelProfiles: {
-        A1: {
-            ttsHint:    'дуже повільно, чітко, з паузами між словами',
-            lexicon:    'тільки найпростіші слова: ser, estar, tener, ir, querer, числа, кольори, привітання',
-            grammar:    'лише presente indicativo, прості ствердні речення',
-            sentences:  'одне просте речення 4-6 слів',
-        },
-        A2: {
-            ttsHint:    'повільно, чітка артикуляція',
-            lexicon:    'базова лексика побутових тем, frecuentemente використовувані дієслова',
-            grammar:    'presente, indefinido, прості питання та заперечення',
-            sentences:  '1-2 короткі речення, прості сполучники y/pero/porque',
-        },
-        B1: {
-            ttsHint:    'помірний темп, природна артикуляція',
-            lexicon:    'розмовна лексика середнього рівня, деякі ідіоми',
-            grammar:    'усі основні часи, subjuntivo в простих випадках',
-            sentences:  '2-3 речення середньої довжини з підрядними',
-        },
-        B2: {
-            ttsHint:    'близький до природного темпу носія',
-            lexicon:    'вільна розмовна лексика, ідіоми, фразові дієслова',
-            grammar:    'складні часові форми, умовний спосіб, subjuntivo вільно',
-            sentences:  '3-4 речення, складні конструкції',
-        },
-        C1: {
-            ttsHint:    'природний темп носія, розмовні редукції',
-            lexicon:    'багата лексика, ідіоматичні вирази, розмовний стиль',
-            grammar:    'весь граматичний спектр, стилістичні варіації',
-            sentences:  '4-6 речень, природний розмовний потік',
-        },
+    // Джерело: sett_set.js → SETTINGS_CONFIG.levelProfiles
+    // Повертаємо сумісний формат для listening (ttsHint/lexicon/grammar/sentences).
+    get levelProfiles() {
+        const src = (typeof getExerciseLevelProfiles === 'function')
+            ? getExerciseLevelProfiles()
+            : {};
+        return {
+            A1: { ttsHint: src.A1?.pace || 'Дуже повільно й чітко', lexicon: src.A1?.lexicon || 'лише базова лексика', grammar: src.A1?.grammar || 'найпростіші граматичні форми', sentences: src.A1?.sentences || '1 речення 4–6 слів' },
+            A2: { ttsHint: src.A2?.pace || 'Повільно й чітко', lexicon: src.A2?.lexicon || 'базова побутова лексика', grammar: src.A2?.grammar || 'прості форми теперішнього, минулого й майбутнього', sentences: src.A2?.sentences || '1–2 короткі речення по 5–8 слів' },
+            B1: { ttsHint: src.B1?.pace || 'Помірний навчальний темп', lexicon: src.B1?.lexicon || 'розмовна лексика середнього рівня', grammar: src.B1?.grammar || 'основні часові й модальні форми', sentences: src.B1?.sentences || '2–3 речення по 7–11 слів' },
+            B2: { ttsHint: src.B2?.pace || 'Майже природний темп', lexicon: src.B2?.lexicon || 'різноманітна лексика та сталі вирази', grammar: src.B2?.grammar || 'широкий набір граматичних структур', sentences: src.B2?.sentences || '3–4 речення по 10–15 слів' },
+            C1: { ttsHint: src.C1?.pace || 'Природний темп носія', lexicon: src.C1?.lexicon || 'багата ідіоматична та абстрактна лексика', grammar: src.C1?.grammar || 'повний спектр граматики', sentences: src.C1?.sentences || '4–6 речень по 14–20 слів' },
+        };
     },
 
     // ─── СЕСІЯ ───────────────────────────────────────────────────────────────────

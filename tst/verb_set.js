@@ -8,7 +8,8 @@
  *   aiPrompt(level) — функція; level береться з sel-level (getExerciseLevels з sett_set.js)
  *
  * МОВА: береться динамічно з getLangConfig() (sett_set.js).
- * РІВЕНЬ: передається параметром; профілі — GRAMMAR_CONFIG.levelProfiles.
+ * РІВЕНЬ: передається параметром; профілі беруться централізовано з sett_set.js
+ * через getExerciseLevelProfile(level). Профілі є мовонезалежними.
  */
 
 /** Повертає мовний конфіг або дефолт якщо getLangConfig ще не доступний */
@@ -40,79 +41,31 @@ const GRAMMAR_CONFIG = {
     sessionStats: 'sp_grammar_session',
   },
 
-  // ── Профілі рівнів (мовозалежні) ────────────────────────
-  // Використовуються у getLevelInstruction(level) для адаптації складності.
-  // Тепер повертають профіль відповідно до обраної мови навчання.
-  _levelProfilesByLang: {
-    es: {
-      A1: { grammar: 'ТІЛЬКИ Presente Indicativo; дієслова: ser, estar, tener, ir, querer, poder та прості регулярні -ar/-er/-ir', lexicon: 'базова лексика: числа, кольори, члени сім\'ї, частини тіла, базова їжа, дні тижня', syntax: 'прості короткі речення 3–5 слів, без складних підрядних' },
-      A2: { grammar: 'Presente + Pretérito Indefinido + Futuro Simple базовий; рефлексивні дієслова; ir a + infinitivo', lexicon: 'побутова лексика: покупки, транспорт, помешкання, робота, хобі, базові прикметники', syntax: 'речення 5–8 слів, прості сполучники (y, pero, porque, cuando)' },
-      B1: { grammar: 'усі часи Indicativo + Subjuntivo базовий (бажання, емоції) + рефлексивні + модальні (poder, deber, tener que)', lexicon: 'розмовна лексика: подорожі, медицина, офіс, стосунки, часові маркери', syntax: 'речення 7–11 слів; підрядні з que, cuando, si, aunque; прямий і непрямий порядок слів' },
-      B2: { grammar: 'повний Subjuntivo (Presente і Imperfecto) + Condicional + Pluscuamperfecto + пасивний стан (se + verbo)', lexicon: 'широка лексика: ідіоми, колокації, фразові дієслова, термінологія', syntax: 'складні речення 10–15 слів; складні підрядні; умовні конструкції (Si + Imperfecto Subj + Condicional)' },
-      C1: { grammar: 'весь граматичний спектр; тонке розрізнення Subjuntivo/Indicativo; Futuro Perfecto; Condicional Perfecto; Subjuntivo Perfecto; інверсія', lexicon: 'академічна та ідіоматична лексика; фразеологізми; стилістичні варіанти; нюанси синонімів', syntax: 'складні багатоклаузульні речення 14–20 слів; еліпсис; безособові конструкції; номіналізація' },
-    },
-    en: {
-      A1: { grammar: 'Simple Present only; verbs: be, have, do, go, come, like, want, need, and basic regular verbs', lexicon: 'basic vocabulary: numbers, colors, family members, body parts, food, days of the week', syntax: 'short simple sentences 3–5 words, no complex subordinate clauses' },
-      A2: { grammar: 'Simple Present + Simple Past + Future (will/going to) + Present Continuous; basic modals (can, must)', lexicon: 'everyday vocabulary: shopping, transport, home, work, hobbies, basic adjectives', syntax: 'sentences 5–8 words, simple conjunctions (and, but, because, when)' },
-      B1: { grammar: 'all basic tenses + Present Perfect + Past Continuous + modals (can, must, should, have to, may) + 1st conditional', lexicon: 'conversational vocabulary: travel, medicine, office, relationships, time markers', syntax: 'sentences 7–11 words; clauses with that, when, if, although; direct and indirect word order' },
-      B2: { grammar: 'Past Perfect + 2nd/3rd conditionals + passive voice + reported speech + gerunds vs. infinitives', lexicon: 'wide vocabulary: idioms, collocations, phrasal verbs, terminology', syntax: 'complex sentences 10–15 words; complex subordinate clauses; conditional structures (If + Past Simple + Would)' },
-      C1: { grammar: 'full grammatical spectrum; inverted conditionals; advanced passives; emphatic structures; mixed conditionals; subjunctive mood', lexicon: 'academic and idiomatic vocabulary; phraseology; stylistic variants; nuances of synonyms', syntax: 'complex multi-clause sentences 14–20 words; ellipsis; impersonal constructions; nominalization' },
-    },
-    fr: {
-      A1: { grammar: 'Présent Indicatif seulement; verbes: être, avoir, aller, faire, vouloir, pouvoir et réguliers -er', lexicon: 'vocabulaire de base: nombres, couleurs, famille, corps, nourriture, jours de la semaine', syntax: 'phrases courtes 3–5 mots, sans subordonnées complexes' },
-      A2: { grammar: 'Présent + Passé Composé + Futur Proche; verbes réfléchis; imparfait basique', lexicon: 'vocabulaire quotidien: achats, transports, logement, travail, loisirs', syntax: 'phrases 5–8 mots, conjonctions simples (et, mais, parce que, quand)' },
-      B1: { grammar: 'tous les temps Indicatif + Subjonctif présent basique + modaux (devoir, pouvoir, vouloir) + Conditionnel', lexicon: 'vocabulaire conversationnel: voyages, médecine, bureau, relations, marqueurs temporels', syntax: 'phrases 7–11 mots; subordonnées avec que, quand, si, bien que' },
-      B2: { grammar: 'Subjonctif présent et passé + Conditionnel passé + Plus-que-parfait + voix passive', lexicon: 'large vocabulaire: idiomes, collocations, terminologie', syntax: 'phrases complexes 10–15 mots; structures conditionnelles complexes' },
-      C1: { grammar: 'spectre grammatical complet; Subjonctif imparfait; distinctions fines; inversion; nominalisation', lexicon: 'vocabulaire académique et idiomatique; phraséologie; variantes stylistiques', syntax: 'phrases multi-propositions 14–20 mots; ellipse; constructions impersonnelles' },
-    },
-    de: {
-      A1: { grammar: 'Präsens nur; Verben: sein, haben, werden, gehen, kommen, mögen; Kasus: Nominativ/Akkusativ', lexicon: 'Grundwortschatz: Zahlen, Farben, Familie, Körper, Essen, Wochentage', syntax: 'einfache Sätze 3–5 Wörter, ohne Nebensätze' },
-      A2: { grammar: 'Präsens + Perfekt + Futur I; Modalverben (können, müssen, wollen, dürfen); Präteritum (sein/haben)', lexicon: 'Alltagswortschatz: Einkaufen, Verkehr, Wohnen, Arbeit, Hobbys', syntax: 'Sätze 5–8 Wörter, einfache Konjunktionen (und, aber, weil, wenn)' },
-      B1: { grammar: 'alle Zeitformen Indikativ + Konjunktiv II basisch + Modalverben + Passiv Präsens/Perfekt', lexicon: 'Gesprächswortschatz: Reisen, Medizin, Büro, Beziehungen, Zeitangaben', syntax: 'Sätze 7–11 Wörter; Nebensätze mit dass, wenn, ob, obwohl; Verb-2. Position' },
-      B2: { grammar: 'Konjunktiv I und II vollständig + Passiv (alle Zeiten) + Plusquamperfekt + Konditionalsätze', lexicon: 'umfangreicher Wortschatz: Redewendungen, Kollokationen, Fachbegriffe', syntax: 'komplexe Sätze 10–15 Wörter; Konditionalkonstruktionen; Partizipialkonstruktionen' },
-      C1: { grammar: 'vollständiges Grammatikspektrum; Konjunktiv Plusquamperfekt; Inversion; nominale Strukturen; Modalpartikeln', lexicon: 'akademischer und idiomatischer Wortschatz; Phraseologie; Stilistik', syntax: 'Mehrfachsätze 14–20 Wörter; Ellipse; unpersönliche Konstruktionen' },
-    },
-    it: {
-      A1: { grammar: 'solo Presente Indicativo; verbi: essere, avere, andare, fare, volere, potere e regolari', lexicon: 'vocabolario di base: numeri, colori, famiglia, corpo, cibo, giorni', syntax: 'frasi brevi 3–5 parole, senza subordinate complesse' },
-      A2: { grammar: 'Presente + Passato Prossimo + Futuro Semplice; verbi riflessivi; stare + gerundio', lexicon: 'vocabolario quotidiano: shopping, trasporti, casa, lavoro, hobby', syntax: 'frasi 5–8 parole, congiunzioni semplici (e, ma, perché, quando)' },
-      B1: { grammar: 'tutti i tempi Indicativo + Congiuntivo Presente basico + Condizionale + Imperfetto', lexicon: 'vocabolario conversazionale: viaggi, medicina, ufficio, relazioni', syntax: 'frasi 7–11 parole; subordinate con che, quando, se, anche se' },
-      B2: { grammar: 'Congiuntivo completo + Condizionale Passato + Trapassato + voce passiva', lexicon: 'ampio vocabolario: idiomi, collocazioni, terminologia', syntax: 'frasi complesse 10–15 parole; strutture condizionali' },
-      C1: { grammar: 'spettro grammaticale completo; sfumature Congiuntivo/Indicativo; strutture avanzate; nominalizzazione', lexicon: 'vocabolario accademico e idiomatico; fraseologia; varianti stilistiche', syntax: 'frasi multi-clausola 14–20 parole; ellissi; costruzioni impersonali' },
-    },
-    pl: {
-      A1: { grammar: 'tylko Czas Teraźniejszy; czasowniki: być, mieć, iść, robić, chcieć, móc; koniugacja regularna', lexicon: 'podstawowe słownictwo: liczby, kolory, rodzina, ciało, jedzenie, dni tygodnia', syntax: 'proste zdania 3–5 słów, bez złożonych zdań podrzędnych' },
-      A2: { grammar: 'Czas Teraźniejszy + Przeszły + Przyszły; czasowniki zwrotne; aspekt dokonany/niedokonany podstawowy', lexicon: 'codzienne słownictwo: zakupy, transport, dom, praca, hobby', syntax: 'zdania 5–8 słów, proste spójniki (i, ale, bo, kiedy)' },
-      B1: { grammar: 'wszystkie czasy + Tryb Warunkowy podstawowy + modalne (móc, musieć, chcieć, powinien)', lexicon: 'słownictwo konwersacyjne: podróże, medycyna, biuro, relacje, wyrażenia czasu', syntax: 'zdania 7–11 słów; zdania podrzędne z że, kiedy, jeśli, chociaż' },
-      B2: { grammar: 'Tryb Warunkowy rozszerzony + Strona Bierna + zdania złożone + aspekt szczegółowy', lexicon: 'szerokie słownictwo: idiomy, kolokacje, terminologia', syntax: 'zdania złożone 10–15 słów; struktury warunkowe' },
-      C1: { grammar: 'pełne spektrum gramatyczne; tryb warunkowy złożony; inwersja; konstrukcje nominalne; mowa zależna', lexicon: 'akademickie i idiomatyczne słownictwo; frazeologia; warianty stylistyczne', syntax: 'wieloklauzulowe zdania 14–20 słów; elipsa; konstrukcje bezosobowe' },
-    },
-    pt: {
-      A1: { grammar: 'apenas Presente Indicativo; verbos: ser, estar, ter, ir, querer, poder e regulares -ar/-er/-ir', lexicon: 'vocabulário básico: números, cores, família, corpo, comida, dias da semana', syntax: 'frases simples 3–5 palavras, sem orações subordinadas complexas' },
-      A2: { grammar: 'Presente + Pretérito Perfeito Simples + Futuro Imediato (ir + inf); verbos reflexivos', lexicon: 'vocabulário cotidiano: compras, transporte, casa, trabalho, hobby', syntax: 'frases 5–8 palavras, conjunções simples (e, mas, porque, quando)' },
-      B1: { grammar: 'todos os tempos Indicativo + Subjuntivo Presente básico + modais + Imperfeito', lexicon: 'vocabulário conversacional: viagens, medicina, escritório, relações, marcadores temporais', syntax: 'frases 7–11 palavras; orações subordinadas com que, quando, se, embora' },
-      B2: { grammar: 'Subjuntivo completo + Condicional + Mais-que-perfeito + voz passiva + Futuro do Subjuntivo', lexicon: 'vocabulário amplo: expressões idiomáticas, colocações, terminologia', syntax: 'frases complexas 10–15 palavras; estruturas condicionais' },
-      C1: { grammar: 'espectro gramatical completo; distinções sutis; Subjuntivo Imperfeito; inversão; nominalizações', lexicon: 'vocabulário acadêmico e idiomático; fraseologia; variantes estilísticas', syntax: 'frases multi-cláusula 14–20 palavras; elipse; construções impessoais' },
-    },
-    la: {
-      A1: { grammar: 'Praesens 1st/2nd conjugation only; verbs: esse, habere; cases: Nominativus/Accusativus', lexicon: 'basic Latin: familia, numeralia, corpus, dies hebdomadis, res cotidianae', syntax: 'simple sentences 3–5 words; SVO/SOV word order' },
-      A2: { grammar: 'all conjugations Praesens + Perfectum + Futurum; basic cases (nom/acc/gen/dat/abl)', lexicon: 'everyday Latin: vita quotidiana, domus, iter, amor, labor', syntax: 'sentences 5–8 words; simple subordinate clauses with ut, quod, cum' },
-      B1: { grammar: 'all tenses Indicativus + Coniunctivus Praesens/Imperfectum; all cases; Passivum basic', lexicon: 'conversational Latin: travel, philosophy, nature, time, body', syntax: 'sentences 7–11 words; cum clauses; indirect statement (acc + inf)' },
-      B2: { grammar: 'full Indicativus + Coniunctivus + infinitive constructions + participles + gerunds/gerundives', lexicon: 'wide Latin vocabulary: idioms, literary expressions, formal register', syntax: 'complex sentences 10–15 words; complex subordinate clauses; ablative absolute' },
-      C1: { grammar: 'full grammatical spectrum; rare verb forms; literary constructions; subtle Coniunctivus usage', lexicon: 'academic and classical vocabulary; phraseology; prose and poetry styles', syntax: 'complex multi-clause sentences 14–20 words; ellipsis; impersonal constructions' },
-    },
-  },
-
-  /** Повертає рядок-інструкцію рівня для вставки в початок промпту (мовозалежна) */
+  /** Повертає рядок-інструкцію рівня для вставки в початок промпту */
   getLevelInstruction(level) {
-    const L = _vLang();
-    const lang = (L.target && L.target.id) ? L.target.id : 'es';
-    const profiles = this._levelProfilesByLang[lang] || this._levelProfilesByLang['en'];
-    const p = profiles[level] || profiles['B1'];
+    const central = (typeof getExerciseLevelProfile === 'function')
+      ? getExerciseLevelProfile(level)
+      : {
+          pace: 'Помірний навчальний темп',
+          lexicon: 'розмовна лексика середнього рівня',
+          grammar: 'основні часові й модальні форми',
+          sentences: '2–3 речення по 7–11 слів',
+          constraints: 'базові складнопідрядні',
+        };
+    const p = {
+      pace: central.pace,
+      grammar: central.grammar,
+      lexicon: central.lexicon,
+      syntax: central.sentences,
+      constraints: central.constraints || 'Не виходь за межі рівня.',
+    };
     return (
       `\nПРОФІЛЬ РІВНЯ ${level}:\n` +
+      `  • темп:      ${p.pace}\n` +
       `  • граматика: ${p.grammar}\n` +
       `  • лексика:   ${p.lexicon}\n` +
       `  • синтаксис: ${p.syntax}\n` +
+      `  • обмеження: ${p.constraints}\n` +
       `Суворо дотримуйся цього профілю у ВСІХ 5 завданнях. ` +
       `Не виходь за межі рівня ні у граматиці, ні у лексиці.\n`
     );
