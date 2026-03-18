@@ -25,6 +25,13 @@
             color: #fff;
             -webkit-tap-highlight-color: transparent;
             overflow-x: hidden;
+            font-weight: 700;
+            line-height: 1.05;
+        }
+
+        body *:not(i) {
+            font-weight: 700 !important;
+            line-height: 1.05 !important;
         }
 
         .glass-card {
@@ -57,6 +64,13 @@
             border-right: 4px solid rgba(249, 115, 22, 0.5);
         }
 
+        .chat-bubble-ai p,
+        .chat-bubble-user p {
+            margin: 0;
+            font-size: 1.35rem;
+            line-height: 1.02;
+        }
+
         #scroll-area::-webkit-scrollbar { width: 4px; }
         #scroll-area::-webkit-scrollbar-thumb { background: rgba(249, 115, 22, 0.3); border-radius: 10px; }
 
@@ -79,6 +93,36 @@
 
         .btn-glow {
             box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+        }
+
+        .vision-assist-panel {
+            background: rgba(15, 23, 42, 0.96);
+            border: 2px solid rgba(251, 146, 60, 0.6);
+            box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.9), 0 10px 24px rgba(2, 6, 23, 0.5);
+        }
+
+        .mic-btn-accessible {
+            width: 7rem;
+            height: 7rem;
+            border: 4px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.25), 0 18px 30px rgba(249, 115, 22, 0.22);
+        }
+
+        .mic-btn-accessible:focus-visible,
+        .replay-btn-accessible:focus-visible,
+        .side-action-btn:focus-visible {
+            outline: 4px solid #fde68a;
+            outline-offset: 4px;
+        }
+
+        .side-action-btn {
+            width: 5rem;
+            height: 5rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
         }
 
         /* Діагностична кнопка — активний стан під час AI-запиту */
@@ -173,7 +217,7 @@
         </div>
 
         <!-- Chat History -->
-        <div id="scroll-area" class="flex-grow overflow-y-auto space-y-4 pr-2 mb-4 text-sm custom-scrollbar">
+        <div id="scroll-area" class="flex-grow overflow-y-auto space-y-2 pr-1 mb-3 text-lg custom-scrollbar">
             <!-- Messages injected here -->
         </div>
 
@@ -191,20 +235,27 @@
         </div>
 
         <!-- Interactive Mic Controls -->
-        <div class="glass-card p-6 rounded-[3.5rem] flex flex-col items-center gap-4 mb-4">
-            <div class="relative w-24 h-24 flex items-center justify-center">
-                <div id="mic-ring" class="hidden recording-ring"></div>
-                <button id="record-btn" class="w-20 h-20 rounded-full bg-orange-600 flex items-center justify-center shadow-lg shadow-orange-600/20 active:scale-95 transition-all z-10">
-                    <i id="mic-icon" class="fa-solid fa-microphone text-3xl text-white"></i>
+        <div class="vision-assist-panel w-full p-2 rounded-2xl flex flex-col items-center gap-1 mt-auto mb-0 sticky bottom-0">
+            <div class="text-center w-full">
+                <p id="stt-status" class="text-sm font-black text-slate-200 uppercase tracking-[0.08em]"></p>
+                <p id="transcript-preview" class="text-base italic text-orange-300 mt-0 max-w-full mx-auto leading-tight break-words"></p>
+            </div>
+            <div class="relative w-full h-28">
+                <button type="button" id="clear-draft-btn" onclick="clearDraftTranscript()" class="side-action-btn absolute left-1 bottom-0 bg-slate-900 border border-slate-500 text-slate-200 hover:border-orange-400 hover:text-orange-300 active:scale-95 transition-all" title="Стерти поточний текст відповіді" aria-label="Стерти поточний текст відповіді">
+                    <i class="fa-solid fa-eraser text-2xl"></i>
+                </button>
+                <div class="absolute inset-x-0 bottom-0 flex justify-center">
+                    <div class="relative w-32 h-32 flex items-center justify-center">
+                        <div id="mic-ring" class="hidden recording-ring"></div>
+                        <button id="record-btn" aria-label="Почати або зупинити запис голосу" class="mic-btn-accessible rounded-full bg-orange-600 flex items-center justify-center active:scale-95 transition-all z-10">
+                            <i id="mic-icon" class="fa-solid fa-microphone text-4xl text-white"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" id="replay-btn" onclick="replayLastPhrase()" class="replay-btn-accessible side-action-btn hidden absolute right-1 bottom-0 bg-slate-900 border-2 border-orange-400 text-orange-200 hover:text-white hover:bg-orange-600 active:scale-95 transition-all" title="Повторити останню фразу ШІ" aria-label="Повторити останню фразу ШІ">
+                    <i class="fa-solid fa-rotate-right text-2xl"></i>
                 </button>
             </div>
-            <div class="text-center">
-                <p id="stt-status" class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Торкніться, щоб говорити</p>
-                <p id="transcript-preview" class="text-xs italic text-orange-400 mt-1 max-w-xs mx-auto min-h-[1.25rem]"></p>
-            </div>
-            <button id="replay-btn" onclick="replayLastPhrase()" class="hidden flex items-center gap-2 px-4 py-2 rounded-2xl glass-card text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-orange-400 active:scale-95 transition-all" title="Повторити останню фразу ШІ">
-                <i class="fa-solid fa-rotate-right text-xs"></i> Повторити фразу
-            </button>
         </div>
     </div>
 
@@ -409,6 +460,7 @@
             document.getElementById('exercise-screen').classList.remove('hidden');
             document.getElementById('exercise-screen').classList.add('flex');
             document.getElementById('replay-btn').classList.add('hidden');
+            setTranscriptDraft("");
             lastAiMessage = '';
 
             if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
@@ -604,8 +656,7 @@
         // --- Interaction Handlers ---
         function clearFeedback() {
             document.getElementById('feedback-sheet').classList.add('hidden');
-            document.getElementById('transcript-preview').innerText = "";
-            currentTranscript = "";
+            setTranscriptDraft("");
             logPhoneStudy('skip', '', { explanationShown: true, taskText: lastTaskText, aiFeedbackText: lastAiFeedbackText });
             addLog("Повторна спроба");
         }
@@ -621,8 +672,7 @@
                 taskText: taskForLog,
                 aiFeedbackText: lastAiFeedbackText,
             });
-            currentTranscript = "";
-            document.getElementById('transcript-preview').innerText = "";
+            setTranscriptDraft("");
             lastAiFeedbackText = '';
             callAI(toSend);
         }
@@ -688,14 +738,14 @@
                 }
                 const base = finalizedParts.join(" ").trim();
                 currentTranscript = `${base}${interimText ? ` ${interimText.trim()}` : ""}`.trim();
-                document.getElementById('transcript-preview').innerText = currentTranscript;
+                setTranscriptDraft(currentTranscript);
             };
 
             recognition.onend = () => {
                 isRecording = false;
                 document.getElementById('mic-ring').classList.add('hidden');
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
-                document.getElementById('stt-status').innerText = "ТОРКНІТЬСЯ, ЩОБ ГОВОРИТИ";
+                document.getElementById('stt-status').innerText = "";
                 addLog("Запис завершено");
 
                 const shouldAutoRestart = isMobile && sttSessionActive && !sttManualStopRequested;
@@ -736,6 +786,23 @@
             if (lastAiMessage) speakText(lastAiMessage);
         }
 
+        function updateDraftClearButton() {
+            const clearBtn = document.getElementById('clear-draft-btn');
+            if (!clearBtn) return;
+            const hasDraft = Boolean((currentTranscript || '').trim());
+            clearBtn.classList.toggle('opacity-50', !hasDraft);
+        }
+
+        function setTranscriptDraft(text = "") {
+            currentTranscript = text;
+            document.getElementById('transcript-preview').innerText = text;
+            updateDraftClearButton();
+        }
+
+        function clearDraftTranscript() {
+            setTranscriptDraft("");
+        }
+
         document.getElementById('record-btn').onclick = () => {
             if (!recognition) setupSTT();
             if (isRecording) {
@@ -743,8 +810,7 @@
                 recognition.stop();
             } else {
                 window.speechSynthesis.cancel();
-                currentTranscript = "";
-                document.getElementById('transcript-preview').innerText = "";
+                setTranscriptDraft("");
                 document.getElementById('feedback-sheet').classList.add('hidden');
                 sttSessionActive = true;
                 sttManualStopRequested = false;
@@ -756,7 +822,7 @@
         function addMessage(sender, text) {
             const area = document.getElementById('scroll-area');
             const div = document.createElement('div');
-            div.className = `p-4 rounded-2xl max-w-[85%] animate-in slide-in-from-bottom-2 duration-300 ${sender === 'ai' ? 'chat-bubble-ai self-start' : 'chat-bubble-user self-end ml-auto'}`;
+            div.className = `p-2.5 rounded-xl max-w-full animate-in slide-in-from-bottom-2 duration-300 ${sender === 'ai' ? 'chat-bubble-ai self-start' : 'chat-bubble-user self-end ml-auto'}`;
             div.innerHTML = `<p>${text}</p>`;
             area.appendChild(div);
             area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
