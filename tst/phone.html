@@ -248,6 +248,13 @@
             </div>
             <div class="relative w-full h-28">
                 <button id="clear-draft-btn" onclick="clearDraftTranscript()" class="side-action-btn absolute left-1 bottom-0 bg-slate-900 border border-slate-500 text-slate-200 hover:border-orange-400 hover:text-orange-300 active:scale-95 transition-all" title="Стерти поточний текст відповіді" aria-label="Стерти поточний текст відповіді">
+        <div class="vision-assist-panel p-6 rounded-[2.5rem] flex flex-col items-center gap-5 mb-4">
+            <div class="text-center">
+                <p id="stt-status" class="text-sm font-black text-slate-200 uppercase tracking-[0.08em]"></p>
+                <p id="transcript-preview" class="text-lg italic text-orange-300 mt-2 max-w-xl mx-auto leading-tight break-words"></p>
+            </div>
+            <div class="relative w-full h-32">
+                <button id="clear-draft-btn" onclick="clearDraftTranscript()" class="side-action-btn absolute left-1 bottom-1 bg-slate-900 border border-slate-500 text-slate-200 hover:border-orange-400 hover:text-orange-300 active:scale-95 transition-all" title="Стерти поточний текст відповіді" aria-label="Стерти поточний текст відповіді">
                     <i class="fa-solid fa-eraser text-base"></i><span>Стерти</span>
                 </button>
                 <div class="absolute inset-x-0 bottom-0 flex justify-center">
@@ -259,6 +266,7 @@
                     </div>
                 </div>
                 <button id="replay-btn" onclick="replayLastPhrase()" class="replay-btn-accessible side-action-btn hidden absolute right-1 bottom-0 bg-slate-900 border-2 border-orange-400 text-orange-200 hover:text-white hover:bg-orange-600 active:scale-95 transition-all" title="Повторити останню фразу ШІ" aria-label="Повторити останню фразу ШІ">
+                <button id="replay-btn" onclick="replayLastPhrase()" class="replay-btn-accessible side-action-btn hidden absolute right-1 bottom-1 bg-slate-900 border-2 border-orange-400 text-orange-200 hover:text-white hover:bg-orange-600 active:scale-95 transition-all" title="Повторити останню фразу ШІ" aria-label="Повторити останню фразу ШІ">
                     <i class="fa-solid fa-rotate-right text-base"></i><span>Повторити</span>
                 </button>
             </div>
@@ -556,6 +564,7 @@
             if (userMsg) conversation.push({ role: 'user', content: userMsg });
 
             addLog("Запит до ШІ...");
+            updateExerciseInvite('ШІ формує наступне завдання…');
             _phoneSetAiActive(true);
             try {
                 const response = await fetchAI(conversation);
@@ -832,6 +841,13 @@
         };
 
         // --- Helpers ---
+        function updateExerciseInvite(text = '') {
+            const invite = document.getElementById('exercise-invite');
+            if (!invite) return;
+            const normalized = (text || '').replace(/\s+/g, ' ').trim();
+            invite.innerText = normalized || 'Тут зʼявиться фраза від ШІ.';
+        }
+
         function addMessage(sender, text) {
             const area = document.getElementById('scroll-area');
             const div = document.createElement('div');
@@ -839,6 +855,7 @@
             div.innerHTML = `<p>${text}</p>`;
             area.appendChild(div);
             area.scrollTo({ top: area.scrollHeight, behavior: 'smooth' });
+            if (sender === 'ai') updateExerciseInvite(text);
         }
 
         async function generateScene(desc) {
