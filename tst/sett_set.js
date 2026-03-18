@@ -225,6 +225,8 @@ const SETTINGS_CONFIG = {
         apiKeyAnthro: 'sp_api_key_anthropic',
         apiKeyHf:           'sp_api_key_hf',
         apiKeyPollinations:      'sp_api_key_pollinations',
+        apiKeyOpenaiImg:         'sp_api_key_openai_img',
+        apiKeyGoogleImg:         'sp_api_key_google_img',
         pollinationsImageModel:  'sp_pollinations_img_model',
         imageModel:   'sp_image_model',
         speed:        'sp_speed',
