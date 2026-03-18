@@ -908,15 +908,19 @@
                                 body: JSON.stringify({ prompt: { text: prompt }, imageCount: 1 })
                             }
                         );
-                        if (!res.ok) { const err = await res.text(); throw new Error(`Google Imagen ${res.status}: ${err.slice(0,200)}`); }
+                        if (!res.ok) { const err = await res.text(); throw new Error(`Google Imagen ${res.status}: ${err.slice(0,300)}`); }
                         const data = await res.json();
                         const b64 = data.generatedImages?.[0]?.image?.imageBytes;
-                        if (!b64) throw new Error('Google Imagen: відповідь без зображення');
+                        if (!b64) throw new Error(`Google Imagen: відповідь без зображення. Ключі відповіді: ${Object.keys(data).join(', ')}`);
                         container.innerHTML = `<img src="data:image/png;base64,${b64}" class="w-full h-full object-cover rounded-lg">`;
                         addLog('Картинку згенеровано', 'success');
                         return;
                     } catch (e) {
-                        addLog(`Google Imagen помилка: ${e.message}`, 'error');
+                        if (e instanceof TypeError) {
+                            addLog(`Google Imagen: мережева помилка (CORS або модель недоступна через Gemini API — можливо потрібен Vertex AI): ${e.message}`, 'error');
+                        } else {
+                            addLog(`Google Imagen помилка: ${e.message}`, 'error');
+                        }
                         addLog('Google Imagen → Pollinations');
                     }
                 }
@@ -925,37 +929,22 @@
             // ── Pollinations.ai (fallback або основний варіант) ──
             addLog('Генерація зображення. Сервіс: Pollinations.ai');
             const seed = Math.floor(Math.random() * 9999);
-            const polImgKey   = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
             const polImgModel = localStorage.getItem('sp_pollinations_img_model') || 'flux';
+            const polToken    = (typeof getApiKey === 'function') ? getApiKey('pollinations') : (localStorage.getItem('sp_api_key_pollinations') || '');
+            const polParams   = new URLSearchParams({ width: 480, height: 320, seed, nologo: true, model: polImgModel });
+            if (polToken) polParams.set('token', polToken);
+            const polUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${polParams}`;
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
-                    const res = await fetchWithTimeout('/pol-image', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            prompt,
-                            model:  polImgModel,
-                            seed,
-                            width:  480,
-                            height: 320,
-                            token:  polImgKey,  // сервер використає env POLLINATIONS_TOKEN якщо є
-                        })
-                    }, 60000); // 60с таймаут (сервер має свої 60с до Pollinations)
-                    if (!res.ok) {
-                        if (res.status === 429 && attempt < 3) {
-                            const waitSec = attempt * 10;
-                            container.innerHTML = `<div class="animate-pulse text-orange-500 text-[10px] font-bold">RATE LIMIT — ЧЕКАЄМО ${waitSec}С...</div>`;
-                            await new Promise(r => setTimeout(r, waitSec * 1000));
-                        }
-                        const errBody = await res.json().catch(() => ({}));
-                        throw new Error(`Pollinations ${res.status}: ${errBody.error || ''}`);
-                    }
+                    const res = await fetchWithTimeout(polUrl, {}, 60000);
+                    if (!res.ok) throw new Error(`Pollinations ${res.status}`);
                     const blob = await res.blob();
                     container.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="w-full h-full object-cover rounded-lg">`;
                     addLog('Картинку згенеровано', 'success');
                     return;
                 } catch (e) {
                     addLog(`Pollinations помилка (спроба ${attempt}/3): ${e.message}`, 'error');
+                    if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 5000));
                 }
             }
             container.innerHTML = `<span class="text-slate-600 text-xs italic">Зображення недоступне</span>`;
