@@ -1270,6 +1270,10 @@
             $('section-tts-offline').classList.toggle('hidden', !isOffline);
 
             if (!isOffline) renderOnlineVoices();
+
+            // Зберігаємо одразу — speakText() в інших модулях читає з localStorage
+            set(SK.ttsProvider, currentTtsProvider);
+            set(SK.ttsMode, isOffline ? 'offline' : 'online'); // legacy compat
         };
 
         // ── AI Вимова: зміна провайдера ─────────────────────────

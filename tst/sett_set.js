@@ -584,29 +584,53 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
     // Online TTS — тільки для мови навчання (не для кирилиці)
     if (ttsProvider !== 'offline' && !/[Ѐ-ӿ]/.test(clean)) {
 
-        // Azure Neural TTS (REST API)
+        // Azure Neural TTS (REST API — inline, без залежності від azure_speech_connector.js)
         if (provider === 'azure') {
             const { key: azKey, region: azRegion } = getAzureSpeechConfig();
             if (azKey && azRegion) {
-                // Визначаємо Neural голос: якщо збережений голос є Azure Neural — використовуємо його
                 const voiceMap = {
                     es: 'es-ES-AlvaroNeural', en: 'en-US-JennyNeural',
                     fr: 'fr-FR-DeniseNeural', de: 'de-DE-KatjaNeural',
                     it: 'it-IT-ElsaNeural',   pt: 'pt-PT-RaquelNeural',
                     pl: 'pl-PL-ZofiaNeural',
                 };
-                const prefix    = lang.split('-')[0];
-                const azVoice   = (voice && voice.includes('Neural'))
+                const prefix  = lang.split('-')[0];
+                const azVoice = (voice && voice.includes('Neural'))
                     ? voice
                     : (voiceMap[prefix] || 'es-ES-AlvaroNeural');
-                // Делегуємо у статичний метод AzureSpeechConnector.restTTS якщо клас є
-                if (typeof AzureSpeechConnector !== 'undefined') {
-                    const ok = await AzureSpeechConnector.restTTS(
-                        azKey, azRegion, clean, lang, azVoice, speed,
-                        { onLoading, onStart, onEnd }
+
+                const safeText = clean
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                const ratePct  = Math.round((speed - 1.0) * 100);
+                const rateStr  = (ratePct >= 0 ? '+' : '') + ratePct + '%';
+                const ssml = `<speak version='1.0' xml:lang='${lang}' xmlns='http://www.w3.org/2001/10/synthesis'>`
+                           + `<voice name='${azVoice}'><prosody rate='${rateStr}'>${safeText}</prosody></voice></speak>`;
+
+                if (onLoading) onLoading();
+                try {
+                    const r = await fetch(
+                        `https://${azRegion}.tts.speech.microsoft.com/cognitiveservices/v1`,
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Ocp-Apim-Subscription-Key': azKey,
+                                'Content-Type':             'application/ssml+xml',
+                                'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3',
+                            },
+                            body: ssml,
+                        }
                     );
-                    if (ok) return;
-                }
+                    if (r.ok) {
+                        const url   = URL.createObjectURL(await r.blob());
+                        const audio = new Audio(url);
+                        audio.onplay  = () => { if (onStart) onStart(); };
+                        audio.onended = () => { URL.revokeObjectURL(url); if (onEnd) onEnd(); };
+                        audio.play();
+                        return;
+                    }
+                    console.warn('[speakText/azure] HTTP', r.status);
+                } catch (e) { console.warn('[speakText/azure] fetch error:', e.message); }
             }
         }
 
