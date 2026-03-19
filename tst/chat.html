@@ -9,6 +9,7 @@
 <script src="openai_nad_connector.js"></script>
 <script src="chat_set.js"></script>
 <script src="logger.js"></script>
+<script src="azure_speech_connector.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -386,7 +387,7 @@ function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript
           {!speechError?(
             <>
               <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-                <button onClick={recording?onStopRec:onStartRec} disabled={answered} aria-label={recording?'Зупинити':'Почати запис'}
+                <button onClick={recording?onStopRec:()=>onStartRec(q.correct||q.question)} disabled={answered} aria-label={recording?'Зупинити':'Почати запис'}
                   style={{flex:1,minWidth:130,background:recording?'rgba(236,72,153,.2)':col+'22',border:'2px solid '+(recording?'#ec4899':col+'55'),borderRadius:12,padding:'12px 14px',color:recording?'#ec4899':col,fontWeight:700,cursor:answered?'default':'pointer',fontSize:'1rem',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                   {recording?'⏹ Зупинити':'🎤 Почати запис'}
                 </button>
@@ -397,7 +398,7 @@ function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript
               {transcript&&<div style={{background:'rgba(255,255,255,0.07)',borderRadius:10,padding:'12px 14px',color:'#cbd5e1',fontSize:'0.95rem'}} role="status">📝 {transcript}</div>}
               {transcript&&!answered&&(
                 <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-                  <button onClick={()=>{onSetFallback('');onStartRec();}} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'2px solid rgba(255,255,255,0.14)',borderRadius:10,padding:'11px',color:'#8892b0',cursor:'pointer',fontSize:'0.9rem'}}>Повторити</button>
+                  <button onClick={()=>{onSetFallback('');onStartRec(q.correct||q.question);}} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'2px solid rgba(255,255,255,0.14)',borderRadius:10,padding:'11px',color:'#8892b0',cursor:'pointer',fontSize:'0.9rem'}}>Повторити</button>
                   <button onClick={()=>sub(transcript)} style={{flex:2,background:col,border:'none',borderRadius:10,padding:'11px',color:'#fff',fontWeight:700,cursor:'pointer',fontSize:'0.95rem'}}>Підтвердити</button>
                 </div>
               )}
@@ -460,6 +461,7 @@ function App() {
   const [qStartedAt,setQStartedAt] = useState(0);
   const [qTtsReplays,setQTtsReplays] = useState(0);
   const recRef = useRef(null);
+  const pronScoresRef = useRef(null); // Azure pronunciation scores для поточного speaking питання
 
   const [chatRec,setChatRec] = useState(false);
   const [chatErr,setChatErr] = useState(false);
@@ -512,8 +514,31 @@ function App() {
   };
 
   /* Мікрофон (тест) */
-  const startRec = () => {
+  // targetPhrase — еталонна фраза для Azure Pronunciation Assessment (q.correct speaking питання)
+  const startRec = async (targetPhrase) => {
     setSe(false);
+    pronScoresRef.current = null;
+
+    // Azure Pronunciation Assessment: якщо є ключ і еталонна фраза
+    const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : null;
+    if (azCfg && azCfg.key && targetPhrase && typeof AzureSpeechConnector !== 'undefined') {
+      setRec(true);
+      try {
+        const scores = await AzureSpeechConnector.assessPronunciation(
+          azCfg.key, azCfg.region, targetPhrase, getSettings().speechLang
+        );
+        pronScoresRef.current = scores;
+        if (scores.transcript) setTr(scores.transcript);
+        else { setSe(true); }
+      } catch(e) {
+        addLog('Azure pronunciation assessment error: ' + (e?.message || e), 'warn');
+        setSe(true);
+      }
+      setRec(false);
+      return;
+    }
+
+    // Fallback: Web Speech API
     const SR = window.SpeechRecognition||window.webkitSpeechRecognition;
     if(!SR){setSe(true);return;}
     try{
@@ -590,6 +615,16 @@ function App() {
     } else {
       setTestPh('evaluating');
       result = await evalOpen(q.question,v,q.correct,q.aspect);
+      // Для speaking: змішуємо оцінку вимови (Azure) з оцінкою тексту (AI)
+      if (q.aspect === 'speaking') {
+        const pron = pronScoresRef.current;
+        if (pron && typeof pron.pronunciationScore === 'number' && pron.pronunciationScore > 0) {
+          const pronScore10 = Math.round(pron.pronunciationScore / 10 * 10) / 10; // 0-100 → 0-10
+          const blended = Math.round((result.score * 0.6 + pronScore10 * 0.4) * 10) / 10;
+          result = { ...result, score: blended, pronunciationScores: pron };
+        }
+        pronScoresRef.current = null;
+      }
       setTestPh('questions'); setFb(result);
     }
     const newAns = [...ans,{q,v,result}];
@@ -1155,6 +1190,21 @@ function App() {
               <p style={{fontWeight:800,fontSize:'1rem',color:fb.correct?'#4ade80':'#f87171',marginBottom:8}}>{fb.correct?'✓ Правильно!':'✗ Неправильно'}</p>
               <p style={{color:'#cbd5e1',fontSize:'0.95rem',lineHeight:1.65}}>{fb.feedback}</p>
               {fb.error_analysis&&<p style={{color:'#8892b0',fontSize:'0.85rem',marginTop:8}}>{fb.error_analysis}</p>}
+              {fb.pronunciationScores&&(
+                <div style={{marginTop:12,padding:'10px 12px',background:'rgba(236,72,153,0.08)',borderRadius:10,border:'1px solid rgba(236,72,153,0.2)'}}>
+                  <p style={{color:'#ec4899',fontWeight:700,fontSize:'0.82rem',marginBottom:8}}>🎤 Вимова</p>
+                  {[{icon:'🎯',label:'Точність',val:fb.pronunciationScores.accuracyScore},{icon:'🌊',label:'Плавність',val:fb.pronunciationScores.fluencyScore},{icon:'✅',label:'Повнота',val:fb.pronunciationScores.completenessScore},{icon:'🎵',label:'Просодія',val:fb.pronunciationScores.prosodyScore}].map(({icon,label,val})=>(
+                    <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
+                      <span style={{fontSize:'0.8rem',width:18}}>{icon}</span>
+                      <span style={{color:'#94a3b8',fontSize:'0.78rem',width:68}}>{label}</span>
+                      <div style={{flex:1,height:5,background:'rgba(255,255,255,0.1)',borderRadius:3,overflow:'hidden'}}>
+                        <div style={{height:'100%',width:(val||0)+'%',background:val>=70?'#4ade80':val>=50?'#fbbf24':'#f87171',borderRadius:3,transition:'width .4s ease'}}/>
+                      </div>
+                      <span style={{color:'#cbd5e1',fontSize:'0.78rem',width:30,textAlign:'right'}}>{val||0}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
