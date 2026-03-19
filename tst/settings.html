@@ -809,30 +809,70 @@
 
             <!-- ── Озвучка (TTS) ──────────────────────────────── -->
             <section class="card" aria-labelledby="lbl-tts">
-                <label id="lbl-tts" class="field-label">Режим озвучки (TTS)</label>
+                <label id="lbl-tts" class="field-label">
+                    <i class="fa-solid fa-volume-high" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
+                    Озвучка (TTS)
+                </label>
 
-                <div class="mode-bar" role="group" aria-label="Режим озвучки">
-                    <button id="mode-online" class="toggle-btn"
-                            onclick="setTTSMode('online')"
-                            aria-pressed="false">
-                        <i class="fa-solid fa-wifi mr-1" aria-hidden="true"></i> Онлайн
-                    </button>
-                    <button id="mode-offline" class="toggle-btn"
-                            onclick="setTTSMode('offline')"
-                            aria-pressed="false">
-                        <i class="fa-solid fa-wifi-slash mr-1" aria-hidden="true"></i> Офлайн
-                    </button>
+                <select id="tts-provider-select" class="field"
+                        onchange="handleTtsProviderChange()"
+                        aria-label="Провайдер TTS">
+                    <optgroup label="Онлайн — потрібен ключ">
+                        <option value="openai">OpenAI TTS (Alloy, Shimmer, Nova...)</option>
+                        <option value="azure">Azure Neural TTS (найбільш природній)</option>
+                        <option value="pollinations">Pollinations TTS (безкоштовно)</option>
+                    </optgroup>
+                    <optgroup label="Офлайн — без ключа">
+                        <option value="offline">Offline — Web Speech API</option>
+                    </optgroup>
+                </select>
+
+                <!-- Azure: ключ + регіон (використовується і для STT) -->
+                <div id="tts-azure-box" class="hidden" style="margin-top:.875rem;display:flex;flex-direction:column;gap:.625rem;">
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Azure Speech Key
+                        </label>
+                        <div class="input-wrap">
+                            <input type="password" id="azure-speech-key" class="field"
+                                   autocomplete="off" autocapitalize="none" spellcheck="false"
+                                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                   aria-label="Azure Speech API ключ"
+                                   oninput="syncAzureKey()">
+                            <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                    onclick="togglePasswordVisibility('azure-speech-key', this)">
+                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Azure Регіон
+                        </label>
+                        <input type="text" id="azure-speech-region" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="eastus, westeurope, northeurope..."
+                               aria-label="Azure Speech регіон"
+                               oninput="syncAzureKey()">
+                    </div>
+                    <p class="text-xs" style="color:rgba(255,255,255,.35);margin-top:-.25rem;">
+                        Ключ з Azure Portal → Cognitive Services → Keys and Endpoint.
+                        Використовується і для TTS Вимови, і для Real-time STT.
+                    </p>
                 </div>
 
                 <!-- Онлайн-голоси -->
-                <div id="section-tts-online" class="hidden" aria-live="polite">
+                <div id="section-tts-online" class="hidden" aria-live="polite" style="margin-top:.875rem">
                     <div id="online-voice-grid" class="voice-grid" role="group" aria-label="Оберіть голос"></div>
                     <p id="online-voice-desc" class="text-xs mt-3" style="color: var(--orange-l);"></p>
                 </div>
 
                 <!-- Офлайн-голоси -->
-                <div id="section-tts-offline" class="hidden">
-                    <label for="native-voice-select" class="field-label" style="margin-top:.25rem;">Голос пристрою</label>
+                <div id="section-tts-offline" class="hidden" style="margin-top:.875rem">
+                    <label for="native-voice-select" class="field-label"
+                           style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                        Голос пристрою
+                    </label>
                     <select id="native-voice-select" class="field" aria-label="Вибір системного голосу"></select>
                 </div>
 
@@ -890,45 +930,15 @@
                 <select id="pronunciation-provider" class="field"
                         onchange="handlePronunciationChange()"
                         aria-label="Провайдер Pronunciation TTS">
-                    <option value="offline">Offline — Web Speech API (без ключа)</option>
+                    <option value="same">Той самий, що й Озвучка (TTS)</option>
+                    <option value="offline">Offline — Web Speech API</option>
                     <option value="openai">OpenAI TTS</option>
                     <option value="azure">Azure Neural TTS</option>
                     <option value="pollinations">Pollinations TTS (безкоштовно)</option>
                 </select>
-
-                <!-- Azure: ключ + регіон -->
-                <div id="pronunciation-azure-box" class="hidden" style="margin-top:.875rem;display:flex;flex-direction:column;gap:.625rem;">
-                    <div>
-                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
-                            Azure Speech Key
-                        </label>
-                        <div class="input-wrap">
-                            <input type="password" id="azure-speech-key" class="field"
-                                   autocomplete="off" autocapitalize="none" spellcheck="false"
-                                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                   aria-label="Azure Speech API ключ"
-                                   oninput="syncAzureKey()">
-                            <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
-                                    onclick="togglePasswordVisibility('azure-speech-key', this)">
-                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
-                            Azure Регіон
-                        </label>
-                        <input type="text" id="azure-speech-region" class="field"
-                               autocomplete="off" autocapitalize="none" spellcheck="false"
-                               placeholder="eastus, westeurope, northeurope..."
-                               aria-label="Azure Speech регіон"
-                               oninput="syncAzureKey()">
-                    </div>
-                    <p class="text-xs" style="color:rgba(255,255,255,.35);margin-top:-.25rem;">
-                        Ключ і регіон з Azure Portal → Cognitive Services → Keys and Endpoint.
-                        Цей ключ використовується і для TTS Вимови, і для STT розпізнавання.
-                    </p>
-                </div>
+                <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                    TTS-провайдер для вправ вимови. Azure-ключ — у секції «Озвучка» вище.
+                </p>
             </section>
 
             <!-- ── Розпізнавання мовлення (Real-time STT) ────── -->
@@ -1162,8 +1172,8 @@
         const get = (k, d) => localStorage.getItem(k) ?? d;
         const set = (k, v) => localStorage.setItem(k, v);
 
-        let currentVoice   = '';
-        let currentTTSMode = 'online';
+        let currentVoice       = '';
+        let currentTtsProvider = 'offline';
 
         // ── Ініціалізація ──────────────────────────────────────
         window.addEventListener('DOMContentLoaded', () => {
@@ -1184,12 +1194,20 @@
             $('api-key-openai-img').value        = get(SK.apiKeyOpenaiImg, '');
             $('api-key-google-img').value        = get(SK.apiKeyGoogleImg, '');
 
-            // Azure Speech
+            // TTS провайдер (незалежний від AI provider)
+            currentTtsProvider = get(SK.ttsProvider, (() => {
+                // Legacyfallback: якщо є старий ttsMode=online, беремо AI-provider
+                const legacyMode = get(SK.ttsMode, 'offline');
+                return legacyMode === 'online' ? get(SK.provider, 'openai') : 'offline';
+            })());
+            $('tts-provider-select').value = currentTtsProvider;
+
+            // Azure Speech (ключ і регіон лежать у TTS-секції)
             $('azure-speech-key').value    = get(SK.azureSpeechKey,    '');
             $('azure-speech-region').value = get(SK.azureSpeechRegion, 'eastus');
 
             // Pronunciation TTS provider
-            $('pronunciation-provider').value = get(SK.pronunciationProvider, 'offline');
+            $('pronunciation-provider').value = get(SK.pronunciationProvider, 'same');
             handlePronunciationChange();
 
             // Real-time STT provider
@@ -1204,10 +1222,8 @@
             $('voice-speed').value    = speed;
             $('speed-val').textContent = speed + '×';
 
-            currentTTSMode = get(SK.ttsMode, 'online');
-            const savedVoice  = get(SK.voice, '');
-            const savedProv   = get(SK.provider, 'openai');
-            const validVoices = (SETTINGS_CONFIG.onlineVoices[savedProv]?.list ?? []).map(v => v.id);
+            const savedVoice = get(SK.voice, '');
+            const validVoices = (SETTINGS_CONFIG.onlineVoices[currentTtsProvider]?.list ?? []).map(v => v.id);
             currentVoice = validVoices.includes(savedVoice)
                 ? savedVoice
                 : (validVoices[0] || '');
@@ -1216,7 +1232,7 @@
             updateModelsList(savedProvider);
             $('ai-model').value = get(SK.model, SETTINGS_CONFIG.models[savedProvider][0].id);
 
-            setTTSMode(currentTTSMode);
+            handleTtsProviderChange();   // рендеримо голоси та показуємо/ховаємо блоки
             updateSliderBackground();
             loadNativeVoices();
             checkKeyPresence();
@@ -1243,16 +1259,26 @@
             $('google-img-key-box').classList.toggle('hidden', !isGoogle);
         };
 
-        // ── AI Вимова: показ/приховання Azure-полів ────────────
-        window.handlePronunciationChange = function() {
-            const prov    = $('pronunciation-provider').value;
-            const azureBox = $('pronunciation-azure-box');
-            if (azureBox) azureBox.classList.toggle('hidden', prov !== 'azure');
+        // ── TTS провайдер ───────────────────────────────────────
+        window.handleTtsProviderChange = function() {
+            currentTtsProvider = $('tts-provider-select').value;
+            const isOffline = currentTtsProvider === 'offline';
+            const isAzure   = currentTtsProvider === 'azure';
+
+            $('tts-azure-box').classList.toggle('hidden', !isAzure);
+            $('section-tts-online').classList.toggle('hidden', isOffline);
+            $('section-tts-offline').classList.toggle('hidden', !isOffline);
+
+            if (!isOffline) renderOnlineVoices();
         };
 
-        // ── Sync Azure key/region → застосовуємо одразу ────────
+        // ── AI Вимова: зміна провайдера ─────────────────────────
+        window.handlePronunciationChange = function() {
+            // Немає додаткових полів — все в TTS секції
+        };
+
+        // ── Sync Azure key/region (live-save для поточної сесії) ─
         window.syncAzureKey = function() {
-            // Збережемо одразу щоб AzureSpeechConnector міг читати під час сесії
             set(SK.azureSpeechKey,    $('azure-speech-key').value.trim());
             set(SK.azureSpeechRegion, $('azure-speech-region').value.trim() || 'eastus');
         };
@@ -1262,7 +1288,7 @@
             const prov  = $('stt-provider').value;
             const hints = {
                 openai: 'OpenAI Realtime API — gpt-4o-realtime-preview. Використовує основний OpenAI ключ.',
-                azure:  'Azure Speech Service. Вкажіть ключ і регіон у секції «AI Вимова» вище.',
+                azure:  'Azure Speech Service. Вкажіть ключ і регіон у секції «Озвучка» вище.',
                 gemini: 'Gemini Live NAD. Використовує основний Google Gemini ключ.',
             };
             const hint = $('stt-provider-hint');
@@ -1352,7 +1378,7 @@
             toggleProviderSettings();
             updateModelsList(provider);
             checkKeyPresence();
-            if (currentTTSMode === 'online') renderOnlineVoices();
+            // TTS голоси більше не залежать від AI-провайдера
         };
 
         // ── Перевірка наявності ключа ──────────────────────────
@@ -1429,9 +1455,9 @@
             });
         }
 
-        // ── Онлайн-голоси ──────────────────────────────────────
+        // ── Онлайн-голоси (TTS-секція незалежна від AI provider) ─
         function renderOnlineVoices() {
-            const provider = $('ai-provider').value;
+            const provider = currentTtsProvider;
             const data     = SETTINGS_CONFIG.onlineVoices[provider] ?? { desc: '', list: [] };
 
             // Якщо поточний голос не належить цьому провайдеру — скидаємо на перший доступний
@@ -1456,18 +1482,11 @@
             });
         }
 
-        // ── Режим TTS ──────────────────────────────────────────
+        // ── setTTSMode — backward compat (не використовується в UI) ──
         window.setTTSMode = function (mode) {
-            currentTTSMode = mode;
-            ['online', 'offline'].forEach(m => {
-                const btn = $(`mode-${m}`);
-                const isActive = m === mode;
-                btn.classList.toggle('active', isActive);
-                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-            });
-            $('section-tts-online').classList.toggle('hidden', mode !== 'online');
-            $('section-tts-offline').classList.toggle('hidden', mode !== 'offline');
-            if (mode === 'online') renderOnlineVoices();
+            const mapped = mode === 'offline' ? 'offline' : currentTtsProvider;
+            $('tts-provider-select').value = mapped;
+            handleTtsProviderChange();
         };
 
         // ── Системні голоси (офлайн) ───────────────────────────
@@ -1650,9 +1669,10 @@
             set(SK.apiKeyGoogleImg, $('api-key-google-img').value.trim());
             set(SK.imageModel,  $('image-model-select').value);
 
-            set(SK.speed,        $('voice-speed').value);
-            set(SK.ttsMode,      currentTTSMode);
-            set(SK.voice,        currentVoice);
+            set(SK.speed,       $('voice-speed').value);
+            set(SK.ttsProvider, currentTtsProvider);
+            set(SK.ttsMode,     currentTtsProvider === 'offline' ? 'offline' : 'online'); // legacy compat
+            set(SK.voice,       currentVoice);
 
             // Мови (зберігаються також одразу через onLangChange, але дублюємо для надійності)
             set(SK.targetLang,  $('target-lang').value);
@@ -1677,7 +1697,7 @@
             // Сервіс режим
             set(SK.serviceMode, $('toggle-service-mode').checked ? '1' : '0');
 
-            if (currentTTSMode === 'offline') {
+            if (currentTtsProvider === 'offline') {
                 set(SK.voiceNative, $('native-voice-select').value);
             }
 
