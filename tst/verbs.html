@@ -1125,6 +1125,27 @@ body               { font-size: 20px; }
   font-size: 18px;
   line-height: 1.15;
 }
+
+/* ── Flatten: прибрати контейнер-в-контейнері у фідбеку ── */
+.feedback-box .translations {
+  background: transparent !important;
+  border: none !important;
+  margin-top: 6px;
+  padding: 0;
+}
+.feedback-box .translations .trans-row {
+  border-radius: 8px;
+  margin-bottom: 3px;
+}
+.feedback-box .translations .trans-row:last-child { margin-bottom: 0; }
+
+/* ── Колір тексту перекладу за мовою ── */
+/* Перший рядок = Українська  → жовтуватий */
+.translations > .trans-row:first-child              { color: #e8cc5a; }
+/* Helper-рядок (Англійська) → блакитний */
+[id$="-helper-row"]                                 { color: #7ec8ff; }
+/* Рядок пояснення 💡 → приглушений */
+#e6-fb-ukexplain-row                                { color: var(--muted); }
 </style>
 </head>
 <body style="background:#020617; color:#fff; min-height:100vh; overflow-x:hidden; -webkit-tap-highlight-color:transparent;">
@@ -1150,7 +1171,7 @@ body               { font-size: 20px; }
         <i class="fa-solid fa-chevron-left"></i>
       </a>
       <div>
-        <div style="font-size:1.1rem; font-weight:800; color:#f97316; font-family:'Plus Jakarta Sans',sans-serif;">Граматика ES</div>
+        <div id="sel-header-title" style="font-size:1.1rem; font-weight:800; color:#f97316; font-family:'Plus Jakarta Sans',sans-serif;">Граматика <span id="sel-lang-code">ES</span></div>
         <div style="font-size:0.6rem; text-transform:uppercase; letter-spacing:.1em; color:#475569; font-weight:800; font-family:'Plus Jakarta Sans',sans-serif;">Налаштування сесії</div>
       </div>
     </div>
@@ -1235,7 +1256,7 @@ body               { font-size: 20px; }
     <a id="back-link" href="index.html" class="back-btn" aria-label="Назад на головну">
       <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
     </a>
-    <div class="header-title" aria-label="Граматика — Spanish AI Hub">Граматика <span>ES</span></div>
+    <div class="header-title" id="main-header-title" aria-label="Граматика">Граматика <span id="header-lang-code">ES</span></div>
     <div class="header-actions">
       <button id="settings-btn" class="hdr-btn hdr-btn-settings" aria-label="Глобальні налаштування AI" title="Налаштування">
         <i class="fa-solid fa-gear" aria-hidden="true"></i>
@@ -2161,6 +2182,17 @@ const E4_LABELS = {
   },
 };
 
+// ── Оновити назву мови навчання у заголовках ──────────────────
+function updateHeaderLang() {
+  const lang = (typeof getLangConfig === 'function') ? getLangConfig() : null;
+  if (!lang) return;
+  const code = lang.target.id.toUpperCase();          // 'ES', 'FR', 'IT'…
+  const el1 = document.getElementById('header-lang-code');
+  const el2 = document.getElementById('sel-lang-code');
+  if (el1) el1.textContent = code;
+  if (el2) el2.textContent = code;
+}
+
 function updateE4Labels() {
   const langId = (typeof getLangConfig === 'function') ? getLangConfig().target.id : 'es';
   const L = E4_LABELS[langId] || E4_LABELS.es;
@@ -2385,7 +2417,7 @@ function pickE6(i) {
     const chosen = e6State.picked.join(' ').trim();
     const ok = chosen.toLowerCase() === target.toLowerCase();
     if (ok) e6State.score++;
-    showFB('e6', ok, ok ? '✓ Правильно зібрано!' : `✗ Правильно: ${target}`, d.explain || 'Зверни увагу на порядок слів і форму.', chosen, target);
+    showFB('e6', ok, ok ? '✓ Правильно зібрано!' : `✗ Неправильно. Правильна відповідь: ${target}`, d.explain || 'Зверни увагу на порядок слів і форму.', chosen, target);
     if (!ok) {
       document.getElementById('e6-built').textContent = target;
     }
@@ -2609,6 +2641,7 @@ const EX_PX = ['e1','e2','e3','e4','e5','e6','e7'];
   // Оновлюємо заголовок/опис вправи 4 відповідно до мови, потім будуємо dropdown
   updateE4Labels();
   buildDropdown();
+  updateHeaderLang();
 
   log('grammar.html ініціалізовано');
   log(`Провайдер: ${getGlobalSetting('provider')||'—'} | Модель: ${getGlobalSetting('model')||'—'}`);
