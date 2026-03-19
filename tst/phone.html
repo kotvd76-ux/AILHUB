@@ -866,6 +866,9 @@
             };
 
             recognition.onend = () => {
+                // Azure Pronunciation Assessment керує своїм UI сам — не втручатись
+                if (azurePronunciationActive) return;
+
                 isRecording = false;
                 document.getElementById('mic-ring').classList.add('hidden');
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
@@ -956,6 +959,14 @@
 
         async function startAzurePronunciationAssessment(key, region) {
             if (azurePronunciationActive) return;
+
+            // Зупиняємо Web Speech якщо ще активний, щоб не перехоплював мікрофон
+            sttSessionActive = false;
+            sttManualStopRequested = false;
+            if (recognition) {
+                try { recognition.stop(); } catch (_) {}
+            }
+
             azurePronunciationActive = true;
             isRecording = true;
 
