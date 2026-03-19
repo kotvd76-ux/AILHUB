@@ -1159,8 +1159,9 @@ body               { font-size: 20px; }
 .translations > .trans-row:first-child              { color: #e8cc5a; }
 /* Helper-рядок (Англійська) → блакитний */
 [id$="-helper-row"]                                 { color: #7ec8ff; }
-/* Рядок пояснення 💡 → приглушений */
-#e6-fb-ukexplain-row                                { color: var(--muted); }
+/* Рядок пояснення 💡 → контрастний */
+#e6-fb-ukexplain-row                                { color: var(--text); }
+#e6-fb-ukexplain                                    { color: var(--text) !important; font-size: 17px !important; }
 </style>
 </head>
 <body style="background:#020617; color:#fff; min-height:100vh; overflow-x:hidden; -webkit-tap-highlight-color:transparent;">
@@ -1537,12 +1538,13 @@ body               { font-size: 20px; }
         <div class="fb-text">
           <span class="fb-main" id="e6-fb-msg"></span>
           <span class="fb-explain" id="e6-fb-explain"></span>
-          <div class="translations" id="e6-fb-trans" style="display:none; margin-top:6px;">
-            <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e6-fb-uk"></span></div>
-            <div class="trans-row" id="e6-fb-helper-row" style="display:none"><span class="flag" id="e6-fb-helper-flag" aria-hidden="true"></span><span id="e6-fb-en"></span></div>
-            <div class="trans-row" id="e6-fb-ukexplain-row" style="display:none"><span class="flag" aria-hidden="true">💡</span><span id="e6-fb-ukexplain" style="font-size:15px; color:var(--muted)"></span></div>
-          </div>
         </div>
+      </div>
+      <!-- translations виведено за межі feedback-box -->
+      <div class="translations" id="e6-fb-trans" style="display:none;">
+        <div class="trans-row"><span class="flag" aria-hidden="true">🇺🇦</span><span id="e6-fb-uk"></span></div>
+        <div class="trans-row" id="e6-fb-helper-row" style="display:none"><span class="flag" id="e6-fb-helper-flag" aria-hidden="true"></span><span id="e6-fb-en"></span></div>
+        <div class="trans-row" id="e6-fb-ukexplain-row" style="display:none"><span class="flag" aria-hidden="true">💡</span><span id="e6-fb-ukexplain"></span></div>
       </div>
     </div>
     <div class="action-row">
