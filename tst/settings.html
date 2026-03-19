@@ -881,6 +881,75 @@
                 </div>
             </section>
 
+            <!-- ── AI Вимова (Pronunciation TTS) ────────────── -->
+            <section class="card" aria-labelledby="lbl-pronunciation">
+                <label id="lbl-pronunciation" class="field-label">
+                    <i class="fa-solid fa-microphone-lines" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
+                    AI Вимова (Pronunciation TTS)
+                </label>
+                <select id="pronunciation-provider" class="field"
+                        onchange="handlePronunciationChange()"
+                        aria-label="Провайдер Pronunciation TTS">
+                    <option value="offline">Offline — Web Speech API (без ключа)</option>
+                    <option value="openai">OpenAI TTS</option>
+                    <option value="azure">Azure Neural TTS</option>
+                    <option value="pollinations">Pollinations TTS (безкоштовно)</option>
+                </select>
+
+                <!-- Azure: ключ + регіон -->
+                <div id="pronunciation-azure-box" class="hidden" style="margin-top:.875rem;display:flex;flex-direction:column;gap:.625rem;">
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Azure Speech Key
+                        </label>
+                        <div class="input-wrap">
+                            <input type="password" id="azure-speech-key" class="field"
+                                   autocomplete="off" autocapitalize="none" spellcheck="false"
+                                   placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                   aria-label="Azure Speech API ключ"
+                                   oninput="syncAzureKey()">
+                            <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                    onclick="togglePasswordVisibility('azure-speech-key', this)">
+                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Azure Регіон
+                        </label>
+                        <input type="text" id="azure-speech-region" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="eastus, westeurope, northeurope..."
+                               aria-label="Azure Speech регіон"
+                               oninput="syncAzureKey()">
+                    </div>
+                    <p class="text-xs" style="color:rgba(255,255,255,.35);margin-top:-.25rem;">
+                        Ключ і регіон з Azure Portal → Cognitive Services → Keys and Endpoint.
+                        Цей ключ використовується і для TTS Вимови, і для STT розпізнавання.
+                    </p>
+                </div>
+            </section>
+
+            <!-- ── Розпізнавання мовлення (Real-time STT) ────── -->
+            <section class="card" aria-labelledby="lbl-stt">
+                <label id="lbl-stt" class="field-label">
+                    <i class="fa-solid fa-ear-listen" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
+                    Розпізнавання мовлення (Real-time STT)
+                </label>
+                <select id="stt-provider" class="field"
+                        onchange="handleSttProviderChange()"
+                        aria-label="Провайдер Real-time STT">
+                    <option value="openai">OpenAI Realtime</option>
+                    <option value="azure">Azure Speech</option>
+                    <option value="gemini">Gemini NAD</option>
+                </select>
+                <p id="stt-provider-hint" class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                    Провайдер живого розпізнавання мовлення в модулях Chat, Phone, Listening.
+                    Для Azure — вкажіть ключ у секції «AI Вимова» вище.
+                </p>
+            </section>
+
             <!-- ── Логування ──────────────────────────────────── -->
             <section class="card" id="section-logging" aria-labelledby="lbl-logging">
 
@@ -1115,6 +1184,18 @@
             $('api-key-openai-img').value        = get(SK.apiKeyOpenaiImg, '');
             $('api-key-google-img').value        = get(SK.apiKeyGoogleImg, '');
 
+            // Azure Speech
+            $('azure-speech-key').value    = get(SK.azureSpeechKey,    '');
+            $('azure-speech-region').value = get(SK.azureSpeechRegion, 'eastus');
+
+            // Pronunciation TTS provider
+            $('pronunciation-provider').value = get(SK.pronunciationProvider, 'offline');
+            handlePronunciationChange();
+
+            // Real-time STT provider
+            $('stt-provider').value = get(SK.sttProvider, 'openai');
+            handleSttProviderChange();
+
             const savedImageModel = get(SK.imageModel, 'pollinations');
             $('image-model-select').value = savedImageModel;
             handleImageModelChange();
@@ -1160,6 +1241,32 @@
             $('pollinations-img-key-box').classList.toggle('hidden', !isPol);
             $('openai-img-key-box').classList.toggle('hidden', !isOpenai);
             $('google-img-key-box').classList.toggle('hidden', !isGoogle);
+        };
+
+        // ── AI Вимова: показ/приховання Azure-полів ────────────
+        window.handlePronunciationChange = function() {
+            const prov    = $('pronunciation-provider').value;
+            const azureBox = $('pronunciation-azure-box');
+            if (azureBox) azureBox.classList.toggle('hidden', prov !== 'azure');
+        };
+
+        // ── Sync Azure key/region → застосовуємо одразу ────────
+        window.syncAzureKey = function() {
+            // Збережемо одразу щоб AzureSpeechConnector міг читати під час сесії
+            set(SK.azureSpeechKey,    $('azure-speech-key').value.trim());
+            set(SK.azureSpeechRegion, $('azure-speech-region').value.trim() || 'eastus');
+        };
+
+        // ── STT провайдер: підказка ─────────────────────────────
+        window.handleSttProviderChange = function() {
+            const prov  = $('stt-provider').value;
+            const hints = {
+                openai: 'OpenAI Realtime API — gpt-4o-realtime-preview. Використовує основний OpenAI ключ.',
+                azure:  'Azure Speech Service. Вкажіть ключ і регіон у секції «AI Вимова» вище.',
+                gemini: 'Gemini Live NAD. Використовує основний Google Gemini ключ.',
+            };
+            const hint = $('stt-provider-hint');
+            if (hint) hint.textContent = hints[prov] || '';
         };
 
         // ── Будуємо select провайдерів з конфігу ───────────────
@@ -1551,6 +1658,16 @@
             set(SK.targetLang,  $('target-lang').value);
             set(SK.nativeLang,  $('native-lang').value);
             set(SK.helperLang,  $('helper-lang').value);
+
+            // Azure Speech
+            set(SK.azureSpeechKey,    $('azure-speech-key').value.trim());
+            set(SK.azureSpeechRegion, $('azure-speech-region').value.trim() || 'eastus');
+
+            // AI Вимова
+            set(SK.pronunciationProvider, $('pronunciation-provider').value);
+
+            // Real-time STT
+            set(SK.sttProvider, $('stt-provider').value);
 
             // Логування
             set(SK.techLogEnabled,  $('toggle-techlog').checked  ? '1' : '0');

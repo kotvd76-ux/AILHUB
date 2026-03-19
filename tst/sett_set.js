@@ -13,6 +13,8 @@ const HARDCODED_KEYS = {
     google:       '',   // напр. 'AIzaSy...'
     anthropic:    '',   // напр. 'sk-ant-...'
     pollinations: '',   // напр. 'pk_...' — publishable key з enter.pollinations.ai
+    azureKey:     '',   // напр. 'abc123...' — Azure Speech ключ
+    azureRegion:  '',   // напр. 'eastus'   — Azure регіон (westeurope, eastus тощо)
 };
 
 const SETTINGS_CONFIG = {
@@ -174,6 +176,22 @@ const SETTINGS_CONFIG = {
                 { id: 'dorothy',   name: 'Dorothy',   icon: 'fa-user'          },
                 { id: 'sarah',     name: 'Sarah',     icon: 'fa-user'          },
             ]
+        },
+        azure: {
+            desc: 'Azure Neural TTS — найбільш природній голос',
+            list: [
+                { id: 'es-ES-AlvaroNeural',   name: 'Alvaro (es-ES ♂)',  icon: 'fa-person'       },
+                { id: 'es-ES-ElviraNeural',   name: 'Elvira (es-ES ♀)',  icon: 'fa-person-dress' },
+                { id: 'es-MX-JorgeNeural',    name: 'Jorge (es-MX ♂)',   icon: 'fa-person'       },
+                { id: 'es-MX-DaliaNeural',    name: 'Dalia (es-MX ♀)',   icon: 'fa-person-dress' },
+                { id: 'en-US-JennyNeural',    name: 'Jenny (en-US ♀)',   icon: 'fa-person-dress' },
+                { id: 'en-US-GuyNeural',      name: 'Guy (en-US ♂)',     icon: 'fa-person'       },
+                { id: 'fr-FR-DeniseNeural',   name: 'Denise (fr-FR ♀)',  icon: 'fa-person-dress' },
+                { id: 'de-DE-KatjaNeural',    name: 'Katja (de-DE ♀)',   icon: 'fa-person-dress' },
+                { id: 'it-IT-ElsaNeural',     name: 'Elsa (it-IT ♀)',    icon: 'fa-person-dress' },
+                { id: 'pt-PT-RaquelNeural',   name: 'Raquel (pt-PT ♀)',  icon: 'fa-person-dress' },
+                { id: 'pl-PL-ZofiaNeural',    name: 'Zofia (pl-PL ♀)',   icon: 'fa-person-dress' },
+            ]
         }
     },
 
@@ -246,6 +264,16 @@ const SETTINGS_CONFIG = {
 
         // ── Сервіс режим ───────────────────────────────────
         serviceMode:     'sp_service_mode',      // '1' | '0'
+
+        // ── Azure Speech ────────────────────────────────────
+        azureSpeechKey:    'sp_azure_speech_key',     // Azure Speech ключ
+        azureSpeechRegion: 'sp_azure_speech_region',  // Azure регіон (eastus тощо)
+
+        // ── AI Вимова (Pronunciation TTS) ───────────────────
+        pronunciationProvider: 'sp_pronunciation_provider',  // 'offline'|'openai'|'azure'|'pollinations'
+
+        // ── Провайдер розпізнавання мовлення (Real-time STT) ─
+        sttProvider: 'sp_stt_provider',  // 'openai'|'azure'|'gemini'
     },
 
     // ── Плейсхолдери для полів API-ключів ────────────────────
@@ -329,9 +357,23 @@ function getApiKey(provider) {
         google:       SETTINGS_CONFIG.storageKeys.apiKeyGoogle,
         anthropic:    SETTINGS_CONFIG.storageKeys.apiKeyAnthro,
         pollinations: SETTINGS_CONFIG.storageKeys.apiKeyPollinations,
+        azure:        SETTINGS_CONFIG.storageKeys.azureSpeechKey,
     };
     const lsKey = storageKeyMap[provider] || `sp_api_key_${provider}`;
     return (localStorage.getItem(lsKey) || '').trim();
+}
+
+// ── Azure Speech конфігурація (ключ + регіон) ────────────────
+// Пріоритет: 1) HARDCODED_KEYS → 2) localStorage
+function getAzureSpeechConfig() {
+    const hKey    = (HARDCODED_KEYS.azureKey    || '').trim();
+    const hRegion = (HARDCODED_KEYS.azureRegion || '').trim();
+    if (hKey) return { key: hKey, region: hRegion || 'eastus' };
+
+    const SK = SETTINGS_CONFIG.storageKeys;
+    const key    = (localStorage.getItem(SK.azureSpeechKey)    || '').trim();
+    const region = (localStorage.getItem(SK.azureSpeechRegion) || 'eastus').trim();
+    return { key, region };
 }
 
 // ── Перевірка: чи ключ провайдера захардкоджений у файлі ────
@@ -520,13 +562,42 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
     const lang     = forceLang || detectSpeechLang(clean);
     const SK       = SETTINGS_CONFIG.storageKeys;
     const ttsMode  = localStorage.getItem(SK.ttsMode) || 'offline';
-    const provider = localStorage.getItem(SK.provider) || 'openai';
+    // Для TTS використовуємо pronunciationProvider якщо задано, інакше — основний provider
+    const provider = localStorage.getItem(SK.pronunciationProvider)
+                  || localStorage.getItem(SK.provider)
+                  || 'openai';
     const speed    = speedOverride ?? (parseFloat(localStorage.getItem(SK.speed)) || SETTINGS_CONFIG.speed.default);
     const voice    = localStorage.getItem(SK.voice) || 'alloy';
     const apiKey   = getApiKey(provider);
 
     // Online TTS — тільки для мови навчання (не для кирилиці)
     if (ttsMode === 'online' && !/[Ѐ-ӿ]/.test(clean)) {
+
+        // Azure Neural TTS (REST API)
+        if (provider === 'azure') {
+            const { key: azKey, region: azRegion } = getAzureSpeechConfig();
+            if (azKey && azRegion) {
+                // Визначаємо Neural голос: якщо збережений голос є Azure Neural — використовуємо його
+                const voiceMap = {
+                    es: 'es-ES-AlvaroNeural', en: 'en-US-JennyNeural',
+                    fr: 'fr-FR-DeniseNeural', de: 'de-DE-KatjaNeural',
+                    it: 'it-IT-ElsaNeural',   pt: 'pt-PT-RaquelNeural',
+                    pl: 'pl-PL-ZofiaNeural',
+                };
+                const prefix    = lang.split('-')[0];
+                const azVoice   = (voice && voice.includes('Neural'))
+                    ? voice
+                    : (voiceMap[prefix] || 'es-ES-AlvaroNeural');
+                // Делегуємо у статичний метод AzureSpeechConnector.restTTS якщо клас є
+                if (typeof AzureSpeechConnector !== 'undefined') {
+                    const ok = await AzureSpeechConnector.restTTS(
+                        azKey, azRegion, clean, lang, azVoice, speed,
+                        { onLoading, onStart, onEnd }
+                    );
+                    if (ok) return;
+                }
+            }
+        }
 
         // OpenAI TTS
         if (provider === 'openai' && apiKey) {
