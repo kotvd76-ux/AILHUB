@@ -428,11 +428,20 @@ class AzureSpeechConnector {
         return new Promise((resolve, reject) => {
             recognizer.recognizeOnceAsync(result => {
                 try {
-                    // NoMatch або Canceled — нема мови, повертаємо нулі без виключення
                     if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
+                        // Canceled = помилка з'єднання/авторизації → reject щоб клієнт показав помилку
+                        if (result.reason === SDK.ResultReason.Canceled) {
+                            const details = SDK.CancellationDetails.fromResult(result);
+                            const msg = details.errorDetails || String(details.reason);
+                            if (typeof window.addLog === 'function')
+                                window.addLog(`[Azure/assess] Canceled: ${msg}`, 'error');
+                            reject(new Error('Azure: ' + msg));
+                            return;
+                        }
+                        // NoMatch — нема мови/тиша → повертаємо нулі без виключення
                         const detail = result.errorDetails || result.reason;
                         if (typeof window.addLog === 'function')
-                            window.addLog(`[Azure/assess] reason=${result.reason} details=${detail}`, 'warn');
+                            window.addLog(`[Azure/assess] NoMatch reason=${result.reason} details=${detail}`, 'warn');
                         resolve({
                             transcript: '',
                             accuracyScore: 0, fluencyScore: 0,
@@ -491,9 +500,17 @@ class AzureSpeechConnector {
                 recognizer.recognizeOnceAsync(result => {
                     try {
                         if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
+                            if (result.reason === SDK.ResultReason.Canceled) {
+                                const details = SDK.CancellationDetails.fromResult(result);
+                                const msg = details.errorDetails || String(details.reason);
+                                if (typeof window.addLog === 'function')
+                                    window.addLog(`[Azure/assess] Canceled: ${msg}`, 'error');
+                                reject(new Error('Azure: ' + msg));
+                                return;
+                            }
                             const detail = result.errorDetails || result.reason;
                             if (typeof window.addLog === 'function')
-                                window.addLog(`[Azure/assess] reason=${result.reason} details=${detail}`, 'warn');
+                                window.addLog(`[Azure/assess] NoMatch reason=${result.reason} details=${detail}`, 'warn');
                             resolve({ transcript: '', accuracyScore: 0, fluencyScore: 0, completenessScore: 0, prosodyScore: 0, pronunciationScore: 0 });
                             return;
                         }
