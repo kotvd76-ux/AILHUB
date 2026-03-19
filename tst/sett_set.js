@@ -269,8 +269,14 @@ const SETTINGS_CONFIG = {
         azureSpeechKey:    'sp_azure_speech_key',     // Azure Speech ключ
         azureSpeechRegion: 'sp_azure_speech_region',  // Azure регіон (eastus тощо)
 
+        // ── Озвучка (TTS) — незалежний провайдер ────────────
+        // 'openai' | 'azure' | 'pollinations' | 'offline'
+        ttsProvider: 'sp_tts_provider',
+
         // ── AI Вимова (Pronunciation TTS) ───────────────────
-        pronunciationProvider: 'sp_pronunciation_provider',  // 'offline'|'openai'|'azure'|'pollinations'
+        // 'same' | 'openai' | 'azure' | 'pollinations' | 'offline'
+        // 'same' — використовує той самий ttsProvider
+        pronunciationProvider: 'sp_pronunciation_provider',
 
         // ── Провайдер розпізнавання мовлення (Real-time STT) ─
         sttProvider: 'sp_stt_provider',  // 'openai'|'azure'|'gemini'
@@ -559,19 +565,24 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
     const clean    = stripMarkdown(text);
     if (!clean) { console.warn('[speakText] після stripMarkdown порожній'); return; }
     console.log('[speakText] text:', JSON.stringify(clean.slice(0,80)));
-    const lang     = forceLang || detectSpeechLang(clean);
-    const SK       = SETTINGS_CONFIG.storageKeys;
-    const ttsMode  = localStorage.getItem(SK.ttsMode) || 'offline';
-    // Для TTS використовуємо pronunciationProvider якщо задано, інакше — основний provider
-    const provider = localStorage.getItem(SK.pronunciationProvider)
-                  || localStorage.getItem(SK.provider)
-                  || 'openai';
-    const speed    = speedOverride ?? (parseFloat(localStorage.getItem(SK.speed)) || SETTINGS_CONFIG.speed.default);
-    const voice    = localStorage.getItem(SK.voice) || 'alloy';
-    const apiKey   = getApiKey(provider);
+    const lang = forceLang || detectSpeechLang(clean);
+    const SK   = SETTINGS_CONFIG.storageKeys;
+
+    // ttsProvider — окремий від AI-провайдера (читаємо sp_tts_provider)
+    // Fallback: якщо не задано — legacyфallback через старий sp_tts_mode + sp_provider
+    const ttsProvider = localStorage.getItem(SK.ttsProvider) || (() => {
+        const legacyMode = localStorage.getItem(SK.ttsMode);
+        if (legacyMode === 'online') return localStorage.getItem(SK.provider) || 'openai';
+        return 'offline';
+    })();
+    const provider = ttsProvider;  // alias для getApiKey()
+
+    const speed  = speedOverride ?? (parseFloat(localStorage.getItem(SK.speed)) || SETTINGS_CONFIG.speed.default);
+    const voice  = localStorage.getItem(SK.voice) || 'alloy';
+    const apiKey = getApiKey(provider);
 
     // Online TTS — тільки для мови навчання (не для кирилиці)
-    if (ttsMode === 'online' && !/[Ѐ-ӿ]/.test(clean)) {
+    if (ttsProvider !== 'offline' && !/[Ѐ-ӿ]/.test(clean)) {
 
         // Azure Neural TTS (REST API)
         if (provider === 'azure') {
@@ -659,7 +670,7 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
     });
 
     const voices = await getVoices();
-    console.log('[speakText] voices count:', voices.length, '| lang:', lang, '| ttsMode:', ttsMode);
+    console.log('[speakText] voices count:', voices.length, '| lang:', lang, '| ttsProvider:', ttsProvider);
     window.speechSynthesis.cancel();
 
     const u  = new SpeechSynthesisUtterance(clean);
