@@ -637,25 +637,91 @@
 
         async function runFeedback(transcript) {
             addLog("Аналіз відповіді...");
-            const set = window.AI_EXERCISE_CONFIG;
-            const feedbackSystem = set?.feedback?.system || "Ти вчитель іспанської.";
-
-            const lastTask = conversation[conversation.length - 1].content;
-            const prompt = `Завдання було: ${lastTask}. Учень відповів: "${transcript}". Проаналізуй і виправ помилки українською мовою.`;
-
             _phoneSetAiActive(true);
             try {
-                const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
-                document.getElementById('feedback-content').innerText = feedback;
-                lastAiFeedbackText = feedback || '';
-                document.getElementById('feedback-sheet').classList.remove('hidden');
-                addLog("Аналіз готовий", "success");
+                if (currentType === 'echo') {
+                    await runEchoFeedback(transcript);
+                } else {
+                    const set = window.AI_EXERCISE_CONFIG;
+                    const feedbackSystem = set?.feedback?.system || "Ти вчитель іспанської.";
+                    const lastTask = conversation[conversation.length - 1].content;
+                    const prompt = `Завдання було: ${lastTask}. Учень відповів: "${transcript}". Проаналізуй і виправ помилки українською мовою.`;
+                    const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
+                    document.getElementById('feedback-content').innerText = feedback;
+                    lastAiFeedbackText = feedback || '';
+                    document.getElementById('feedback-sheet').classList.remove('hidden');
+                    addLog("Аналіз готовий", "success");
+                }
             } catch (err) {
                 addLog("Помилка аналізу, продовжуємо", "error");
                 confirmFeedback();
             } finally {
                 _phoneSetAiActive(false);
             }
+        }
+
+        // --- Pronunciation Scoring (Echo exercise) ---
+        async function runEchoFeedback(transcript) {
+            const targetPhrase = lastAiMessage || '';
+            const systemPrompt = `Ти тренер вимови. Оціни, наскільки точно учень повторив фразу. Відповідай ЛИШЕ валідним JSON без markdown: {"accuracy": N, "fluency": N, "tip": "рядок"}. N — ціле від 1 до 5 (1=дуже погано, 5=відмінно). accuracy = точність збігу слів (порівняй обидві фрази). fluency = плавність і темп. tip = конкретна порада українською до 12 слів, або "Відмінно! Ідеальне повторення." якщо обидві оцінки ≥ 4.`;
+            const userPrompt = `Ціль: "${targetPhrase}"\nУчень сказав: "${transcript}"`;
+
+            const raw = await fetchAI([{ role: 'user', content: userPrompt }], systemPrompt);
+            addLog(`Pronunciation raw: ${raw}`);
+
+            let scores = null;
+            try {
+                const jsonMatch = raw.match(/\{[\s\S]*?\}/);
+                if (jsonMatch) scores = JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                addLog("Pronunciation JSON parse error", "error");
+            }
+
+            const container = document.getElementById('feedback-content');
+            if (scores && typeof scores.accuracy === 'number' && typeof scores.fluency === 'number') {
+                container.innerHTML = renderPronunciationScores(scores, targetPhrase, transcript);
+                lastAiFeedbackText = `accuracy:${scores.accuracy}/5 fluency:${scores.fluency}/5 tip:${scores.tip || ''}`;
+            } else {
+                container.innerText = raw;
+                lastAiFeedbackText = raw;
+            }
+            document.getElementById('feedback-sheet').classList.remove('hidden');
+            addLog("Аналіз вимови готовий", "success");
+        }
+
+        function renderPronunciationScores(scores, target, said) {
+            const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const clamp = n => Math.round(Math.max(1, Math.min(5, n)));
+            const bar = n => {
+                const v = clamp(n);
+                const col = v >= 4 ? '#34d399' : v >= 3 ? '#fbbf24' : '#f87171';
+                const pct = (v / 5 * 100).toFixed(0);
+                return `<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${col};border-radius:3px;transition:width .4s"></div></div>`;
+            };
+            const numCol = n => { const v = clamp(n); return v >= 4 ? '#34d399' : v >= 3 ? '#fbbf24' : '#f87171'; };
+            const avg = (scores.accuracy + scores.fluency) / 2;
+            const badge = avg >= 4.5 ? '✨ Відмінно!' : avg >= 3.5 ? '👍 Добре!' : avg >= 2.5 ? '💪 Майже!' : '🔄 Спробуй ще';
+
+            return `<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="font-size:.8rem;font-weight:900;color:#f97316;letter-spacing:.08em;text-transform:uppercase">${badge}</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;width:72px">🎯 Точність</span>
+    ${bar(scores.accuracy)}
+    <span style="font-size:.75rem;color:${numCol(scores.accuracy)};min-width:28px;text-align:right">${clamp(scores.accuracy)}/5</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;width:72px">🌊 Плавність</span>
+    ${bar(scores.fluency)}
+    <span style="font-size:.75rem;color:${numCol(scores.fluency)};min-width:28px;text-align:right">${clamp(scores.fluency)}/5</span>
+  </div>
+  ${scores.tip ? `<div style="padding:8px 10px;background:rgba(249,115,22,.08);border-radius:8px;border:1px solid rgba(249,115,22,.2)">
+    <p style="font-size:.8rem;color:#fdba74;margin:0">💡 ${esc(scores.tip)}</p>
+  </div>` : ''}
+  <div style="padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">
+    <p style="font-size:.65rem;color:#475569;margin:0 0 3px">Ціль: <span style="color:#94a3b8">${esc(target)}</span></p>
+    <p style="font-size:.65rem;color:#475569;margin:0">Ти сказав: <span style="color:#94a3b8">${esc(said)}</span></p>
+  </div>
+</div>`;
         }
 
         // --- Interaction Handlers ---
