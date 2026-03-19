@@ -139,7 +139,7 @@
         .diag-ai-active { animation: diagPulse .9s ease-in-out infinite !important; color: #f59e0b !important; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col max-w-2xl mx-auto p-4">
+<body class="min-h-screen flex flex-col max-w-2xl mx-auto p-2">
 
     <!-- Header -->
     <header class="flex items-center justify-between mb-6">
@@ -178,7 +178,7 @@
             <!-- Level Select -->
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Рівень знань</label>
-                <select id="level-select" onchange="updateGameOptions()" class="w-full glass-card p-5 rounded-3xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
+                <select id="level-select" onchange="updateGameOptions()" class="w-full glass-card p-3.5 rounded-xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
                     <option value="A1">Рівень A1 — Початківець</option>
                     <option value="A2">Рівень A2 — Елементарний</option>
                     <option value="B1">Рівень B1 — Середній</option>
@@ -190,7 +190,7 @@
             <!-- Theme Select -->
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Тема</label>
-                <select id="theme-select" class="w-full glass-card p-5 rounded-3xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
+                <select id="theme-select" class="w-full glass-card p-3.5 rounded-xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
                     <!-- Буде заповнено через JS з getPriorityThemes() -->
                 </select>
             </div>
@@ -198,14 +198,14 @@
             <!-- Game Select -->
             <div class="space-y-2">
                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-4">Тип вправи</label>
-                <select id="type-select" class="w-full glass-card p-5 rounded-3xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
+                <select id="type-select" class="w-full glass-card p-3.5 rounded-xl text-zinc-100 focus:border-orange-500 outline-none transition-all cursor-pointer text-lg font-medium">
                     <!-- Буде заповнено через JS -->
                 </select>
             </div>
         </div>
 
         <div class="pt-8">
-            <button onclick="handleStart()" class="w-full py-6 bg-orange-600 hover:bg-orange-500 text-white rounded-[2.5rem] font-black text-2xl shadow-xl shadow-orange-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 btn-glow">
+            <button onclick="handleStart()" class="w-full py-5 bg-orange-600 hover:bg-orange-500 text-white rounded-2xl font-black text-2xl shadow-xl shadow-orange-600/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 btn-glow">
                 <i class="fa-solid fa-play"></i>
                 ПОЧАТИ
             </button>
@@ -228,20 +228,16 @@
         </div>
 
         <!-- Feedback Layer -->
-        <div id="feedback-sheet" class="hidden glass-card p-6 rounded-[2.5rem] border-orange-500/30 mb-4 animate-in slide-in-from-bottom duration-500 shadow-2xl">
-            <div class="flex items-center gap-2 mb-3">
-                <div class="w-1.5 h-6 bg-orange-500 rounded-full"></div>
-                <h3 class="text-[10px] font-black uppercase tracking-widest text-orange-400">Аналіз вашої іспанської</h3>
-            </div>
-            <div id="feedback-content" class="text-slate-200 text-sm leading-relaxed mb-6 font-medium"></div>
-            <div class="flex gap-3">
-                <button onclick="clearFeedback()" class="flex-1 py-4 bg-slate-800 hover:bg-slate-700 rounded-2xl font-black text-[10px] uppercase transition-colors">Ще раз</button>
-                <button onclick="confirmFeedback()" class="flex-[1.5] py-4 bg-white text-black rounded-2xl font-black text-[10px] uppercase transition-transform active:scale-95 shadow-lg">Продовжити</button>
+        <div id="feedback-sheet" class="hidden p-4 rounded-xl border border-orange-500/30 mb-4 animate-in slide-in-from-bottom duration-500 shadow-2xl" style="background:rgba(10,30,50,0.95);">
+            <div id="feedback-content" class="text-cyan-100 text-sm leading-relaxed mb-4 font-medium"></div>
+            <div class="flex gap-2">
+                <button onclick="clearFeedback()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-black text-[10px] uppercase transition-colors">Ще раз</button>
+                <button onclick="confirmFeedback()" class="flex-[1.5] py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase transition-transform active:scale-95 shadow-lg">Продовжити</button>
             </div>
         </div>
 
         <!-- Interactive Mic Controls -->
-        <div class="vision-assist-panel p-6 rounded-[2.5rem] flex flex-col items-center gap-5 mb-4">
+        <div class="vision-assist-panel p-4 rounded-xl flex flex-col items-center gap-4 mb-4">
             <div class="text-center">
                 <p id="stt-status" class="text-sm font-black text-slate-200 uppercase tracking-[0.08em]"></p>
                 <p id="transcript-preview" class="text-lg italic text-orange-300 mt-2 max-w-xl mx-auto leading-tight break-words"></p>
@@ -483,7 +479,6 @@
         }
 
         async function initAI() {
-            addMessage('ai', 'ініціалізація за налаштуваннями phone_set...');
             
             const set = window.AI_EXERCISE_CONFIG;
             const basePrompt = set?.baseSystemPrompt || "";
