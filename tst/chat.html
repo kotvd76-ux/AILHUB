@@ -461,6 +461,7 @@ function App() {
   const [qStartedAt,setQStartedAt] = useState(0);
   const [qTtsReplays,setQTtsReplays] = useState(0);
   const recRef = useRef(null);
+  const azRecognizerRef = useRef(null); // Azure SpeechRecognizer для можливості відміни
   const pronScoresRef = useRef(null); // Azure pronunciation scores для поточного speaking питання
 
   const [chatRec,setChatRec] = useState(false);
@@ -522,20 +523,35 @@ function App() {
     // Azure Pronunciation Assessment: якщо є ключ і еталонна фраза
     const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : null;
     if (azCfg && azCfg.key && targetPhrase && typeof AzureSpeechConnector !== 'undefined') {
+      addLog('[chat/speak] Azure assessment → target="' + targetPhrase.slice(0,40) + '"');
       setRec(true);
       try {
-        const scores = await AzureSpeechConnector.assessPronunciation(
+        // assessPronunciation повертає recognizer через exposed ref для відміни
+        const { promise, recognizer } = AzureSpeechConnector.assessPronunciationCancelable(
           azCfg.key, azCfg.region, targetPhrase, getSettings().speechLang
         );
+        azRecognizerRef.current = recognizer;
+        const scores = await promise;
+        azRecognizerRef.current = null;
         pronScoresRef.current = scores;
-        if (scores.transcript) setTr(scores.transcript);
-        else { setSe(true); }
+        if (scores.transcript) {
+          setTr(scores.transcript);
+        } else {
+          // Мікрофон працює, але мовлення не розпізнано — дозволяємо повторити
+          addLog('[chat/speak] Azure: no transcript (no speech detected)', 'warn');
+          setTr('');
+        }
       } catch(e) {
-        addLog('Azure pronunciation assessment error: ' + (e?.message || e), 'warn');
+        azRecognizerRef.current = null;
+        addLog('[chat/speak] Azure error: ' + (e?.message || e), 'warn');
         setSe(true);
       }
       setRec(false);
       return;
+    }
+
+    if (azCfg && !azCfg.key) {
+      addLog('[chat/speak] Azure key not set — fallback to Web Speech API', 'warn');
     }
 
     // Fallback: Web Speech API
@@ -549,7 +565,16 @@ function App() {
       recRef.current=r; r.start(); setRec(true);
     }catch(e){setSe(true);}
   };
-  const stopRec = () => { recRef.current&&recRef.current.stop(); setRec(false); };
+  const stopRec = () => {
+    // Відміна Azure recognizer якщо активний
+    if (azRecognizerRef.current) {
+      try { azRecognizerRef.current.close(); } catch(_) {}
+      azRecognizerRef.current = null;
+      setRec(false);
+      return;
+    }
+    recRef.current&&recRef.current.stop(); setRec(false);
+  };
 
   /* Мікрофон (чат) */
   const startCRec = async () => {

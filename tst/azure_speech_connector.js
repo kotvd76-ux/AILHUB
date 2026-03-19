@@ -460,6 +460,61 @@ class AzureSpeechConnector {
             });
         });
     }
+
+    // ── Cancelable варіант assessPronunciation ────────────────────────────────
+    // Повертає { promise, recognizer } щоб клієнт міг закрити recognizer достроково.
+    static assessPronunciationCancelable(key, region, targetPhrase, lang) {
+        let recognizer = null;
+        const promise = (async () => {
+            if (!window.SpeechSDK) {
+                await new Promise((resolve, reject) => {
+                    const s   = document.createElement('script');
+                    s.src     = AzureSpeechConnector.SDK_CDN;
+                    s.onload  = resolve;
+                    s.onerror = () => reject(new Error('Azure Speech SDK не завантажився'));
+                    document.head.appendChild(s);
+                });
+            }
+            const SDK = window.SpeechSDK;
+            const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
+            speechConfig.speechRecognitionLanguage = lang;
+            const pronunciationConfig = new SDK.PronunciationAssessmentConfig(
+                targetPhrase,
+                SDK.PronunciationAssessmentGradingSystem.HundredMark,
+                SDK.PronunciationAssessmentGranularity.Word,
+                true
+            );
+            const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
+            recognizer = new SDK.SpeechRecognizer(speechConfig, audioConfig);
+            pronunciationConfig.applyTo(recognizer);
+            return new Promise((resolve, reject) => {
+                recognizer.recognizeOnceAsync(result => {
+                    try {
+                        if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
+                            const detail = result.errorDetails || result.reason;
+                            if (typeof window.addLog === 'function')
+                                window.addLog(`[Azure/assess] reason=${result.reason} details=${detail}`, 'warn');
+                            resolve({ transcript: '', accuracyScore: 0, fluencyScore: 0, completenessScore: 0, prosodyScore: 0, pronunciationScore: 0 });
+                            return;
+                        }
+                        const pa = SDK.PronunciationAssessmentResult.fromResult(result);
+                        resolve({
+                            transcript:         result.text || '',
+                            accuracyScore:      Math.round(pa.accuracyScore      || 0),
+                            fluencyScore:       Math.round(pa.fluencyScore       || 0),
+                            completenessScore:  Math.round(pa.completenessScore  || 0),
+                            prosodyScore:       Math.round(pa.prosodyScore       || 0),
+                            pronunciationScore: Math.round(pa.pronunciationScore || 0),
+                        });
+                    } catch(e) { reject(e); } finally { try { recognizer.close(); } catch(_) {} }
+                }, err => {
+                    try { recognizer.close(); } catch(_) {}
+                    reject(new Error(String(err)));
+                });
+            });
+        })();
+        return { promise, get recognizer() { return recognizer; } };
+    }
 }
 
 if (typeof window !== 'undefined') window.AzureSpeechConnector = AzureSpeechConnector;
