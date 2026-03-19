@@ -10,6 +10,7 @@
     <script src="sett_set.js"></script>
     <script src="phone_set.js"></script>
     <script src="logger.js"></script>
+    <script src="azure_speech_connector.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
         
@@ -293,7 +294,8 @@
         let lastTaskText = '';
         let lastAiFeedbackText = '';
         let lastAiMessage = '';
-        
+        let azurePronunciationActive = false;
+
         // --- Config from Storage (через sett_set.js storageKeys) ---
         function getConfig() {
             const SK = (typeof SETTINGS_CONFIG !== 'undefined') ? SETTINGS_CONFIG.storageKeys : {
@@ -661,20 +663,33 @@
         }
 
         // --- Pronunciation Scoring (Echo exercise) ---
-        async function runEchoFeedback(transcript) {
+        // azureScores: об'єкт з Azure (0-100) або null → AI scoring (1-5)
+        async function runEchoFeedback(transcript, azureScores = null) {
             const targetPhrase = lastAiMessage || '';
-            const systemPrompt = `Ти тренер вимови. Оціни, наскільки точно учень повторив фразу. Відповідай ЛИШЕ валідним JSON без markdown: {"accuracy": N, "fluency": N, "tip": "рядок"}. N — ціле від 1 до 5 (1=дуже погано, 5=відмінно). accuracy = точність збігу слів (порівняй обидві фрази). fluency = плавність і темп. tip = конкретна порада українською до 12 слів, або "Відмінно! Ідеальне повторення." якщо обидві оцінки ≥ 4.`;
+
+            // ── Azure scores — пряме відображення без AI запиту ──
+            if (azureScores && typeof azureScores.accuracyScore === 'number') {
+                const container = document.getElementById('feedback-content');
+                container.innerHTML = renderPronunciationScores(azureScores, targetPhrase, transcript);
+                lastAiFeedbackText = `acc:${azureScores.accuracyScore} flu:${azureScores.fluencyScore} comp:${azureScores.completenessScore} pros:${azureScores.prosodyScore} overall:${azureScores.pronunciationScore}`;
+                document.getElementById('feedback-sheet').classList.remove('hidden');
+                addLog('Azure pronunciation scores відображено', 'success');
+                return;
+            }
+
+            // ── AI scoring (fallback або без Azure ключа) ──
+            const systemPrompt = `Ти тренер вимови. Оціни, наскільки точно учень повторив фразу. Відповідай ЛИШЕ валідним JSON без markdown: {"accuracy": N, "fluency": N, "tip": "рядок"}. N — ціле від 1 до 5 (1=дуже погано, 5=відмінно). accuracy = точність збігу слів. fluency = плавність і темп. tip = конкретна порада українською до 12 слів, або "Відмінно! Ідеальне повторення." якщо обидві оцінки ≥ 4.`;
             const userPrompt = `Ціль: "${targetPhrase}"\nУчень сказав: "${transcript}"`;
 
             const raw = await fetchAI([{ role: 'user', content: userPrompt }], systemPrompt);
-            addLog(`Pronunciation raw: ${raw}`);
+            addLog(`Pronunciation AI raw: ${raw}`);
 
             let scores = null;
             try {
                 const jsonMatch = raw.match(/\{[\s\S]*?\}/);
                 if (jsonMatch) scores = JSON.parse(jsonMatch[0]);
             } catch (e) {
-                addLog("Pronunciation JSON parse error", "error");
+                addLog('Pronunciation JSON parse error', 'error');
             }
 
             const container = document.getElementById('feedback-content');
@@ -686,33 +701,66 @@
                 lastAiFeedbackText = raw;
             }
             document.getElementById('feedback-sheet').classList.remove('hidden');
-            addLog("Аналіз вимови готовий", "success");
+            addLog('AI pronunciation scores відображено', 'success');
         }
 
+        // scores: Azure ({accuracyScore, fluencyScore, completenessScore, prosodyScore, pronunciationScore} 0-100)
+        //      або AI ({accuracy, fluency, tip} 1-5)
         function renderPronunciationScores(scores, target, said) {
             const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            const clamp = n => Math.round(Math.max(1, Math.min(5, n)));
-            const bar = n => {
-                const v = clamp(n);
-                const col = v >= 4 ? '#34d399' : v >= 3 ? '#fbbf24' : '#f87171';
-                const pct = (v / 5 * 100).toFixed(0);
-                return `<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${col};border-radius:3px;transition:width .4s"></div></div>`;
-            };
-            const numCol = n => { const v = clamp(n); return v >= 4 ? '#34d399' : v >= 3 ? '#fbbf24' : '#f87171'; };
-            const avg = (scores.accuracy + scores.fluency) / 2;
-            const badge = avg >= 4.5 ? '✨ Відмінно!' : avg >= 3.5 ? '👍 Добре!' : avg >= 2.5 ? '💪 Майже!' : '🔄 Спробуй ще';
+            const isAzure = typeof scores.accuracyScore === 'number';
 
+            if (isAzure) {
+                const pct = n => Math.max(0, Math.min(100, Math.round(n || 0)));
+                const col = n => pct(n) >= 75 ? '#34d399' : pct(n) >= 55 ? '#fbbf24' : '#f87171';
+                const bar = n => `<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="width:${pct(n)}%;height:100%;background:${col(n)};border-radius:3px;transition:width .4s"></div></div>`;
+                const overall = pct(scores.pronunciationScore);
+                const badge = overall >= 85 ? '✨ Відмінно!' : overall >= 70 ? '👍 Добре!' : overall >= 50 ? '💪 Майже!' : '🔄 Спробуй ще';
+                const rows = [
+                    { icon: '🎯', label: 'Точність',  val: scores.accuracyScore },
+                    { icon: '🌊', label: 'Плавність', val: scores.fluencyScore },
+                    { icon: '✅', label: 'Повнота',   val: scores.completenessScore },
+                    { icon: '🎵', label: 'Просодія',  val: scores.prosodyScore },
+                ];
+                const rowsHtml = rows.map(r => `
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;width:72px">${r.icon} ${r.label}</span>
+    ${bar(r.val)}
+    <span style="font-size:.75rem;color:${col(r.val)};min-width:36px;text-align:right">${pct(r.val)}</span>
+  </div>`).join('');
+                return `<div style="display:flex;flex-direction:column;gap:10px">
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:.8rem;font-weight:900;color:#f97316;letter-spacing:.08em;text-transform:uppercase">${badge}</span>
+    <span style="font-size:.65rem;color:#475569">Azure · /100</span>
+  </div>
+  ${rowsHtml}
+  <div style="padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">
+    <p style="font-size:.65rem;color:#475569;margin:0 0 3px">Ціль: <span style="color:#94a3b8">${esc(target)}</span></p>
+    <p style="font-size:.65rem;color:#475569;margin:0">Ти сказав: <span style="color:#94a3b8">${esc(said)}</span></p>
+  </div>
+</div>`;
+            }
+
+            // AI (1-5)
+            const clamp = n => Math.round(Math.max(1, Math.min(5, n)));
+            const col5 = n => clamp(n) >= 4 ? '#34d399' : clamp(n) >= 3 ? '#fbbf24' : '#f87171';
+            const bar5 = n => { const v = clamp(n); return `<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="width:${v/5*100}%;height:100%;background:${col5(n)};border-radius:3px;transition:width .4s"></div></div>`; };
+            const avg = (scores.accuracy + scores.fluency) / 2;
+            const badge5 = avg >= 4.5 ? '✨ Відмінно!' : avg >= 3.5 ? '👍 Добре!' : avg >= 2.5 ? '💪 Майже!' : '🔄 Спробуй ще';
             return `<div style="display:flex;flex-direction:column;gap:10px">
-  <div style="font-size:.8rem;font-weight:900;color:#f97316;letter-spacing:.08em;text-transform:uppercase">${badge}</div>
+  <div style="display:flex;align-items:center;justify-content:space-between">
+    <span style="font-size:.8rem;font-weight:900;color:#f97316;letter-spacing:.08em;text-transform:uppercase">${badge5}</span>
+    <span style="font-size:.65rem;color:#475569">AI · /5</span>
+  </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;width:72px">🎯 Точність</span>
-    ${bar(scores.accuracy)}
-    <span style="font-size:.75rem;color:${numCol(scores.accuracy)};min-width:28px;text-align:right">${clamp(scores.accuracy)}/5</span>
+    ${bar5(scores.accuracy)}
+    <span style="font-size:.75rem;color:${col5(scores.accuracy)};min-width:28px;text-align:right">${clamp(scores.accuracy)}/5</span>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;width:72px">🌊 Плавність</span>
-    ${bar(scores.fluency)}
-    <span style="font-size:.75rem;color:${numCol(scores.fluency)};min-width:28px;text-align:right">${clamp(scores.fluency)}/5</span>
+    ${bar5(scores.fluency)}
+    <span style="font-size:.75rem;color:${col5(scores.fluency)};min-width:28px;text-align:right">${clamp(scores.fluency)}/5</span>
   </div>
   ${scores.tip ? `<div style="padding:8px 10px;background:rgba(249,115,22,.08);border-radius:8px;border:1px solid rgba(249,115,22,.2)">
     <p style="font-size:.8rem;color:#fdba74;margin:0">💡 ${esc(scores.tip)}</p>
@@ -879,6 +927,16 @@
         }
 
         document.getElementById('record-btn').onclick = () => {
+            // Echo + Azure Pronunciation Assessment
+            if (currentType === 'echo' && !azurePronunciationActive) {
+                const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : { key: '', region: '' };
+                if (azCfg.key) {
+                    if (isRecording) return; // ігноруємо повторне натискання
+                    startAzurePronunciationAssessment(azCfg.key, azCfg.region);
+                    return;
+                }
+            }
+            // Стандартний Web Speech API
             if (!recognition) setupSTT();
             if (isRecording) {
                 sttManualStopRequested = true;
@@ -895,6 +953,51 @@
                 recognition.start();
             }
         };
+
+        async function startAzurePronunciationAssessment(key, region) {
+            if (azurePronunciationActive) return;
+            azurePronunciationActive = true;
+            isRecording = true;
+
+            const targetPhrase = lastAiMessage || '';
+            const lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES';
+
+            document.getElementById('mic-ring').classList.remove('hidden');
+            document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
+            document.getElementById('stt-status').innerText = 'AZURE: ГОВОРИ ФРАЗУ…';
+            document.getElementById('feedback-sheet').classList.add('hidden');
+            currentTranscript = '';
+            document.getElementById('transcript-preview').innerText = '';
+            updateDraftClearButton();
+
+            _phoneSetAiActive(false); // лоадер не показуємо — мікрофон активний
+
+            try {
+                if (typeof AzureSpeechConnector === 'undefined') throw new Error('AzureSpeechConnector не знайдено');
+                addLog('Azure Pronunciation Assessment запущено…');
+                const scores = await AzureSpeechConnector.assessPronunciation(key, region, targetPhrase, lang);
+                addLog(`Azure: acc=${scores.accuracyScore} flu=${scores.fluencyScore} comp=${scores.completenessScore} pros=${scores.prosodyScore} overall=${scores.pronunciationScore}`, 'success');
+
+                currentTranscript = scores.transcript;
+                document.getElementById('transcript-preview').innerText = scores.transcript || '(тишина)';
+                updateDraftClearButton();
+                if (scores.transcript) addMessage('user', scores.transcript);
+
+                phoneAttemptNumber = phoneCompletedTurns + 1;
+                _phoneSetAiActive(true);
+                await runEchoFeedback(scores.transcript, scores);
+            } catch (e) {
+                addLog('Azure assessment помилка: ' + e.message + ' → AI fallback', 'error');
+                if (currentTranscript) await runEchoFeedback(currentTranscript);
+            } finally {
+                azurePronunciationActive = false;
+                isRecording = false;
+                _phoneSetAiActive(false);
+                document.getElementById('mic-ring').classList.add('hidden');
+                document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
+                document.getElementById('stt-status').innerText = '';
+            }
+        }
 
         // --- Helpers ---
         function updateExerciseInvite(text = '') {
