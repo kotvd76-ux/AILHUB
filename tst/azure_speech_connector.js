@@ -394,4 +394,61 @@ class AzureSpeechConnector {
     }
 }
 
+    // ── Pronunciation Assessment (одноразовий запис, повертає бали) ──────────
+    // key          — Azure Speech ключ
+    // region       — Azure регіон (eastus тощо)
+    // targetPhrase — фраза для порівняння (reference text)
+    // lang         — BCP-47, напр. 'es-ES'
+    // Повертає Promise<{transcript, accuracyScore, fluencyScore, completenessScore, prosodyScore, pronunciationScore}>
+    static async assessPronunciation(key, region, targetPhrase, lang) {
+        if (!window.SpeechSDK) {
+            await new Promise((resolve, reject) => {
+                const s   = document.createElement('script');
+                s.src     = AzureSpeechConnector.SDK_CDN;
+                s.onload  = resolve;
+                s.onerror = () => reject(new Error('Azure Speech SDK не завантажився'));
+                document.head.appendChild(s);
+            });
+        }
+        const SDK = window.SpeechSDK;
+
+        const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
+        speechConfig.speechRecognitionLanguage = lang;
+
+        const pronunciationConfig = new SDK.PronunciationAssessmentConfig(
+            targetPhrase,
+            SDK.PronunciationAssessmentGradingSystem.HundredMark,
+            SDK.PronunciationAssessmentGranularity.Word,
+            true  // enableMiscue
+        );
+
+        const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
+        const recognizer  = new SDK.SpeechRecognizer(speechConfig, audioConfig);
+        pronunciationConfig.applyTo(recognizer);
+
+        return new Promise((resolve, reject) => {
+            recognizer.recognizeOnceAsync(result => {
+                try {
+                    const pa = SDK.PronunciationAssessmentResult.fromResult(result);
+                    resolve({
+                        transcript:         result.text || '',
+                        accuracyScore:      Math.round(pa.accuracyScore      || 0),
+                        fluencyScore:       Math.round(pa.fluencyScore       || 0),
+                        completenessScore:  Math.round(pa.completenessScore  || 0),
+                        prosodyScore:       Math.round(pa.prosodyScore       || 0),
+                        pronunciationScore: Math.round(pa.pronunciationScore || 0),
+                    });
+                } catch (e) {
+                    reject(e);
+                } finally {
+                    recognizer.close();
+                }
+            }, err => {
+                recognizer.close();
+                reject(new Error(String(err)));
+            });
+        });
+    }
+}
+
 if (typeof window !== 'undefined') window.AzureSpeechConnector = AzureSpeechConnector;
