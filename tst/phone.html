@@ -1008,6 +1008,26 @@
                 await runEchoFeedback(scores.transcript, scores);
             } catch (e) {
                 addLog('Azure assessment помилка: ' + e.message, 'error');
+                if (e.message.startsWith('AZURE_NETWORK:')) {
+                    // Сервер Azure недоступний з цієї мережі → Web Speech + AI scoring
+                    addLog('Fallback → Web Speech API + AI scoring', 'warn');
+                    azurePronunciationActive = false;
+                    isRecording = false;
+                    document.getElementById('mic-ring').classList.add('hidden');
+                    document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
+                    document.getElementById('stt-status').innerText = '';
+                    // Запускаємо звичайний Web Speech запис
+                    if (!recognition) setupSTT();
+                    currentTranscript = '';
+                    finalizedParts = [];
+                    document.getElementById('transcript-preview').innerText = '';
+                    updateDraftClearButton();
+                    document.getElementById('feedback-sheet').classList.add('hidden');
+                    sttSessionActive = true;
+                    sttManualStopRequested = false;
+                    try { recognition.start(); } catch (_) {}
+                    return;
+                }
             } finally {
                 azurePronunciationActive = false;
                 isRecording = false;

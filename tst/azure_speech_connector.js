@@ -428,11 +428,17 @@ class AzureSpeechConnector {
         return new Promise((resolve, reject) => {
             recognizer.recognizeOnceAsync(result => {
                 try {
-                    // NoMatch або Canceled — нема мови, повертаємо нулі без виключення
+                    // NoMatch або Canceled — нема мови або мережева помилка
                     if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
-                        const detail = result.errorDetails || result.reason;
+                        const detail = result.errorDetails || String(result.reason);
                         if (typeof window.addLog === 'function')
                             window.addLog(`[Azure/assess] reason=${result.reason} details=${detail}`, 'warn');
+                        // Мережева помилка (1006 / Unable to contact server) — кидаємо,
+                        // щоб caller міг зробити fallback на Web Speech + AI
+                        if (detail.includes('Unable to contact server') || detail.includes('1006')) {
+                            reject(new Error('AZURE_NETWORK: ' + detail));
+                            return;
+                        }
                         resolve({
                             transcript: '',
                             accuracyScore: 0, fluencyScore: 0,
