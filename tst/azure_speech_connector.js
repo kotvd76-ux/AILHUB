@@ -430,6 +430,9 @@ class AzureSpeechConnector {
                 try {
                     // NoMatch або Canceled — нема мови, повертаємо нулі без виключення
                     if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
+                        const detail = result.errorDetails || result.reason;
+                        if (typeof window.addLog === 'function')
+                            window.addLog(`[Azure/assess] reason=${result.reason} details=${detail}`, 'warn');
                         resolve({
                             transcript: '',
                             accuracyScore: 0, fluencyScore: 0,
