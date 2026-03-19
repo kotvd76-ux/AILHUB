@@ -963,32 +963,38 @@
             const lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES';
 
             document.getElementById('mic-ring').classList.remove('hidden');
-            document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
-            document.getElementById('stt-status').innerText = 'AZURE: ГОВОРИ ФРАЗУ…';
+            document.getElementById('mic-icon').className = 'fa-solid fa-square text-4xl text-white';
+            document.getElementById('stt-status').innerText = '🎤 ГОВОРИ ФРАЗУ…';
             document.getElementById('feedback-sheet').classList.add('hidden');
             currentTranscript = '';
             document.getElementById('transcript-preview').innerText = '';
             updateDraftClearButton();
 
-            _phoneSetAiActive(false); // лоадер не показуємо — мікрофон активний
-
             try {
                 if (typeof AzureSpeechConnector === 'undefined') throw new Error('AzureSpeechConnector не знайдено');
                 addLog('Azure Pronunciation Assessment запущено…');
                 const scores = await AzureSpeechConnector.assessPronunciation(key, region, targetPhrase, lang);
+
+                // NoMatch — всі бали 0 і нема транскрипту → повторний спробуй
+                if (!scores.transcript && scores.pronunciationScore === 0) {
+                    addLog('Azure: мова не розпізнана (тишина або шум), спробуй ще раз', 'warn');
+                    document.getElementById('transcript-preview').innerText = '(не розпізнано — спробуй ще)';
+                    updateDraftClearButton();
+                    return;
+                }
+
                 addLog(`Azure: acc=${scores.accuracyScore} flu=${scores.fluencyScore} comp=${scores.completenessScore} pros=${scores.prosodyScore} overall=${scores.pronunciationScore}`, 'success');
 
                 currentTranscript = scores.transcript;
-                document.getElementById('transcript-preview').innerText = scores.transcript || '(тишина)';
+                document.getElementById('transcript-preview').innerText = scores.transcript;
                 updateDraftClearButton();
-                if (scores.transcript) addMessage('user', scores.transcript);
+                addMessage('user', scores.transcript);
 
                 phoneAttemptNumber = phoneCompletedTurns + 1;
                 _phoneSetAiActive(true);
                 await runEchoFeedback(scores.transcript, scores);
             } catch (e) {
-                addLog('Azure assessment помилка: ' + e.message + ' → AI fallback', 'error');
-                if (currentTranscript) await runEchoFeedback(currentTranscript);
+                addLog('Azure assessment помилка: ' + e.message, 'error');
             } finally {
                 azurePronunciationActive = false;
                 isRecording = false;
