@@ -392,7 +392,6 @@ class AzureSpeechConnector {
             return false;
         }
     }
-}
 
     // ── Pronunciation Assessment (одноразовий запис, повертає бали) ──────────
     // key          — Azure Speech ключ
