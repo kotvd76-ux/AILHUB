@@ -16,7 +16,7 @@
 <script src="verb_set.js"></script>
 <script src="logger.js"></script>
 
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Noto+Sans:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
 /* ── DESIGN TOKENS ───────────────────────────── */
@@ -894,6 +894,135 @@ body::before {
   box-shadow: 0 0 24px rgba(249, 115, 22, 0.35);
 }
 #selection-screen { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+/* ══ ACCESSIBILITY: COMPACT BOLD (listening-style) ══════════════
+   Відповідає дизайну модуля listening.html:
+   — Nunito жирний скрізь
+   — Зменшені міжрядкові інтервали
+   — Компактні контейнери без зайвого паддінгу
+   — Без прапорців і букв-значків у кнопках
+   — Іконки замість підписів у кнопках
+   ══════════════════════════════════════════════════════════════ */
+
+/* --- Шрифт: Nunito скрізь --- */
+body,
+.option-btn, .check-btn, .next-btn, .go-btn,
+.hdr-btn, .back-btn, .score-val, .score-label,
+.exercise-label, .exercise-title, .exercise-desc,
+.fib-sentence, .swipe-sentence, .yn-sentence,
+.selector-name, .selector-badge, .dropdown-item,
+.fb-main, .fb-explain, .feedback-box,
+.word-token, .word-fixed, .word-select, .word-fix-btn,
+.ai-controls-title, .ai-type-btn, .generate-btn,
+.result-title, .result-sub, .result-pct, .result-btn,
+.swipe-btn, .yn-btn, .trans-row, .builder-label,
+.swipe-hint, .ai-loading-text, .card-loading-text,
+.card-error-msg, .card-error-btn {
+  font-family: 'Nunito', sans-serif !important;
+}
+
+/* --- Глобальний жирний шрифт та компактний міжрядковий --- */
+body { font-weight: 700; line-height: 1.15; }
+
+/* --- Приховати прапорці (зменшення візуального шуму) --- */
+.flag { display: none !important; }
+
+/* --- Приховати букви-значки у варіантах відповіді --- */
+.opt-letter { display: none !important; }
+
+/* --- Компактний контейнер програми --- */
+.app { padding: 14px 16px 80px; gap: 12px; }
+
+/* --- Картка вправи --- */
+.card { padding: 16px 18px; gap: 10px; }
+
+/* --- Рядок рахунку --- */
+.score-bar { padding: 10px 14px; gap: 6px; }
+.score-val   { font-size: 20px; font-weight: 800; }
+.score-label { font-size: 11px; }
+
+/* --- Заголовки вправи --- */
+.exercise-label { font-size: 11px; letter-spacing: 1px; }
+.exercise-title { font-size: 20px; font-weight: 800; line-height: 1.1; }
+.exercise-desc  { font-size: 15px; line-height: 1.2; }
+
+/* --- Кнопки варіантів: компактні, жирні, без відступу для значка --- */
+.option-btn {
+  padding: 12px 16px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+  gap: 0;
+}
+
+/* --- Кнопка «Перевірити» --- */
+.check-btn { padding: 16px; font-size: 18px; font-weight: 800; }
+
+/* --- Кнопка «Далі» — іконка стрілки через CSS, текст прихований --- */
+.next-btn {
+  padding: 14px 20px;
+  font-size: 0;        /* приховує текстовий вузол "Далі →" */
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.next-btn::after {
+  content: '\f061';                 /* fa-arrow-right */
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 18px;
+  display: inline-block;
+}
+
+/* --- Кнопка Go — лише іконка, без підпису --- */
+.go-btn { padding: 8px 10px; font-size: 0; }
+.go-btn .go-icon    { font-size: 15px; }
+.go-btn .go-spinner { font-size: 0; }   /* spinner — box, font-size не впливає */
+
+/* --- Речення вправ: компактні --- */
+.fib-sentence,
+.yn-sentence   { padding: 16px 14px; line-height: 1.35; font-size: 20px; font-weight: 800; }
+.swipe-sentence { font-size: 20px; font-weight: 800; line-height: 1.35; }
+
+/* --- Фідбек --- */
+.feedback-box { padding: 12px 14px; font-size: 15px; line-height: 1.2; gap: 10px; }
+.fb-main      { font-size: 17px; font-weight: 800; }
+.fb-explain   { font-size: 15px; line-height: 1.2; }
+.fb-icon      { width: 36px; height: 36px; font-size: 18px; }
+
+/* --- Рядки перекладу --- */
+.trans-row { padding: 10px 16px; font-size: 16px; line-height: 1.15; }
+
+/* --- Контекст-блок --- */
+.context-box { padding: 14px 16px; gap: 8px; }
+
+/* --- Свайп-кнопки та Так/Ні --- */
+.swipe-btn { padding: 16px 12px; font-size: 17px; font-weight: 800; }
+.yn-btn    { padding: 16px; font-size: 18px; font-weight: 800; }
+
+/* --- Слова-токени (Знайди помилку) --- */
+.word-token   { font-size: 18px; padding: 8px 12px; font-weight: 800; }
+.word-fix-btn { font-size: 17px; padding: 10px 14px; font-weight: 800; }
+
+/* --- Дропдаун --- */
+.dropdown-item { padding: 12px 20px; font-size: 16px; line-height: 1.15; }
+.selector-name { font-size: 17px; }
+.selector-header { padding: 14px 18px; }
+
+/* --- AI-панель --- */
+.ai-controls { padding: 16px; gap: 12px; }
+.ai-type-btn { font-size: 13px; font-weight: 800; padding: 10px 6px; }
+.generate-btn { font-size: 16px; font-weight: 800; padding: 16px; }
+
+/* --- Результат --- */
+.result-card { padding: 36px 24px; gap: 14px; }
+.result-title { font-size: 26px; font-weight: 800; }
+.result-btn   { font-size: 18px; font-weight: 800; padding: 18px; }
+
+/* --- Заголовок-кнопки: лише іконки --- */
+.hdr-btn { font-size: 0; padding: 10px 12px; }
+.hdr-btn i { font-size: 16px; }
 </style>
 </head>
 <body style="background:#020617; color:#fff; min-height:100vh; overflow-x:hidden; -webkit-tap-highlight-color:transparent;">
