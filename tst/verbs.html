@@ -1023,6 +1023,108 @@ body { font-weight: 700; line-height: 1.15; }
 /* --- Заголовок-кнопки: лише іконки --- */
 .hdr-btn { font-size: 0; padding: 10px 12px; }
 .hdr-btn i { font-size: 16px; }
+
+/* ══ PATCH v2: exercise headers, language colors, layout ══════════
+   1a — прибрати «Вправа N / назва / опис» та прогрес-лінію
+   1b — фон перекладу за кольором мови (тьмяний)
+   2a — прибрати іконку ✓/✗ у фідбеку
+   2b — вирівняти контейнери пояснення і перекладу
+   2c — кнопки tap-order рядками замість стовпця
+   2d — те ж, що 1a (вже покрито)
+   ═════════════════════════════════════════════════════════════════ */
+
+/* 1a ─ Приховати заголовки вправ (дублюються в селекторі) */
+.exercise-label,
+.exercise-title,
+.exercise-desc  { display: none !important; }
+
+/* 1a ─ Приховати прогрес-лінію (достатньо цифр) */
+.progress-track { display: none !important; }
+
+/* 1a ─ Збільшити трохи шрифт */
+body               { font-size: 20px; }
+.option-btn        { font-size: 20px; }
+.fib-sentence,
+.yn-sentence       { font-size: 22px; }
+.swipe-sentence    { font-size: 22px; }
+.trans-row         { font-size: 17px; }
+.fb-main           { font-size: 18px; }
+.fb-explain        { font-size: 17px; }
+.word-token        { font-size: 20px; }
+.word-fix-btn      { font-size: 18px; }
+
+/* 1b ─ Кольори фону перекладу за мовою (тьмяні, добрий контраст)       */
+/*      Прибрати товстий лівий бордер з контейнера — він буде per-row   */
+.translations {
+  border-left: 1px solid var(--border) !important;
+  overflow: hidden;
+}
+
+/*  Перший рядок = завжди Українська 🇺🇦  (синій) */
+.translations > .trans-row:first-child {
+  background: rgba(0, 91, 187, 0.16);
+  border-left: 3px solid rgba(0, 91, 187, 0.55);
+}
+
+/*  Рядок допоміжної мови (-helper-row) = зазвичай Англійська 🇬🇧 (червоний) */
+[id$="-helper-row"] {
+  background: rgba(207, 20, 43, 0.14);
+  border-left: 3px solid rgba(207, 20, 43, 0.5);
+}
+
+/*  Рядок пояснення (тільки e6, "💡") */
+#e6-fb-ukexplain-row {
+  background: rgba(100, 100, 120, 0.18);
+  border-left: 3px solid rgba(140, 140, 160, 0.4);
+}
+
+/* Кольорові фони і у feedback-translations (ex6) */
+#e6-fb-trans > .trans-row:first-child {
+  background: rgba(0, 91, 187, 0.16);
+  border-left: 3px solid rgba(0, 91, 187, 0.55);
+}
+
+/* 2a ─ Прибрати іконку ✓/✗ (звільнить місце для тексту) */
+.fb-icon { display: none !important; }
+
+/* 2b ─ Вирівняти контейнери фідбеку і перекладу  */
+.feedback-box,
+.translations {
+  border-radius: 12px !important;
+}
+.feedback-box {
+  padding: 12px 14px;
+  gap: 5px;
+  flex-direction: column;  /* тепер без іконки — лише текст */
+}
+.fb-text {
+  gap: 3px;
+  display: flex;
+  flex-direction: column;
+}
+.trans-row {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.2;
+}
+.trans-row:last-child { border-bottom: none; }
+
+/* 2b ─ score-bar компактніше після прибирання прогрес-лінії */
+.score-bar { gap: 0; padding: 8px 14px; }
+
+/* 2c ─ Кнопки tap-order (ex6): рядками замість стовпця */
+#e6-options {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#e6-options .option-btn {
+  width: auto !important;
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  font-size: 18px;
+  line-height: 1.15;
+}
 </style>
 </head>
 <body style="background:#020617; color:#fff; min-height:100vh; overflow-x:hidden; -webkit-tap-highlight-color:transparent;">
