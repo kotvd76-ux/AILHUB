@@ -1102,6 +1102,21 @@ body               { font-size: 20px; }
   display: flex;
   flex-direction: column;
 }
+
+/* ── Прибрати зовнішній контейнер картки вправи ── */
+.card {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  gap: 10px;
+}
+
+/* ── Збільшити шрифт тексту завдання ── */
+.fib-sentence,
+.yn-sentence    { font-size: 26px; }
+.swipe-sentence { font-size: 26px; }
+.spotfix-sentence .word-token { font-size: 23px; }
+
 .trans-row {
   padding: 9px 14px;
   border-bottom: 1px solid var(--border);
