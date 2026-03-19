@@ -629,7 +629,11 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
                         audio.play();
                         return;
                     }
-                    console.warn('[speakText/azure] HTTP', r.status);
+                    const warnMsg = r.status === 401
+                        ? '[speakText/azure] HTTP 401 — Azure ключ невірний або прострочений, перевір Налаштування'
+                        : '[speakText/azure] HTTP ' + r.status;
+                    console.warn(warnMsg);
+                    if (typeof window.addLog === 'function') window.addLog(warnMsg, 'warn');
                 } catch (e) { console.warn('[speakText/azure] fetch error:', e.message); }
             }
         }

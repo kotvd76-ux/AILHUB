@@ -1008,6 +1008,11 @@
                 await runEchoFeedback(scores.transcript, scores);
             } catch (e) {
                 addLog('Azure assessment помилка: ' + e.message, 'error');
+                const isAuth = /401|AuthenticationFailure|auth/i.test(e.message);
+                document.getElementById('transcript-preview').innerText = isAuth
+                    ? '⚠️ Azure ключ невірний або прострочений — перевір Налаштування'
+                    : '❌ Azure помилка: ' + e.message;
+                updateDraftClearButton();
             } finally {
                 azurePronunciationActive = false;
                 isRecording = false;
