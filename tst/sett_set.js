@@ -49,6 +49,11 @@ const SETTINGS_CONFIG = {
         { value: 'SocialMedia',    label: '📱 Соцмережі / Інтернет'      },
     ],
 
+    // ── Глобальні слова для генерації seed-контексту (noun + verb + theme) ──
+    // Єдине джерело для всіх модулів. Використовувати через getSeedNouns/getSeedVerbs.
+    seedNouns: ['людина', 'дитина', 'родина', 'тварина', 'річ', 'думка', 'мета', 'почуття', 'енергія', 'час'],
+    seedVerbs: ['малювати', 'говорити', 'мати', 'хотіти', 'вчитися', 'робити', 'йти', 'брати', 'бачити', 'знати'],
+
     // ── Глобальні рівні CEFR для всіх вправ ─────────────────
     // Єдине джерело переліку рівнів у всіх модулях.
     exerciseLevels: [
@@ -419,6 +424,15 @@ function getPriorityThemes() {
         { value: 'Finance',        label: '💰 Фінанси / Гроші'           },
         { value: 'SocialMedia',    label: '📱 Соцмережі / Інтернет'      },
     ];
+}
+
+// ── Глобальні слова для генерації seed-контексту ─────────────
+// Повертають єдиний список іменників/дієслів для всіх модулів.
+function getSeedNouns() {
+    return Array.isArray(SETTINGS_CONFIG?.seedNouns) ? SETTINGS_CONFIG.seedNouns : [];
+}
+function getSeedVerbs() {
+    return Array.isArray(SETTINGS_CONFIG?.seedVerbs) ? SETTINGS_CONFIG.seedVerbs : [];
 }
 
 // ── Глобальна функція отримання мовної конфігурації ─────────
