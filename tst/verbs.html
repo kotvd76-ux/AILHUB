@@ -2855,15 +2855,10 @@ async function goGenerateEx(exNum, retryCount = 0) {
     ? exCfg.aiPrompt(level)
     : exCfg.aiPrompt;
 
-  // ── Seed: беремо свіжий, якого ще не було ────
-  const seedPool  = (exCfg.nouns && exCfg.verbs)
-    ? exCfg.nouns.flatMap(n => exCfg.verbs.map(v => `${n} — ${v}`))
-    : (exCfg.seeds && exCfg.seeds.length) ? exCfg.seeds : RANDOM_SEEDS_FALLBACK;
   const focusPool = (exCfg.focuses && exCfg.focuses.length) ? exCfg.focuses : null;
   const themes    = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
   const themeMode = (typeof getGrammarThemeDefaultMode === 'function') ? getGrammarThemeDefaultMode() : 'random';
   const usedSeeds = await getUsedSeeds(exCfg.id);
-  const seed      = pickFreshSeed(seedPool, usedSeeds);
   const focus     = focusPool ? pickRandom(focusPool) : null;
   const chosenTheme = selectedTheme
     ? (themes.find(t => t.value === selectedTheme) || { value: selectedTheme, label: selectedTheme })
@@ -2882,6 +2877,14 @@ async function goGenerateEx(exNum, retryCount = 0) {
   }
 
   const theme = chosenTheme || randomTheme;
+
+  // ── Seed: noun + verb + theme — централізовані джерела з sett_set.js ────
+  const _sNouns = (typeof getSeedNouns === 'function') ? getSeedNouns() : [];
+  const _sVerbs = (typeof getSeedVerbs === 'function') ? getSeedVerbs() : [];
+  const seed = (_sNouns.length && _sVerbs.length)
+    ? `${pickRandom(_sNouns)} — ${pickRandom(_sVerbs)}${theme ? ' — ' + theme.value : ''}`
+    : pickFreshSeed((exCfg.seeds && exCfg.seeds.length) ? exCfg.seeds : RANDOM_SEEDS_FALLBACK, usedSeeds);
+
   const token     = Date.now();
 
   // ── Формуємо заборону повторів для AI ────────
