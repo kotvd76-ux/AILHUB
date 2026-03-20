@@ -42,7 +42,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: 'Noto Sans', sans-serif;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1.6;
   min-height: 100vh;
   overflow-x: hidden;
@@ -338,7 +338,7 @@ body::before {
 .option-btn {
   width: 100%; padding: 20px 22px;
   background: var(--surface); border: 2px solid var(--border); border-radius: 14px;
-  color: var(--text); font-size: 20px; font-family: 'DM Mono', monospace; font-weight: 500;
+  color: var(--text); font-size: 24px; font-family: 'DM Mono', monospace; font-weight: 500;
   cursor: pointer; transition: border-color .15s, background .15s, transform .1s;
   text-align: left; display: flex; align-items: center; gap: 16px; line-height: 1.4;
 }
@@ -370,7 +370,7 @@ body::before {
 @keyframes swipeRight { to { transform:translateX(120%) rotate(15deg); opacity:0; } }
 @keyframes swipeLeft  { to { transform:translateX(-120%) rotate(-15deg); opacity:0; } }
 
-.swipe-sentence { font-family:'DM Mono',monospace; font-size:24px; color:var(--text); line-height:1.7; margin-bottom:10px; }
+.swipe-sentence { font-family:'DM Mono',monospace; font-size:26px; color:var(--text); line-height:1.7; margin-bottom:10px; }
 .swipe-blank { display:inline-block; width:100px; height:30px; border-bottom:3px solid var(--accent); vertical-align:bottom; margin:0 6px; }
 .swipe-hint  { font-size:16px; color:var(--muted); font-style:italic; }
 
@@ -398,7 +398,7 @@ body::before {
 
 /* ── YES/NO (Ex 5) ───────────────────────────── */
 .yn-sentence {
-  font-family:'DM Mono',monospace; font-size:24px; color:var(--text); text-align:center;
+  font-family:'DM Mono',monospace; font-size:26px; color:var(--text); text-align:center;
   padding:32px 12px; line-height:1.6; background:var(--surface); border-radius:14px; border:2px solid var(--border);
 }
 .yn-translation {
@@ -435,14 +435,14 @@ body::before {
 .feedback-box.correct .fb-icon { background:rgba(61,250,170,.2); color:var(--correct); }
 .feedback-box.wrong   .fb-icon { background:rgba(255,107,74,.2); color:var(--wrong); }
 .fb-text { display:flex; flex-direction:column; gap:6px; }
-.fb-main { font-weight:700; font-size:19px; }
+.fb-main { font-weight:700; font-size:18px; }
 .feedback-box.correct .fb-main { color:var(--correct); }
 .feedback-box.wrong   .fb-main { color:var(--wrong); }
-.fb-explain { font-size:17px; color:var(--text); line-height:1.65; }
+.fb-explain { font-size:22px; color:var(--text); line-height:1.65; }
 
 /* ── FIB (Ex 3) ──────────────────────────────── */
 .fib-sentence {
-  font-family:'DM Mono',monospace; font-size:22px; text-align:center;
+  font-family:'DM Mono',monospace; font-size:26px; text-align:center;
   padding:30px 14px; background:var(--surface); border:2px solid var(--border);
   border-radius:14px; line-height:1.9;
 }
@@ -460,7 +460,7 @@ body::before {
 }
 .trans-row {
   display:flex; align-items:flex-start; gap:14px;
-  padding:16px 20px; font-size:18px; line-height:1.5;
+  padding:16px 20px; font-size:22px; line-height:1.5;
   border-bottom:1px solid var(--border);
 }
 .trans-row:last-child { border-bottom:none; }
@@ -949,7 +949,7 @@ body { font-weight: 700; line-height: 1.15; }
 /* --- Кнопки варіантів: компактні, жирні, без відступу для значка --- */
 .option-btn {
   padding: 12px 16px;
-  font-size: 18px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.1;
   gap: 0;
@@ -982,17 +982,17 @@ body { font-weight: 700; line-height: 1.15; }
 
 /* --- Речення вправ: компактні --- */
 .fib-sentence,
-.yn-sentence   { padding: 16px 14px; line-height: 1.35; font-size: 20px; font-weight: 800; }
-.swipe-sentence { font-size: 20px; font-weight: 800; line-height: 1.35; }
+.yn-sentence   { padding: 16px 14px; line-height: 1.35; font-size: 26px; font-weight: 800; }
+.swipe-sentence { font-size: 26px; font-weight: 800; line-height: 1.35; }
 
 /* --- Фідбек --- */
-.feedback-box { padding: 12px 14px; font-size: 15px; line-height: 1.2; gap: 10px; }
-.fb-main      { font-size: 17px; font-weight: 800; }
-.fb-explain   { font-size: 15px; line-height: 1.2; }
+.feedback-box { padding: 12px 14px; font-size: 22px; line-height: 1.2; gap: 10px; }
+.fb-main      { font-size: 18px; font-weight: 800; }
+.fb-explain   { font-size: 22px; line-height: 1.2; }
 .fb-icon      { width: 36px; height: 36px; font-size: 18px; }
 
 /* --- Рядки перекладу --- */
-.trans-row { padding: 10px 16px; font-size: 16px; line-height: 1.15; }
+.trans-row { padding: 10px 16px; font-size: 22px; line-height: 1.15; }
 
 /* --- Контекст-блок --- */
 .context-box { padding: 14px 16px; gap: 8px; }
@@ -1002,8 +1002,8 @@ body { font-weight: 700; line-height: 1.15; }
 .yn-btn    { padding: 16px; font-size: 18px; font-weight: 800; }
 
 /* --- Слова-токени (Знайди помилку) --- */
-.word-token   { font-size: 18px; padding: 8px 12px; font-weight: 800; }
-.word-fix-btn { font-size: 17px; padding: 10px 14px; font-weight: 800; }
+.word-token   { font-size: 22px; padding: 8px 12px; font-weight: 800; }
+.word-fix-btn { font-size: 22px; padding: 10px 14px; font-weight: 800; }
 
 /* --- Дропдаун --- */
 .dropdown-item { padding: 12px 20px; font-size: 16px; line-height: 1.15; }
@@ -1041,17 +1041,6 @@ body { font-weight: 700; line-height: 1.15; }
 /* 1a ─ Приховати прогрес-лінію (достатньо цифр) */
 .progress-track { display: none !important; }
 
-/* 1a ─ Розміри шрифтів */
-body               { font-size: 22px; }
-.option-btn        { font-size: 24px; }
-.fib-sentence,
-.yn-sentence       { font-size: 22px; }
-.swipe-sentence    { font-size: 22px; }
-.trans-row         { font-size: 22px; }
-.fb-main           { font-size: 18px; }
-.fb-explain        { font-size: 22px; }
-.word-token        { font-size: 22px; }
-.word-fix-btn      { font-size: 22px; }
 
 /* 1b ─ Кольори фону перекладу за мовою (тьмяні, добрий контраст)       */
 /*      Прибрати товстий лівий бордер з контейнера — він буде per-row   */
@@ -1111,10 +1100,6 @@ body               { font-size: 22px; }
   gap: 10px;
 }
 
-/* ── Збільшити шрифт тексту завдання ── */
-.fib-sentence,
-.yn-sentence    { font-size: 26px; }
-.swipe-sentence { font-size: 26px; }
 .spotfix-sentence .word-token { font-size: 23px; }
 
 .trans-row {
