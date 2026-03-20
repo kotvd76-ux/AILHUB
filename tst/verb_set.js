@@ -442,6 +442,8 @@ const GRAMMAR_CONFIG = {
           (L.helper.id !== 'none' ? `en — ТІЛЬКИ переклад мовою ${L.helper.nameEn}, ОКРЕМО від поля uk.\n` : '') +
           'КРИТИЧНО: words[errorIdx] ≠ correctWord; correctWord присутній серед fixOptions.\n' +
           'КРИТИЧНО: correctWord та жодна його однокоренева форма НЕ з\'являється в words[] ніде крім позиції errorIdx.\n' +
+          'КРИТИЧНО: errorIdx ПОВИНЕН вказувати РІВНО на те слово у words[], яке є граматично неправильним — тобто words[errorIdx] є помилковим словом, а correctWord — його виправленням. НЕ вказуй на сусіднє або інше слово.\n' +
+          'КРИТИЧНО: жодне зі слів fixOptions (крім correctWord) НЕ повинно збігатися з будь-яким словом у words[].\n' +
           'Відповідай ТІЛЬКИ валідним JSON без markdown:\n' +
           (L.helper.id !== 'none'
               ? '{"tasks":[{"words":[...],"errorIdx":0,"correctWord":"...","fixOptions":["...","...","..."],"uk":"...","en":"...","explain":"..."}]}\n'

@@ -3027,12 +3027,28 @@ function normalizeTasksByExercise(exNum, tasks) {
         .map(v => String(v || '').trim())
         .filter(v => v && v !== correctWord);
 
+      // Detect shifted errorIdx: if words[errorIdx] itself appears as a distractor in fixOptions,
+      // it means AI pointed to the wrong position. Try to find the real error word.
+      const fixSet = new Set((Array.isArray(t.fixOptions) ? t.fixOptions : []).map(v => String(v).trim()));
+      if (wrongWord && wrongWord !== correctWord && fixSet.has(wrongWord) && !fixSet.has(correctWord) === false) {
+        // words[errorIdx] is a sentence word that leaked into fixOptions as a distractor
+        const candidateIdx = words.findIndex((w, i) => i !== errorIdx && fixSet.has(w.trim()) && w.trim() !== correctWord);
+        if (candidateIdx !== -1) {
+          errorIdx = candidateIdx;
+          wrongWord = (words[errorIdx] || '').trim();
+        }
+      }
+
       if (!wrongWord || wrongWord === correctWord) {
         wrongWord = wrongCandidates[0] || (correctWord ? `${correctWord}*` : '___');
         words[errorIdx] = wrongWord;
       }
 
-      const options = Array.from(new Set([correctWord, wrongWord, ...wrongCandidates].filter(Boolean))).slice(0, 3);
+      // Build distractors excluding words already in the sentence (other than at errorIdx)
+      const sentenceWords = new Set(words.filter((_, i) => i !== errorIdx).map(w => w.toLowerCase().trim()));
+      const filteredCandidates = wrongCandidates.filter(v => !sentenceWords.has(v.toLowerCase()));
+
+      const options = Array.from(new Set([correctWord, wrongWord, ...filteredCandidates].filter(Boolean))).slice(0, 3);
       while (options.length < 3) options.push(`opt${options.length + 1}`);
 
       return {
