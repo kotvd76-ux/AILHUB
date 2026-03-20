@@ -113,7 +113,9 @@ const GRAMMAR_CONFIG = {
           '\nАЛГОРИТМ для кожного завдання:\n' +
           `  1. Склади природне речення мовою ${L.targetName} відповідно до профілю рівня ${level}\n` +
           '  2. Визнач дієслово або дієслівну групу яку учень має вгадати\n' +
-          '  3. Поділи речення: before = все ДО дієслова, after = все ПІСЛЯ\n' +
+          '  3. Поділи речення: before = все ДО дієслова (особова форма), after = все ПІСЛЯ (включно з дієприкметником/герундієм, якщо є)\n' +
+          '     Приклад estar+participio: "Las ventanas están cerradas" → before="Las ventanas", correct="están", after="cerradas"\n' +
+          '     ВАЖЛИВО: дієприкметник (cerradas, abierto, hecho тощо) завжди йде в after, НІКОЛИ в before\n' +
           '  4. Склади 3 варіанти: правильний + 2 схожих але граматично неправильних для цього рівня\n' +
           '\nЗАБОРОНЕНО: hablar, comer, vivir, ir al trabajo, ir al mercado,\n' +
           'tener hambre/sed, me llamo, Buenos días, estar bien, la casa grande.\n' +
