@@ -2856,7 +2856,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
     : exCfg.aiPrompt;
 
   // ── Seed: беремо свіжий, якого ще не було ────
-  const seedPool  = (exCfg.seeds   && exCfg.seeds.length)   ? exCfg.seeds   : RANDOM_SEEDS_FALLBACK;
+  const seedPool  = (exCfg.nouns && exCfg.verbs)
+    ? exCfg.nouns.flatMap(n => exCfg.verbs.map(v => `${n} — ${v}`))
+    : (exCfg.seeds && exCfg.seeds.length) ? exCfg.seeds : RANDOM_SEEDS_FALLBACK;
   const focusPool = (exCfg.focuses && exCfg.focuses.length) ? exCfg.focuses : null;
   const themes    = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
   const themeMode = (typeof getGrammarThemeDefaultMode === 'function') ? getGrammarThemeDefaultMode() : 'random';
