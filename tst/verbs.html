@@ -3100,7 +3100,21 @@ function applyAiData(exNum, tasks) {
   const normalizedTasks = normalizeTasksByExercise(exNum, tasks);
 
   if (exNum === 1) {
-    E1_DATA.length = 0; normalizedTasks.forEach(t => E1_DATA.push(t));
+    E1_DATA.length = 0; normalizedTasks.forEach(t => {
+      // Validate split: participio should never end up in 'before'
+      if (t.before && t.correct && t.after) {
+        const beforeWords = t.before.trim().split(/\s+/);
+        const lastWord = beforeWords[beforeWords.length - 1] || '';
+        // If last word of 'before' looks like a participle (ends in -ado/-ido/-to/-so/-cho)
+        // and the correct verb is a form of estar/ser, likely bad split — swap participio to after
+        if (/(?:ado|ido|to|so|cho)s?$/i.test(lastWord) && /^(est[aá]|son|es|está[n]?|estuv)/i.test(t.correct)) {
+          console.warn('[E1 validation] Bad split detected, fixing:', JSON.stringify(t));
+          t.after = lastWord + (t.after ? ' ' + t.after : '');
+          t.before = beforeWords.slice(0, -1).join(' ');
+        }
+      }
+      E1_DATA.push(t);
+    });
     e1State = { idx: 0, score: 0, answered: false }; renderE1();
   } else if (exNum === 2) {
     E2_DATA.length = 0; normalizedTasks.forEach(t => E2_DATA.push(t));
