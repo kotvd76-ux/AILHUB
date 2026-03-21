@@ -875,10 +875,31 @@
                 document.getElementById('stt-status').innerText = "";
                 addLog("Запис завершено");
 
-                const shouldAutoRestart = isMobile && sttSessionActive && !sttManualStopRequested;
-                if (shouldAutoRestart) {
-                    // Mobile single-shot STT often auto-stops after short pauses.
-                    // Keep listening until user explicitly presses stop.
+                if (sttManualStopRequested) {
+                    // Юзер натиснув стоп вручну — відправити якщо є що
+                    if (currentTranscript.trim()) {
+                        addMessage('user', currentTranscript);
+                        runFeedback(currentTranscript);
+                    }
+                    sttSessionActive = false;
+                    sttManualStopRequested = false;
+                    finalizedParts = [];
+                    return;
+                }
+
+                if (!sttSessionActive) return; // сесію вже закрито (фатальна помилка тощо)
+
+                if (isMobile && currentTranscript.trim()) {
+                    // Мобільний: є результат — авто-відправити (не чекати ручного стопу)
+                    addMessage('user', currentTranscript);
+                    runFeedback(currentTranscript);
+                    sttSessionActive = false;
+                    finalizedParts = [];
+                    return;
+                }
+
+                if (isMobile) {
+                    // Мобільний: немає результату (пауза/no-speech) — перезапустити
                     setTimeout(() => {
                         if (sttSessionActive && !isRecording) {
                             try {
@@ -891,13 +912,8 @@
                     return;
                 }
 
-                if (sttManualStopRequested && currentTranscript.trim()) {
-                    addMessage('user', currentTranscript);
-                    runFeedback(currentTranscript);
-                }
-
+                // Desktop: continuous=true, тут не доходимо за звичайних умов
                 sttSessionActive = false;
-                sttManualStopRequested = false;
                 finalizedParts = [];
             };
 
