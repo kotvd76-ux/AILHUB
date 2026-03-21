@@ -489,10 +489,17 @@
             if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
 
             addLog(`Запуск ${typeText}. Модель: ${config.model}`, "success");
+            addLog(`STT режим для вправи: ${type === 'echo' ? 'Azure (Echo)' : 'Web Speech'}`);
             if (type === 'describe') {
                 initDescribeExercise();
             } else {
                 initAI();
+            }
+
+            // Для не-Echo вправ одразу ініціалізуємо STT, щоб у логах було видно
+            // підтримку браузера, режим і можливі причини збоїв.
+            if (type !== 'echo' && !recognition) {
+                setupSTT();
             }
         }
 
@@ -1054,7 +1061,12 @@
             }
             if (isRecording) {
                 sttManualStopRequested = true;
-                recognition.stop();
+                addLog('STT: ручна зупинка запису');
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    addLog(`STT stop() помилка: ${e.message || e}`, 'error');
+                }
             } else {
                 window.speechSynthesis.cancel();
                 currentTranscript = "";
@@ -1064,7 +1076,15 @@
                 document.getElementById('feedback-sheet').classList.add('hidden');
                 sttSessionActive = true;
                 sttManualStopRequested = false;
-                recognition.start();
+                addLog(`STT: старт запису (${currentType || 'unknown'})`);
+                try {
+                    recognition.start();
+                } catch (e) {
+                    addLog(`STT start() помилка: ${e.message || e}`, 'error');
+                    sttSessionActive = false;
+                    sttManualStopRequested = false;
+                    document.getElementById('stt-status').innerText = 'STT не стартував';
+                }
             }
         };
 
@@ -1102,8 +1122,11 @@
                 // NoMatch — всі бали 0 і нема транскрипту → повторний спробуй
                 if (!scores.transcript && scores.pronunciationScore === 0) {
                     addLog('Azure: мова не розпізнана (тишина або шум), спробуй ще раз', 'warn');
-                    document.getElementById('transcript-preview').innerText = '(не розпізнано — спробуй ще)';
-                    updateDraftClearButton();
+                    const fallbackOk = await fallbackEchoWithWebSpeech();
+                    if (!fallbackOk) {
+                        document.getElementById('transcript-preview').innerText = '(не розпізнано — спробуй ще)';
+                        updateDraftClearButton();
+                    }
                     return;
                 }
 
@@ -1132,6 +1155,58 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
                 document.getElementById('stt-status').innerText = '';
             }
+        }
+
+        async function fallbackEchoWithWebSpeech() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                addLog('Fallback STT: Web Speech API недоступний', 'warn');
+                return false;
+            }
+
+            addLog('Fallback STT: пробуємо Web Speech API…', 'warn');
+            return await new Promise(resolve => {
+                let done = false;
+                const finish = (ok) => {
+                    if (done) return;
+                    done = true;
+                    resolve(ok);
+                };
+
+                try {
+                    const r = new SpeechRec();
+                    r.lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'en-US';
+                    r.interimResults = false;
+                    r.continuous = false;
+                    r.maxAlternatives = 1;
+
+                    r.onresult = (e) => {
+                        const text = (e.results?.[0]?.[0]?.transcript || '').trim();
+                        if (!text) return;
+                        currentTranscript = text;
+                        document.getElementById('transcript-preview').innerText = text;
+                        updateDraftClearButton();
+                        addMessage('user', text);
+                        phoneAttemptNumber = phoneCompletedTurns + 1;
+                        _phoneSetAiActive(true);
+                        runEchoFeedback(text).finally(() => _phoneSetAiActive(false));
+                        addLog('Fallback STT: розпізнавання успішне', 'success');
+                        finish(true);
+                    };
+
+                    r.onerror = (e) => {
+                        addLog(`Fallback STT error: ${e.error}`, 'warn');
+                        finish(false);
+                    };
+
+                    r.onend = () => setTimeout(() => finish(Boolean((currentTranscript || '').trim())), 0);
+                    r.start();
+                    setTimeout(() => finish(false), 9000);
+                } catch (e) {
+                    addLog(`Fallback STT exception: ${e.message || e}`, 'warn');
+                    finish(false);
+                }
+            });
         }
 
         // --- Helpers ---
