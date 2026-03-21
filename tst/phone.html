@@ -260,7 +260,7 @@
                 <div class="absolute inset-x-0 bottom-0 flex justify-center pointer-events-none">
                     <div class="relative w-32 h-32 flex items-center justify-center pointer-events-auto">
                         <div id="mic-ring" class="hidden recording-ring"></div>
-                        <button id="record-btn" aria-label="Почати або зупинити запис голосу" class="mic-btn-accessible rounded-full bg-orange-600 flex items-center justify-center active:scale-95 transition-all z-10">
+                        <button id="record-btn" aria-label="Почати або зупинити запис голосу" class="mic-btn-accessible rounded-full bg-sky-500 flex items-center justify-center active:scale-95 transition-all z-10">
                             <i id="mic-icon" class="fa-solid fa-microphone text-4xl text-white"></i>
                         </button>
                     </div>
@@ -569,11 +569,51 @@
             callAI();
         }
 
+        // Кольори кнопки мікрофону залежно від стану:
+        // idle=🔵 sky-500 | recording=🔴 red-600 | result=🟢 green-500 | processing=⚫ slate-600
+        function setMicState(state) {
+            const btn    = document.getElementById('record-btn');
+            const icon   = document.getElementById('mic-icon');
+            const ring   = document.getElementById('mic-ring');
+            const status = document.getElementById('stt-status');
+            if (!btn) return;
+            const COLORS = ['bg-sky-500','bg-red-600','bg-green-500','bg-slate-600','bg-orange-600'];
+            COLORS.forEach(c => btn.classList.remove(c));
+            btn.disabled = false;
+            switch (state) {
+                case 'idle':
+                    btn.classList.add('bg-sky-500');
+                    icon.className = 'fa-solid fa-microphone text-4xl text-white';
+                    ring.classList.add('hidden');
+                    status.innerText = '';
+                    break;
+                case 'recording':
+                    btn.classList.add('bg-red-600');
+                    icon.className = 'fa-solid fa-square text-4xl text-white';
+                    ring.classList.remove('hidden');
+                    break;
+                case 'result':
+                    btn.classList.add('bg-green-500');
+                    icon.className = 'fa-solid fa-paper-plane text-4xl text-white';
+                    ring.classList.add('hidden');
+                    status.innerText = 'Тапни або чекай 4с…';
+                    break;
+                case 'processing':
+                    btn.classList.add('bg-slate-600');
+                    btn.disabled = true;
+                    icon.className = 'fa-solid fa-circle-notch fa-spin text-4xl text-white';
+                    ring.classList.add('hidden');
+                    status.innerText = '';
+                    break;
+            }
+        }
+
         function _phoneSetAiActive(on) {
             const loader = document.getElementById('phone-ai-loader');
             const diagBtn = document.getElementById('phone-diag-hdr-btn');
             if (loader) loader.style.display = on ? 'flex' : 'none';
             if (diagBtn) { diagBtn.classList.toggle('diag-ai-active', on); }
+            if (!azurePronunciationActive) setMicState(on ? 'processing' : 'idle');
         }
 
         // --- API & AI logic ---
@@ -929,6 +969,7 @@
                     if (result.isFinal) {
                         finalsInBatch += 1;
                         mergeTranscriptPart(finalizedParts, text);
+                        gotFinal = true;
                     } else {
                         interimText += `${text} `;
                     }
@@ -950,9 +991,6 @@
                 if (azurePronunciationActive) return;
 
                 isRecording = false;
-                document.getElementById('mic-ring').classList.add('hidden');
-                document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
-                document.getElementById('stt-status').innerText = "";
                 addLog("Запис завершено");
                 sttTrace('onend', {
                     session: sttSessionSeq,
@@ -1006,23 +1044,31 @@
                     isRecording,
                 });
                 // Фатальні помилки — дозвіл відхилено, відновлення неможливе
-                const fatalErrors = ['not-allowed', 'service-not-allowed'];
-                if (fatalErrors.includes(e.error)) {
+                if (['not-allowed', 'service-not-allowed'].includes(e.error)) {
                     sttSessionActive = false;
                     sttManualStopRequested = false;
-                    document.getElementById('stt-status').innerText = "Мікрофон заблоковано";
+                    clearTimeout(sttResultTimer); sttResultTimer = null;
+                    setMicState('idle');
+                    document.getElementById('stt-status').innerText = 'Мікрофон заблоковано';
                     return;
                 }
-                // Нефатальні помилки (no-speech, aborted, network, audio-capture):
-                // НЕ вбиваємо sttSessionActive — onend запустить авто-рестарт на мобільному.
-                if (e.error === 'no-speech') {
-                    document.getElementById('stt-status').innerText = "Не чую... повторна спроба";
-                }
+                // Нефатальні (no-speech, aborted, network): onend сам зробить тихий рестарт
             };
         }
 
         function replayLastPhrase() {
             if (lastAiMessage) speakText(lastAiMessage);
+        }
+
+        function submitCurrentTranscript() {
+            if (!currentTranscript.trim()) return;
+            clearTimeout(sttResultTimer); sttResultTimer = null;
+            sttSessionActive = false;
+            const text = currentTranscript;
+            currentTranscript = "";
+            finalizedParts = [];
+            addMessage('user', text);
+            runFeedback(text);
         }
 
         function updateDraftClearButton() {
@@ -1093,6 +1139,11 @@
                     startAzurePronunciationAssessment(azCfg.key, azCfg.region);
                     return;
                 }
+            }
+            // Зелений стан: таймер тікає → тап = відправити негайно
+            if (sttResultTimer !== null) {
+                submitCurrentTranscript();
+                return;
             }
             // Стандартний Web Speech API
             if (!recognition) setupSTT();
