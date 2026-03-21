@@ -6,6 +6,7 @@
     <title>Spanish AI Hub - Keenetic Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="sett_set.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
         
@@ -46,7 +47,7 @@
 
     <header class="p-6 flex justify-between items-center">
         <div>
-            <h1 class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+            <h1 id="hub-title" class="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
                 Spanish AI Hub
             </h1>
             <p class="text-zinc-500 text-sm">Ваша мовна школа на Keenetic</p>
@@ -137,6 +138,15 @@
     </footer>
 
     <script>
+        // Dynamic hub title based on learning language (uses sett_set.js)
+        (function() {
+            const lang = getLangConfig();
+            const title = lang.targetName + ' AI Hub';
+            const el = document.getElementById('hub-title');
+            if (el) el.textContent = title;
+            document.title = title + ' - Keenetic Edition';
+        })();
+
         // Показуємо кнопки Сервіс та Діагностика залежно від режиму
         (function() {
             const serviceMode = localStorage.getItem('sp_service_mode') === '1';
