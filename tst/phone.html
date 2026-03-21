@@ -302,6 +302,7 @@
         let lastAiFeedbackText = '';
         let lastAiMessage = '';
         let azurePronunciationActive = false;
+        let sttSessionSeq = 0;
 
         // --- Config from Storage (через sett_set.js storageKeys) ---
         function getConfig() {
@@ -337,6 +338,14 @@
             div.innerText = `[${time}] ${msg}`;
             container.appendChild(div);
             container.parentElement.scrollTo({ top: container.parentElement.scrollHeight, behavior: 'smooth' });
+        }
+
+        function sttTrace(event, details = {}) {
+            const payload = Object.entries(details)
+                .filter(([, v]) => v !== undefined && v !== null && v !== '')
+                .map(([k, v]) => `${k}=${String(v)}`)
+                .join(' ');
+            addLog(`[STT] ${event}${payload ? ` | ${payload}` : ''}`);
         }
 
         function toggleLogs() {
@@ -824,9 +833,16 @@
 
         function setupSTT() {
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            sttTrace('setup:start', {
+                hasSpeechRecognition: Boolean(SpeechRec),
+                hasMediaDevices: Boolean(navigator.mediaDevices?.getUserMedia),
+                secureContext: window.isSecureContext,
+                userAgent: (navigator.userAgent || '').slice(0, 110),
+            });
             if (!SpeechRec) {
                 addLog("STT не підтримується", "error");
                 document.getElementById('stt-status').innerText = "STT не підтримується у цьому браузері";
+                sttTrace('setup:unsupported-browser');
                 return;
             }
 
@@ -843,6 +859,13 @@
             recognition.interimResults = !isMobile;
             recognition.maxAlternatives = 1;
             finalizedParts = [];
+            sttTrace('setup:ready', {
+                mode: isMobile ? 'mobile-single-shot' : 'desktop-continuous',
+                lang: recognition.lang,
+                continuous: recognition.continuous,
+                interim: recognition.interimResults,
+                maxAlternatives: recognition.maxAlternatives,
+            });
 
             const mergeTranscriptPart = (parts, chunk) => {
                 const normalized = (chunk || "").replace(/\s+/g, " ").trim();
@@ -856,7 +879,23 @@
                 parts.push(normalized);
             };
 
+            const submitCurrentTranscript = () => {
+                const text = (currentTranscript || '').trim();
+                if (!text) {
+                    sttTrace('submit:skipped-empty', { session: sttSessionSeq });
+                    return false;
+                }
+                sttTrace('submit:ok', { session: sttSessionSeq, textLen: text.length });
+                addMessage('user', text);
+                runFeedback(text);
+                sttSessionActive = false;
+                sttManualStopRequested = false;
+                finalizedParts = [];
+                return true;
+            };
+
             recognition.onstart = () => {
+                sttSessionSeq += 1;
                 isRecording = true;
                 phoneAttemptStartedAt = Date.now();
                 phoneAttemptNumber = phoneCompletedTurns + 1;
@@ -864,15 +903,19 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-square';
                 document.getElementById('stt-status').innerText = "СЛУХАЮ ІСПАНСЬКУ...";
                 addLog("Мікрофон активний");
+                sttTrace('onstart', { session: sttSessionSeq, sttSessionActive, isMobile });
             };
 
             recognition.onresult = (e) => {
+                sttTrace('onresult:batch', { session: sttSessionSeq, resultIndex: e.resultIndex, total: e.results?.length || 0 });
                 let interimText = "";
+                let finalsInBatch = 0;
                 for (let i = e.resultIndex; i < e.results.length; i++) {
                     const result = e.results[i];
                     const text = (result[0]?.transcript || "").trim();
                     if (!text) continue;
                     if (result.isFinal) {
+                        finalsInBatch += 1;
                         mergeTranscriptPart(finalizedParts, text);
                     } else {
                         interimText += `${text} `;
@@ -882,6 +925,12 @@
                 currentTranscript = `${base}${interimText ? ` ${interimText.trim()}` : ""}`.trim();
                 document.getElementById('transcript-preview').innerText = currentTranscript;
                 updateDraftClearButton();
+                sttTrace('onresult:merged', {
+                    session: sttSessionSeq,
+                    finalsInBatch,
+                    finalizedParts: finalizedParts.length,
+                    transcriptLen: currentTranscript.length,
+                });
             };
 
             recognition.onend = () => {
@@ -893,26 +942,36 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
                 document.getElementById('stt-status').innerText = "";
                 addLog("Запис завершено");
+                sttTrace('onend', {
+                    session: sttSessionSeq,
+                    shouldRestartCandidate: isMobile && sttSessionActive && !sttManualStopRequested,
+                    sttSessionActive,
+                    sttManualStopRequested,
+                    transcriptLen: (currentTranscript || '').trim().length,
+                });
 
                 const shouldAutoRestart = isMobile && sttSessionActive && !sttManualStopRequested;
                 if (shouldAutoRestart) {
                     // Mobile single-shot STT often auto-stops after short pauses.
-                    // Keep listening until user explicitly presses stop.
+                    // If text already captured — auto-submit immediately.
+                    if (submitCurrentTranscript()) return;
+                    // Otherwise continue listening until we capture speech.
                     setTimeout(() => {
                         if (sttSessionActive && !isRecording) {
                             try {
                                 recognition.start();
+                                sttTrace('onend:restart', { session: sttSessionSeq });
                             } catch (_) {
                                 // Ignore transient "already started" / permission race errors.
+                                sttTrace('onend:restart-failed', { session: sttSessionSeq });
                             }
                         }
                     }, 300);
                     return;
                 }
 
-                if (sttManualStopRequested && currentTranscript.trim()) {
-                    addMessage('user', currentTranscript);
-                    runFeedback(currentTranscript);
+                if (sttManualStopRequested) {
+                    submitCurrentTranscript();
                 }
 
                 sttSessionActive = false;
@@ -922,6 +981,13 @@
 
             recognition.onerror = (e) => {
                 addLog(`STT Error: ${e.error}`, "error");
+                sttTrace('onerror', {
+                    session: sttSessionSeq,
+                    code: e.error,
+                    message: e.message || '',
+                    sttSessionActive,
+                    isRecording,
+                });
                 // Фатальні помилки — дозвіл відхилено, відновлення неможливе
                 const fatalErrors = ['not-allowed', 'service-not-allowed'];
                 if (fatalErrors.includes(e.error)) {
@@ -959,6 +1025,13 @@
         }
 
         document.getElementById('record-btn').onclick = () => {
+            sttTrace('record-btn:click', {
+                currentType,
+                isRecording,
+                hasRecognition: Boolean(recognition),
+                sttSessionActive,
+                sttManualStopRequested,
+            });
             // Echo + Azure Pronunciation Assessment
             if (currentType === 'echo' && !azurePronunciationActive) {
                 const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : { key: '', region: '' };
