@@ -652,7 +652,7 @@
                     await runEchoFeedback(transcript);
                 } else {
                     const set = window.AI_EXERCISE_CONFIG;
-                    const feedbackSystem = set?.feedback?.system || "Ти вчитель іспанської.";
+                    const feedbackSystem = set?.feedback?.system || `Ти вчитель ${getLangConfig().targetInstr} мови.`;
                     const lastTask = conversation[conversation.length - 1].content;
                     const prompt = `Завдання було: ${lastTask}. Учень відповів: "${transcript}". Проаналізуй і виправ помилки українською мовою.`;
                     const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
