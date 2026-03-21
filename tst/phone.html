@@ -887,7 +887,7 @@
                                 // Ignore transient "already started" / permission race errors.
                             }
                         }
-                    }, 120);
+                    }, 300);
                     return;
                 }
 
@@ -903,9 +903,19 @@
 
             recognition.onerror = (e) => {
                 addLog(`STT Error: ${e.error}`, "error");
-                sttSessionActive = false;
-                sttManualStopRequested = false;
-                recognition.stop();
+                // Фатальні помилки — дозвіл відхилено, відновлення неможливе
+                const fatalErrors = ['not-allowed', 'service-not-allowed'];
+                if (fatalErrors.includes(e.error)) {
+                    sttSessionActive = false;
+                    sttManualStopRequested = false;
+                    document.getElementById('stt-status').innerText = "Мікрофон заблоковано";
+                    return;
+                }
+                // Нефатальні помилки (no-speech, aborted, network, audio-capture):
+                // НЕ вбиваємо sttSessionActive — onend запустить авто-рестарт на мобільному.
+                if (e.error === 'no-speech') {
+                    document.getElementById('stt-status').innerText = "Не чую... повторна спроба";
+                }
             };
         }
 
