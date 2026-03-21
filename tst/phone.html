@@ -254,6 +254,9 @@
                 <button id="clear-draft-btn" onclick="clearDraftTranscript()" class="side-action-btn absolute left-1 bottom-1 bg-slate-900 border border-slate-500 text-slate-200 hover:border-orange-400 hover:text-orange-300 active:scale-95 transition-all" title="Стерти поточний текст відповіді" aria-label="Стерти поточний текст відповіді">
                     <i class="fa-solid fa-eraser text-base"></i><span>Стерти</span>
                 </button>
+                <button id="send-draft-btn" onclick="forceSubmitDraftTranscript()" class="side-action-btn absolute left-1 top-1 bg-slate-900 border border-emerald-500 text-emerald-200 hover:border-emerald-300 hover:text-emerald-100 active:scale-95 transition-all" title="Примусово відправити поточний текст на аналіз" aria-label="Примусово відправити поточний текст на аналіз">
+                    <i class="fa-solid fa-paper-plane text-base"></i><span>Відправити</span>
+                </button>
                 <div class="absolute inset-x-0 bottom-0 flex justify-center pointer-events-none">
                     <div class="relative w-32 h-32 flex items-center justify-center pointer-events-auto">
                         <div id="mic-ring" class="hidden recording-ring"></div>
@@ -295,6 +298,7 @@
         let finalizedParts = [];
         let sttSessionActive = false;
         let sttManualStopRequested = false;
+        let sttForceSubmitRequested = false;
         let phoneAttemptStartedAt = 0;
         let phoneAttemptNumber = 0;
         let phoneCompletedTurns = 0;
@@ -908,8 +912,9 @@
                 phoneAttemptNumber = phoneCompletedTurns + 1;
                 document.getElementById('mic-ring').classList.remove('hidden');
                 document.getElementById('mic-icon').className = 'fa-solid fa-square';
-                document.getElementById('stt-status').innerText = "СЛУХАЮ " + getLangConfig().targetInstr.toUpperCase() + "...";
+                document.getElementById('stt-status').innerText = formatListeningStatus(recognition.lang);
                 addLog("Мікрофон активний");
+                updateDraftClearButton();
                 sttTrace('onstart', { session: sttSessionSeq, sttSessionActive, isMobile });
             };
 
@@ -983,7 +988,12 @@
 
                 sttSessionActive = false;
                 sttManualStopRequested = false;
+                sttForceSubmitRequested = false;
                 finalizedParts = [];
+                if (sttAutoSubmitTimer) {
+                    clearTimeout(sttAutoSubmitTimer);
+                    sttAutoSubmitTimer = null;
+                }
             };
 
             recognition.onerror = (e) => {
@@ -1017,17 +1027,53 @@
 
         function updateDraftClearButton() {
             const clearBtn = document.getElementById('clear-draft-btn');
+            const sendBtn = document.getElementById('send-draft-btn');
             if (!clearBtn) return;
             const hasDraft = Boolean((currentTranscript || '').trim());
+            const canForceSend = hasDraft || isRecording;
             clearBtn.disabled = !hasDraft;
             clearBtn.classList.toggle('opacity-40', !hasDraft);
             clearBtn.classList.toggle('cursor-not-allowed', !hasDraft);
+            if (sendBtn) {
+                sendBtn.disabled = !canForceSend;
+                sendBtn.classList.toggle('opacity-40', !canForceSend);
+                sendBtn.classList.toggle('cursor-not-allowed', !canForceSend);
+            }
         }
 
         function clearDraftTranscript() {
             currentTranscript = "";
             finalizedParts = [];
             document.getElementById('transcript-preview').innerText = "";
+            updateDraftClearButton();
+        }
+
+        function forceSubmitDraftTranscript() {
+            const text = (currentTranscript || '').trim();
+            sttTrace('submit:force-click', { textLen: text.length, isRecording, sttSessionActive });
+            if (isRecording) {
+                sttForceSubmitRequested = true;
+                sttManualStopRequested = true;
+                addLog('STT: примусова відправка — зупиняю запис');
+                try {
+                    recognition?.stop();
+                } catch (e) {
+                    addLog(`STT force-stop() помилка: ${e.message || e}`, 'warn');
+                }
+                return;
+            }
+            if (!text) {
+                addLog('STT: немає тексту для примусової відправки', 'warn');
+                return;
+            }
+            addMessage('user', text);
+            runFeedback(text);
+            sttSessionActive = false;
+            sttManualStopRequested = false;
+            sttForceSubmitRequested = false;
+            finalizedParts = [];
+            currentTranscript = '';
+            document.getElementById('transcript-preview').innerText = '';
             updateDraftClearButton();
         }
 
@@ -1116,6 +1162,7 @@
             // Зупиняємо Web Speech якщо ще активний, щоб не перехоплював мікрофон
             sttSessionActive = false;
             sttManualStopRequested = false;
+            sttForceSubmitRequested = false;
             if (recognition) {
                 try { recognition.stop(); } catch (_) {}
             }
