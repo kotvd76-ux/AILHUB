@@ -984,6 +984,18 @@
                     finalizedParts: finalizedParts.length,
                     transcriptLen: currentTranscript.length,
                 });
+
+                // Мобільний: фінальний результат → зелений стан + 4с таймер авто-відправки
+                // (натиснути кнопку під час зеленого стану = відправити негайно)
+                if (isMobile && gotFinal && currentTranscript.trim()) {
+                    clearTimeout(sttResultTimer);
+                    setMicState('result');
+                    sttResultTimer = setTimeout(() => {
+                        sttResultTimer = null;
+                        sttTrace('autosend:4s-timer', { session: sttSessionSeq });
+                        submitCurrentTranscript();
+                    }, 4000);
+                }
             };
 
             recognition.onend = () => {
@@ -1002,8 +1014,10 @@
 
                 const shouldAutoRestart = isMobile && sttSessionActive && !sttManualStopRequested;
                 if (shouldAutoRestart) {
-                    // Mobile single-shot STT often auto-stops after short pauses.
-                    // If text already captured — auto-submit immediately.
+                    // Таймер 4с вже запущений у onresult → зелений стан активний, не чіпаємо
+                    if (sttResultTimer !== null) return;
+                    // Немає таймера: або результату не було (тиша/no-speech) → рестарт,
+                    // або щось пішло не так → завершити сесію.
                     if (submitCurrentTranscript()) return;
                     // Otherwise continue listening until we capture speech.
                     setTimeout(() => {
@@ -1061,7 +1075,7 @@
         }
 
         function submitCurrentTranscript() {
-            if (!currentTranscript.trim()) return;
+            if (!currentTranscript.trim()) return false; // нічого відправляти
             clearTimeout(sttResultTimer); sttResultTimer = null;
             sttSessionActive = false;
             const text = currentTranscript;
@@ -1069,6 +1083,7 @@
             finalizedParts = [];
             addMessage('user', text);
             runFeedback(text);
+            return true; // відправлено
         }
 
         function updateDraftClearButton() {
@@ -1196,14 +1211,19 @@
                 sttSessionActive = true;
                 sttManualStopRequested = false;
                 addLog(`STT: старт запису (${currentType || 'unknown'})`);
-                try {
-                    recognition.start();
-                } catch (e) {
-                    addLog(`STT start() помилка: ${e.message || e}`, 'error');
-                    sttSessionActive = false;
-                    sttManualStopRequested = false;
-                    document.getElementById('stt-status').innerText = 'STT не стартував';
-                }
+                const doStart = () => {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        addLog(`STT start() помилка: ${e.message || e} — перестворення`, 'error');
+                        recognition = null; // наступний клік зробить setupSTT знову
+                        sttSessionActive = false;
+                        sttManualStopRequested = false;
+                        setMicState('idle');
+                    }
+                };
+                // Якщо recognition щойно створено — один тік для ініціалізації
+                if (isFirstSetup) setTimeout(doStart, 0); else doStart();
             }
         };
 
