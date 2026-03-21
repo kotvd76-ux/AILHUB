@@ -850,7 +850,7 @@
                 phoneAttemptNumber = phoneCompletedTurns + 1;
                 document.getElementById('mic-ring').classList.remove('hidden');
                 document.getElementById('mic-icon').className = 'fa-solid fa-square';
-                document.getElementById('stt-status').innerText = "СЛУХАЮ ІСПАНСЬКУ...";
+                document.getElementById('stt-status').innerText = "СЛУХАЮ " + getLangConfig().targetInstr.toUpperCase() + "...";
                 addLog("Мікрофон активний");
             };
 
