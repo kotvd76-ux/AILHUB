@@ -8,6 +8,13 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Підключення конфігів — ПОРЯДОК ВАЖЛИВИЙ -->
     <script src="sett_set.js"></script>
+    <script>
+        document.title = document.title.replace('Spanish', getLangConfig().targetName);
+        document.addEventListener('DOMContentLoaded', function() {
+            var el = document.getElementById('header-title');
+            if (el) el.textContent = getLangConfig().targetName + ' AI Trainer';
+        });
+    </script>
     <script src="phone_set.js"></script>
     <script src="logger.js"></script>
     <script src="azure_speech_connector.js"></script>
@@ -852,13 +859,6 @@
             // recognition stops automatically after the first utterance and submits.
             // On desktop: continuous mode — user manually presses stop to submit.
             const isMobile = isLikelyMobileOrTablet();
-            const formatListeningStatus = (langCode) => {
-                const base = (langCode || '').toLowerCase();
-                if (base.startsWith('en')) return 'СЛУХАЮ АНГЛІЙСЬКУ...';
-                if (base.startsWith('es')) return 'СЛУХАЮ ІСПАНСЬКУ...';
-                if (base.startsWith('uk')) return 'СЛУХАЮ УКРАЇНСЬКУ...';
-                return `СЛУХАЮ (${langCode || 'auto'})...`;
-            };
 
             recognition = new SpeechRec();
             recognition.lang = getLangConfig().speechLang;
