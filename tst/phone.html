@@ -303,6 +303,9 @@
         let lastAiMessage = '';
         let azurePronunciationActive = false;
         let sttSessionSeq = 0;
+        let sttResultTimer = null;
+        let gotFinal = false;
+        let isFirstSetup = true;
 
         // --- Config from Storage (через sett_set.js storageKeys) ---
         function getConfig() {
