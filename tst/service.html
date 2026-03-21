@@ -258,13 +258,15 @@ hr.sep{border:none;border-top:1px solid var(--bdr);margin:18px 0}
   .mong{grid-template-columns:1fr 1fr}
 }
 </style>
+<script src="sett_set.js"></script>
+<script>document.title = document.title.replace('Spanish', getLangConfig().targetName);</script>
 </head>
 <body>
 
 <header class="hdr">
   <button class="menu-btn" onclick="toggleSidebar()" aria-label="Меню"><i class="fa fa-bars"></i></button>
   <a href="index.html" class="back-btn"><i class="fa fa-arrow-left"></i> Назад</a>
-  <div class="hdr-logo">Spanish <em>AI</em> Hub</div>
+  <div class="hdr-logo"><span id="hdr-lang-name">Spanish</span> <em>AI</em> Hub</div>
   <div style="flex:1"></div>
   <div class="sdot"></div>
   <div class="hdr-tag">СЕРВІС / УТИЛІТИ</div>
@@ -992,7 +994,7 @@ function filterLS() { const q = document.getElementById('lsSrch').value.toLowerC
 function cpLS(k) { navigator.clipboard.writeText(localStorage.getItem(k)||''); toast('Скопійовано: '+k); }
 function delLS(k) { if (!confirm(`Видалити ключ «${k}»?`)) return; localStorage.removeItem(k); loadLS(); toast('Видалено: '+k); }
 function clearLS() {
-  if (!confirm('Видалити всі ключі Spanish AI Hub?\n\nЦе скине всі налаштування та логи!')) return;
+  if (!confirm(`Видалити всі ключі ${getLangConfig().targetName} AI Hub?\n\nЦе скине всі налаштування та логи!`)) return;
   allKeys.forEach(k => localStorage.removeItem(k)); loadLS(); toast('Очищено');
 }
 
@@ -1146,6 +1148,8 @@ function calcUsage(){
 
 // INIT
 window.addEventListener('DOMContentLoaded', () => {
+  var langEl = document.getElementById('hdr-lang-name');
+  if (langEl) langEl.textContent = getLangConfig().targetName;
   refreshLogs(); refreshTechLogs(); loadLS(); loadBkInfo(); loadApiKeys();
   loadEd('sett_set', document.querySelector('.edtab.active'));
   // Спроба автоматично підтягнути сьогоднішні логи з сервера
