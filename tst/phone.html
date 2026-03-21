@@ -805,10 +805,21 @@
         // Автоматично: очищує Markdown, визначає мову (кирилиця→uk-UA, решта→мова навчання),
         // підтримує online TTS (OpenAI) та offline (Web Speech API).
 
+        function isLikelyMobileOrTablet() {
+            const ua = navigator.userAgent || '';
+            const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+            const touchPoints = navigator.maxTouchPoints || 0;
+            const smallViewport = Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 1024;
+            const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            const ipadDesktopUA = /Macintosh/i.test(ua) && touchPoints > 1;
+            return uaMobile || ipadDesktopUA || (coarsePointer && smallViewport);
+        }
+
         function setupSTT() {
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRec) {
                 addLog("STT не підтримується", "error");
+                document.getElementById('stt-status').innerText = "STT не підтримується у цьому браузері";
                 return;
             }
 
@@ -817,12 +828,13 @@
             // On mobile: single-shot mode (continuous=false, interimResults=false) —
             // recognition stops automatically after the first utterance and submits.
             // On desktop: continuous mode — user manually presses stop to submit.
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isMobile = isLikelyMobileOrTablet();
 
             recognition = new SpeechRec();
             recognition.lang = getLangConfig().speechLang;
             recognition.continuous = !isMobile;
             recognition.interimResults = !isMobile;
+            recognition.maxAlternatives = 1;
             finalizedParts = [];
 
             const mergeTranscriptPart = (parts, chunk) => {
@@ -951,6 +963,15 @@
             }
             // Стандартний Web Speech API
             if (!recognition) setupSTT();
+            if (!recognition) {
+                const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : { key: '' };
+                if (!azCfg.key) {
+                    alert('Цей браузер не підтримує STT. Спробуй Chrome на Android або додай Azure Speech ключ у Налаштуваннях.');
+                } else {
+                    alert('Web Speech API недоступний. Для мобільного STT у цьому браузері увімкни вправу Echo (Azure).');
+                }
+                return;
+            }
             if (isRecording) {
                 sttManualStopRequested = true;
                 recognition.stop();
