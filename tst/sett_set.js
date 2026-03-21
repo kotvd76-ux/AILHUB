@@ -213,14 +213,14 @@ const SETTINGS_CONFIG = {
 
         // Мова, яку вивчають (target language)
         target: [
-            { id: 'es', label: 'Іспанська',    flag: '🇪🇸', bcp47: 'es-ES', nameEn: 'Spanish',    nameNative: 'Español'    },
-            { id: 'en', label: 'Англійська',   flag: '🇬🇧', bcp47: 'en-GB', nameEn: 'English',    nameNative: 'English'    },
-            { id: 'fr', label: 'Французька',   flag: '🇫🇷', bcp47: 'fr-FR', nameEn: 'French',     nameNative: 'Français'   },
-            { id: 'de', label: 'Німецька',     flag: '🇩🇪', bcp47: 'de-DE', nameEn: 'German',     nameNative: 'Deutsch'    },
-            { id: 'it', label: 'Італійська',   flag: '🇮🇹', bcp47: 'it-IT', nameEn: 'Italian',    nameNative: 'Italiano'   },
-            { id: 'pl', label: 'Польська',     flag: '🇵🇱', bcp47: 'pl-PL', nameEn: 'Polish',     nameNative: 'Polski'     },
-            { id: 'pt', label: 'Португальська',flag: '🇵🇹', bcp47: 'pt-PT', nameEn: 'Portuguese', nameNative: 'Português'  },
-            { id: 'la', label: 'Латинська',    flag: '🏛️', bcp47: 'la',    nameEn: 'Latin',      nameNative: 'Latina'     },
+            { id: 'es', label: 'Іспанська',     labelInstr: 'іспанською',     flag: '🇪🇸', bcp47: 'es-ES', nameEn: 'Spanish',    nameNative: 'Español'    },
+            { id: 'en', label: 'Англійська',    labelInstr: 'англійською',    flag: '🇬🇧', bcp47: 'en-GB', nameEn: 'English',    nameNative: 'English'    },
+            { id: 'fr', label: 'Французька',    labelInstr: 'французькою',    flag: '🇫🇷', bcp47: 'fr-FR', nameEn: 'French',     nameNative: 'Français'   },
+            { id: 'de', label: 'Німецька',      labelInstr: 'німецькою',      flag: '🇩🇪', bcp47: 'de-DE', nameEn: 'German',     nameNative: 'Deutsch'    },
+            { id: 'it', label: 'Італійська',    labelInstr: 'італійською',    flag: '🇮🇹', bcp47: 'it-IT', nameEn: 'Italian',    nameNative: 'Italiano'   },
+            { id: 'pl', label: 'Польська',      labelInstr: 'польською',      flag: '🇵🇱', bcp47: 'pl-PL', nameEn: 'Polish',     nameNative: 'Polski'     },
+            { id: 'pt', label: 'Португальська', labelInstr: 'португальською', flag: '🇵🇹', bcp47: 'pt-PT', nameEn: 'Portuguese', nameNative: 'Português'  },
+            { id: 'la', label: 'Латинська',     labelInstr: 'латиною',        flag: '🏛️', bcp47: 'la',    nameEn: 'Latin',      nameNative: 'Latina'     },
         ],
 
         // Рідна мова інтерфейсу (мова пояснень, фідбеку, перекладів)
@@ -464,6 +464,7 @@ function getLangConfig() {
         teacherRole:  `professional ${target.nameEn} teacher`,
         targetName:   target.nameEn,        // 'Spanish'
         targetNative: target.nameNative,    // 'Español'
+        targetInstr:  target.labelInstr,    // 'іспанською' (орудний відмінок для UI-фраз)
         uiLanguage:   native.nameEn,        // 'Ukrainian'
         helperClause,                       // ' When needed, add brief hints in English.'
         speechLang:   target.bcp47,         // 'es-ES'

@@ -8,6 +8,13 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Підключення конфігів — ПОРЯДОК ВАЖЛИВИЙ -->
     <script src="sett_set.js"></script>
+    <script>
+        document.title = document.title.replace('Spanish', getLangConfig().targetName);
+        document.addEventListener('DOMContentLoaded', function() {
+            var el = document.getElementById('header-title');
+            if (el) el.textContent = getLangConfig().targetName + ' AI Trainer';
+        });
+    </script>
     <script src="phone_set.js"></script>
     <script src="logger.js"></script>
     <script src="azure_speech_connector.js"></script>
@@ -665,7 +672,7 @@
                     await runEchoFeedback(transcript);
                 } else {
                     const set = window.AI_EXERCISE_CONFIG;
-                    const feedbackSystem = set?.feedback?.system || "Ти вчитель іспанської.";
+                    const feedbackSystem = set?.feedback?.system || `Ти вчитель ${getLangConfig().targetInstr} мови.`;
                     const lastTask = conversation[conversation.length - 1].content;
                     const prompt = `Завдання було: ${lastTask}. Учень відповів: "${transcript}". Проаналізуй і виправ помилки українською мовою.`;
                     const feedback = await fetchAI([{ role: 'user', content: prompt }], feedbackSystem);
@@ -856,16 +863,6 @@
             // recognition stops automatically after the first utterance and submits.
             // On desktop: continuous mode — user manually presses stop to submit.
             const isMobile = isLikelyMobileOrTablet();
-            const mobileAutosubmitDelayMs = 4000;
-            const formatListeningStatus = (langCode) => {
-                const base = (langCode || '').toLowerCase();
-                if (base.startsWith('en')) return 'СЛУХАЮ АНГЛІЙСЬКУ...';
-                if (base.startsWith('es')) return 'СЛУХАЮ ІСПАНСЬКУ...';
-                if (base.startsWith('uk')) return 'СЛУХАЮ УКРАЇНСЬКУ...';
-                return `СЛУХАЮ (${langCode || 'auto'})...`;
-            };
-            let sttLastResultAt = 0;
-            let sttAutoSubmitTimer = null;
 
             recognition = new SpeechRec();
             recognition.lang = getLangConfig().speechLang;
@@ -904,29 +901,8 @@
                 runFeedback(text);
                 sttSessionActive = false;
                 sttManualStopRequested = false;
-                sttForceSubmitRequested = false;
                 finalizedParts = [];
-                if (sttAutoSubmitTimer) {
-                    clearTimeout(sttAutoSubmitTimer);
-                    sttAutoSubmitTimer = null;
-                }
                 return true;
-            };
-            const scheduleMobileAutoSubmit = () => {
-                if (!isMobile) return;
-                if (sttAutoSubmitTimer) clearTimeout(sttAutoSubmitTimer);
-                sttAutoSubmitTimer = setTimeout(() => {
-                    if (!sttSessionActive || sttManualStopRequested || isRecording) return;
-                    const text = (currentTranscript || '').trim();
-                    if (!text) return;
-                    const idleForMs = Date.now() - sttLastResultAt;
-                    if (idleForMs < mobileAutosubmitDelayMs) {
-                        scheduleMobileAutoSubmit();
-                        return;
-                    }
-                    sttTrace('autosubmit:idle', { session: sttSessionSeq, idleForMs, textLen: text.length });
-                    submitCurrentTranscript();
-                }, mobileAutosubmitDelayMs);
             };
 
             recognition.onstart = () => {
@@ -961,8 +937,6 @@
                 currentTranscript = `${base}${interimText ? ` ${interimText.trim()}` : ""}`.trim();
                 document.getElementById('transcript-preview').innerText = currentTranscript;
                 updateDraftClearButton();
-                sttLastResultAt = Date.now();
-                scheduleMobileAutoSubmit();
                 sttTrace('onresult:merged', {
                     session: sttSessionSeq,
                     finalsInBatch,
@@ -980,7 +954,6 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
                 document.getElementById('stt-status').innerText = "";
                 addLog("Запис завершено");
-                updateDraftClearButton();
                 sttTrace('onend', {
                     session: sttSessionSeq,
                     shouldRestartCandidate: isMobile && sttSessionActive && !sttManualStopRequested,
@@ -992,8 +965,9 @@
                 const shouldAutoRestart = isMobile && sttSessionActive && !sttManualStopRequested;
                 if (shouldAutoRestart) {
                     // Mobile single-shot STT often auto-stops after short pauses.
-                    // Keep session alive and submit only after short idle window.
-                    scheduleMobileAutoSubmit();
+                    // If text already captured — auto-submit immediately.
+                    if (submitCurrentTranscript()) return;
+                    // Otherwise continue listening until we capture speech.
                     setTimeout(() => {
                         if (sttSessionActive && !isRecording) {
                             try {
@@ -1009,9 +983,6 @@
                 }
 
                 if (sttManualStopRequested) {
-                    if (sttForceSubmitRequested) {
-                        sttTrace('submit:force-onend', { session: sttSessionSeq });
-                    }
                     submitCurrentTranscript();
                 }
 
@@ -1148,12 +1119,6 @@
                             session: sttSessionSeq,
                             transcriptLen: (currentTranscript || '').trim().length,
                         });
-                        try {
-                            recognition.abort();
-                            sttTrace('record-btn:stop-timeout-abort', { session: sttSessionSeq });
-                        } catch (_) {
-                            sttTrace('record-btn:stop-timeout-abort-failed', { session: sttSessionSeq });
-                        }
                         isRecording = false;
                         document.getElementById('mic-ring').classList.add('hidden');
                         document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
@@ -1165,10 +1130,7 @@
                         }
                         sttSessionActive = false;
                         sttManualStopRequested = false;
-                        sttForceSubmitRequested = false;
                         finalizedParts = [];
-                        recognition = null;
-                        setupSTT();
                     }, 1600);
                 } catch (e) {
                     addLog(`STT stop() помилка: ${e.message || e}`, 'error');
@@ -1182,28 +1144,13 @@
                 document.getElementById('feedback-sheet').classList.add('hidden');
                 sttSessionActive = true;
                 sttManualStopRequested = false;
-                sttForceSubmitRequested = false;
                 addLog(`STT: старт запису (${currentType || 'unknown'})`);
                 try {
                     recognition.start();
                 } catch (e) {
                     addLog(`STT start() помилка: ${e.message || e}`, 'error');
-                    const startMsg = String(e?.message || e || '').toLowerCase();
-                    if (startMsg.includes('already started')) {
-                        sttTrace('start:already-started', { session: sttSessionSeq });
-                        try { recognition.abort(); } catch (_) {}
-                        recognition = null;
-                        setupSTT();
-                        document.getElementById('stt-status').innerText = 'STT перезапущено — натисни ще раз';
-                        addLog('STT: сесію перезапущено після зависання start()', 'warn');
-                        sttSessionActive = false;
-                        sttManualStopRequested = false;
-                        sttForceSubmitRequested = false;
-                        return;
-                    }
                     sttSessionActive = false;
                     sttManualStopRequested = false;
-                    sttForceSubmitRequested = false;
                     document.getElementById('stt-status').innerText = 'STT не стартував';
                 }
             }
