@@ -908,7 +908,7 @@
                 phoneAttemptNumber = phoneCompletedTurns + 1;
                 document.getElementById('mic-ring').classList.remove('hidden');
                 document.getElementById('mic-icon').className = 'fa-solid fa-square';
-                document.getElementById('stt-status').innerText = "СЛУХАЮ ІСПАНСЬКУ...";
+                document.getElementById('stt-status').innerText = formatListeningStatus(recognition.lang);
                 addLog("Мікрофон активний");
                 sttTrace('onstart', { session: sttSessionSeq, sttSessionActive, isMobile });
             };
@@ -1064,6 +1064,28 @@
                 addLog('STT: ручна зупинка запису');
                 try {
                     recognition.stop();
+                    sttTrace('record-btn:stop-requested', { session: sttSessionSeq });
+                    // Chrome Android occasionally misses onend after stop().
+                    // Fail-safe to unblock UI and submit transcript if we already have text.
+                    setTimeout(() => {
+                        if (!isRecording) return;
+                        sttTrace('record-btn:stop-timeout-fallback', {
+                            session: sttSessionSeq,
+                            transcriptLen: (currentTranscript || '').trim().length,
+                        });
+                        isRecording = false;
+                        document.getElementById('mic-ring').classList.add('hidden');
+                        document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
+                        document.getElementById('stt-status').innerText = '';
+                        const text = (currentTranscript || '').trim();
+                        if (text) {
+                            addMessage('user', text);
+                            runFeedback(text);
+                        }
+                        sttSessionActive = false;
+                        sttManualStopRequested = false;
+                        finalizedParts = [];
+                    }, 1600);
                 } catch (e) {
                     addLog(`STT stop() помилка: ${e.message || e}`, 'error');
                 }
