@@ -142,6 +142,7 @@ const CEFR_DESCS  = { A1:'Початківець', A2:'Елементарний'
 
 
 const BG = 'linear-gradient(135deg,#0f0f1a 0%,#1a1a2e 50%,#16213e 100%)';
+const _LC = (typeof getLangConfig === 'function') ? getLangConfig() : { targetInstr: 'іспанською', targetName: 'Spanish', uiLanguage: 'Ukrainian', helperClause: '' };
 const isoDate = () => new Date().toISOString().slice(0,10);
 
 /* ── Допоміжні функції ──────────────────────────────── */
@@ -409,7 +410,7 @@ function QuestionCard({ q, idx, total, onAnswer, answered, recording, transcript
             <>
               <div role="alert" style={{background:'rgba(251,191,36,.1)',border:'2px solid rgba(251,191,36,.35)',borderRadius:12,padding:'12px 14px',color:'#fbbf24',fontSize:'0.9rem',lineHeight:1.7}}>⚠️ Запис недоступний. Введіть відповідь текстом.</div>
               <textarea value={fallbackText} onChange={e=>onSetFallback(e.target.value)} disabled={answered} rows={3}
-                placeholder="Напиши відповідь іспанською…" aria-label="Текстова відповідь"
+                placeholder={'Напиши відповідь ' + _LC.targetInstr + '…'} aria-label="Текстова відповідь"
                 style={{background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'12px 14px',color:'#fff',fontSize:'1rem',resize:'vertical',outline:'none'}}/>
               <button onClick={()=>sub(fallbackText)} disabled={!fallbackText.trim()||answered}
                 style={{background:fallbackText.trim()&&!answered?col:'rgba(255,255,255,0.1)',border:'none',borderRadius:12,padding:'13px',color:'#fff',fontWeight:700,cursor:fallbackText.trim()&&!answered?'pointer':'default',fontSize:'1rem'}}>
@@ -859,7 +860,7 @@ function App() {
     nadRef._nextIsHint = true;
     nadRef.current._send({
       clientContent: {
-        turns: [{ role:'user', parts:[{ text:'Дай мені коротку підказку УКРАЇНСЬКОЮ мовою (1-2 речення): поясни що потрібно відповісти і яку лексику або граматику використати, але НЕ кажи готову іспанську відповідь.' }] }],
+        turns: [{ role:'user', parts:[{ text:`Дай мені коротку підказку УКРАЇНСЬКОЮ мовою (1-2 речення): поясни що потрібно відповісти і яку лексику або граматику використати, але НЕ кажи готову відповідь ${_LC.targetInstr}.` }] }],
         turnComplete: true
       }
     });
@@ -921,7 +922,7 @@ function App() {
         }else if(msg.correction&&!msg.correction.has_errors){body+="{\\pard\\li400\\i\\cf7 "+enc(msg.correction.overall||"Без помилок!")+"}\\par\n";}
       }else if(msg.role==='ai'){body+="{\\pard\\sa120\\sb60 {\\b\\cf8 [AI]:} {\\cf0 "+enc(msg.content)+"}\\par}\n";}
     });
-    const rtf=["{\\rtf1\\ansi\\deff0","{\\fonttbl{\\f0\\fswiss\\fcharset204 Arial;}}","{\\colortbl;\\red0\\green0\\blue0;\\red30\\green90\\blue210;\\red20\\green60\\blue160;\\red120\\green40\\blue160;\\red200\\green40\\blue40;\\red100\\green100\\blue100;\\red30\\green140\\blue60;\\red10\\green120\\blue110;}","{\\f0\\fs24","{\\pard\\qc\\b\\fs30 "+uc("Розмова іспанською")+"\\par}","{\\pard\\qc\\fs20\\cf6 "+uc(date)+(topic?" \\u183? "+uc("Тема: "+topic):"")+"\\par}","{\\pard\\qc\\fs20\\cf6 "+uc("Рівень: "+testLabel)+"\\par}","{\\pard\\brdrb\\brdrs\\brdrw10\\brsp20 \\par}",body,"}}"].join("\n");
+    const rtf=["{\\rtf1\\ansi\\deff0","{\\fonttbl{\\f0\\fswiss\\fcharset204 Arial;}}","{\\colortbl;\\red0\\green0\\blue0;\\red30\\green90\\blue210;\\red20\\green60\\blue160;\\red120\\green40\\blue160;\\red200\\green40\\blue40;\\red100\\green100\\blue100;\\red30\\green140\\blue60;\\red10\\green120\\blue110;}","{\\f0\\fs24","{\\pard\\qc\\b\\fs30 "+uc("Розмова " + _LC.targetInstr)+"\\par}","{\\pard\\qc\\fs20\\cf6 "+uc(date)+(topic?" \\u183? "+uc("Тема: "+topic):"")+"\\par}","{\\pard\\qc\\fs20\\cf6 "+uc("Рівень: "+testLabel)+"\\par}","{\\pard\\brdrb\\brdrs\\brdrw10\\brsp20 \\par}",body,"}}"].join("\n");
     const b=new Blob([rtf],{type:"application/rtf"});
     const u=URL.createObjectURL(b);
     const el=document.createElement("a");el.href=u;el.download="spanish_chat_"+isoDate()+".rtf";el.click();URL.revokeObjectURL(u);
@@ -1351,7 +1352,7 @@ function App() {
 
             {/* Рядок статусу */}
             <div style={{fontSize:'0.8rem',color:nadState==='listening'?'#4ade80':nadState==='speaking'?'#4a9ede':nadState==='connecting'?'#fbbf24':nadState==='error'?'#f87171':'#4b5563',fontWeight:600,letterSpacing:'0.03em'}}>
-              {nadState==='connecting'?'⏳ Підключення…':nadState==='ready'?'● Утримуйте кнопку і говоріть іспанською':nadState==='listening'?'🎙 Запис… відпустіть коли закінчите':nadState==='speaking'?'🔊 AI відповідає…':nadState==='error'?'❌ Помилка':'●'}
+              {nadState==='connecting'?'⏳ Підключення…':nadState==='ready'?('● Утримуйте кнопку і говоріть ' + _LC.targetInstr):nadState==='listening'?'🎙 Запис… відпустіть коли закінчите':nadState==='speaking'?'🔊 AI відповідає…':nadState==='error'?'❌ Помилка':'●'}
             </div>
 
             {/* Push-and-Hold кнопка по центру */}
@@ -1361,7 +1362,7 @@ function App() {
                 onTouchStart={e=>{e.preventDefault();pttStart();}} onTouchEnd={pttStop}
                 disabled={nadState!=='ready'&&nadState!=='listening'}
                 aria-pressed={nadState==='listening'}
-                title="Утримуйте і говоріть іспанською"
+                title={'Утримуйте і говоріть ' + _LC.targetInstr}
                 style={{
                   position:'relative',
                   width:80,height:80,borderRadius:'50%',
@@ -1431,8 +1432,8 @@ function App() {
               </button>
             )}
             <textarea ref={inpRef} value={input} onChange={e=>setInput(e.target.value)} onKeyDown={onKey}
-              placeholder={mode.id==='chat'?'Пиши іспанською…':'Твоя відповідь…'}
-              aria-label={mode.id==='chat'?'Повідомлення іспанською':'Відповідь'}
+              placeholder={mode.id==='chat'?('Пиши ' + _LC.targetInstr + '…'):'Твоя відповідь…'}
+              aria-label={mode.id==='chat'?('Повідомлення ' + _LC.targetInstr):'Відповідь'}
               rows={1}
               style={{flex:1,background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'12px 14px',color:'#fff',fontSize:'0.95rem',resize:'none',outline:'none',lineHeight:1.55,minHeight:46}}/>
             <button onClick={sendMsg} disabled={loading||!input.trim()} aria-label="Надіслати"
@@ -1442,7 +1443,7 @@ function App() {
         {!nadOn&&chatRec&&(
           <div style={{display:'flex',alignItems:'center',gap:7,marginTop:7,justifyContent:'center'}} aria-live="assertive">
             {[0,1,2].map(n=><div key={n} style={{width:6,height:6,borderRadius:'50%',background:'#ec4899',animation:'dot .8s infinite',animationDelay:(n*.15)+'s'}}/>)}
-            <span style={{color:'#ec4899',fontSize:'0.82rem'}}>Запис іспанської…</span>
+            <span style={{color:'#ec4899',fontSize:'0.82rem'}}>{'Запис ' + _LC.targetInstr + '…'}</span>
           </div>
         )}
         {!nadOn&&chatErr&&<p role="alert" style={{color:'#f87171',fontSize:'0.82rem',marginTop:5,textAlign:'center'}}>Мікрофон недоступний — введіть текст вручну</p>}
