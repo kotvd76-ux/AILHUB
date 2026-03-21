@@ -295,6 +295,7 @@
         let lastAiFeedbackText = '';
         let lastAiMessage = '';
         let azurePronunciationActive = false;
+        let sttSessionSeq = 0;
 
         // --- Config from Storage (через sett_set.js storageKeys) ---
         function getConfig() {
@@ -330,6 +331,14 @@
             div.innerText = `[${time}] ${msg}`;
             container.appendChild(div);
             container.parentElement.scrollTo({ top: container.parentElement.scrollHeight, behavior: 'smooth' });
+        }
+
+        function sttTrace(event, details = {}) {
+            const payload = Object.entries(details)
+                .filter(([, v]) => v !== undefined && v !== null && v !== '')
+                .map(([k, v]) => `${k}=${String(v)}`)
+                .join(' ');
+            addLog(`[STT] ${event}${payload ? ` | ${payload}` : ''}`);
         }
 
         function toggleLogs() {
@@ -473,10 +482,17 @@
             if (type === 'describe') document.getElementById('image-container').classList.remove('hidden');
 
             addLog(`Запуск ${typeText}. Модель: ${config.model}`, "success");
+            addLog(`STT режим для вправи: ${type === 'echo' ? 'Azure (Echo)' : 'Web Speech'}`);
             if (type === 'describe') {
                 initDescribeExercise();
             } else {
                 initAI();
+            }
+
+            // Для не-Echo вправ одразу ініціалізуємо STT, щоб у логах було видно
+            // підтримку браузера, режим і можливі причини збоїв.
+            if (type !== 'echo' && !recognition) {
+                setupSTT();
             }
         }
 
@@ -805,10 +821,28 @@
         // Автоматично: очищує Markdown, визначає мову (кирилиця→uk-UA, решта→мова навчання),
         // підтримує online TTS (OpenAI) та offline (Web Speech API).
 
+        function isLikelyMobileOrTablet() {
+            const ua = navigator.userAgent || '';
+            const coarsePointer = typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches;
+            const touchPoints = navigator.maxTouchPoints || 0;
+            const smallViewport = Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 1024;
+            const uaMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+            const ipadDesktopUA = /Macintosh/i.test(ua) && touchPoints > 1;
+            return uaMobile || ipadDesktopUA || (coarsePointer && smallViewport);
+        }
+
         function setupSTT() {
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            sttTrace('setup:start', {
+                hasSpeechRecognition: Boolean(SpeechRec),
+                hasMediaDevices: Boolean(navigator.mediaDevices?.getUserMedia),
+                secureContext: window.isSecureContext,
+                userAgent: (navigator.userAgent || '').slice(0, 110),
+            });
             if (!SpeechRec) {
                 addLog("STT не підтримується", "error");
+                document.getElementById('stt-status').innerText = "STT не підтримується у цьому браузері";
+                sttTrace('setup:unsupported-browser');
                 return;
             }
 
@@ -817,13 +851,21 @@
             // On mobile: single-shot mode (continuous=false, interimResults=false) —
             // recognition stops automatically after the first utterance and submits.
             // On desktop: continuous mode — user manually presses stop to submit.
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isMobile = isLikelyMobileOrTablet();
 
             recognition = new SpeechRec();
             recognition.lang = getLangConfig().speechLang;
             recognition.continuous = !isMobile;
             recognition.interimResults = !isMobile;
+            recognition.maxAlternatives = 1;
             finalizedParts = [];
+            sttTrace('setup:ready', {
+                mode: isMobile ? 'mobile-single-shot' : 'desktop-continuous',
+                lang: recognition.lang,
+                continuous: recognition.continuous,
+                interim: recognition.interimResults,
+                maxAlternatives: recognition.maxAlternatives,
+            });
 
             const mergeTranscriptPart = (parts, chunk) => {
                 const normalized = (chunk || "").replace(/\s+/g, " ").trim();
@@ -837,7 +879,23 @@
                 parts.push(normalized);
             };
 
+            const submitCurrentTranscript = () => {
+                const text = (currentTranscript || '').trim();
+                if (!text) {
+                    sttTrace('submit:skipped-empty', { session: sttSessionSeq });
+                    return false;
+                }
+                sttTrace('submit:ok', { session: sttSessionSeq, textLen: text.length });
+                addMessage('user', text);
+                runFeedback(text);
+                sttSessionActive = false;
+                sttManualStopRequested = false;
+                finalizedParts = [];
+                return true;
+            };
+
             recognition.onstart = () => {
+                sttSessionSeq += 1;
                 isRecording = true;
                 phoneAttemptStartedAt = Date.now();
                 phoneAttemptNumber = phoneCompletedTurns + 1;
@@ -845,15 +903,19 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-square';
                 document.getElementById('stt-status').innerText = "СЛУХАЮ ІСПАНСЬКУ...";
                 addLog("Мікрофон активний");
+                sttTrace('onstart', { session: sttSessionSeq, sttSessionActive, isMobile });
             };
 
             recognition.onresult = (e) => {
+                sttTrace('onresult:batch', { session: sttSessionSeq, resultIndex: e.resultIndex, total: e.results?.length || 0 });
                 let interimText = "";
+                let finalsInBatch = 0;
                 for (let i = e.resultIndex; i < e.results.length; i++) {
                     const result = e.results[i];
                     const text = (result[0]?.transcript || "").trim();
                     if (!text) continue;
                     if (result.isFinal) {
+                        finalsInBatch += 1;
                         mergeTranscriptPart(finalizedParts, text);
                     } else {
                         interimText += `${text} `;
@@ -863,6 +925,12 @@
                 currentTranscript = `${base}${interimText ? ` ${interimText.trim()}` : ""}`.trim();
                 document.getElementById('transcript-preview').innerText = currentTranscript;
                 updateDraftClearButton();
+                sttTrace('onresult:merged', {
+                    session: sttSessionSeq,
+                    finalsInBatch,
+                    finalizedParts: finalizedParts.length,
+                    transcriptLen: currentTranscript.length,
+                });
             };
 
             recognition.onend = () => {
@@ -874,26 +942,36 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
                 document.getElementById('stt-status').innerText = "";
                 addLog("Запис завершено");
+                sttTrace('onend', {
+                    session: sttSessionSeq,
+                    shouldRestartCandidate: isMobile && sttSessionActive && !sttManualStopRequested,
+                    sttSessionActive,
+                    sttManualStopRequested,
+                    transcriptLen: (currentTranscript || '').trim().length,
+                });
 
                 const shouldAutoRestart = isMobile && sttSessionActive && !sttManualStopRequested;
                 if (shouldAutoRestart) {
                     // Mobile single-shot STT often auto-stops after short pauses.
-                    // Keep listening until user explicitly presses stop.
+                    // If text already captured — auto-submit immediately.
+                    if (submitCurrentTranscript()) return;
+                    // Otherwise continue listening until we capture speech.
                     setTimeout(() => {
                         if (sttSessionActive && !isRecording) {
                             try {
                                 recognition.start();
+                                sttTrace('onend:restart', { session: sttSessionSeq });
                             } catch (_) {
                                 // Ignore transient "already started" / permission race errors.
+                                sttTrace('onend:restart-failed', { session: sttSessionSeq });
                             }
                         }
                     }, 300);
                     return;
                 }
 
-                if (sttManualStopRequested && currentTranscript.trim()) {
-                    addMessage('user', currentTranscript);
-                    runFeedback(currentTranscript);
+                if (sttManualStopRequested) {
+                    submitCurrentTranscript();
                 }
 
                 sttSessionActive = false;
@@ -903,6 +981,13 @@
 
             recognition.onerror = (e) => {
                 addLog(`STT Error: ${e.error}`, "error");
+                sttTrace('onerror', {
+                    session: sttSessionSeq,
+                    code: e.error,
+                    message: e.message || '',
+                    sttSessionActive,
+                    isRecording,
+                });
                 // Фатальні помилки — дозвіл відхилено, відновлення неможливе
                 const fatalErrors = ['not-allowed', 'service-not-allowed'];
                 if (fatalErrors.includes(e.error)) {
@@ -940,6 +1025,13 @@
         }
 
         document.getElementById('record-btn').onclick = () => {
+            sttTrace('record-btn:click', {
+                currentType,
+                isRecording,
+                hasRecognition: Boolean(recognition),
+                sttSessionActive,
+                sttManualStopRequested,
+            });
             // Echo + Azure Pronunciation Assessment
             if (currentType === 'echo' && !azurePronunciationActive) {
                 const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : { key: '', region: '' };
@@ -951,9 +1043,23 @@
             }
             // Стандартний Web Speech API
             if (!recognition) setupSTT();
+            if (!recognition) {
+                const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : { key: '' };
+                if (!azCfg.key) {
+                    alert('Цей браузер не підтримує STT. Спробуй Chrome на Android або додай Azure Speech ключ у Налаштуваннях.');
+                } else {
+                    alert('Web Speech API недоступний. Для мобільного STT у цьому браузері увімкни вправу Echo (Azure).');
+                }
+                return;
+            }
             if (isRecording) {
                 sttManualStopRequested = true;
-                recognition.stop();
+                addLog('STT: ручна зупинка запису');
+                try {
+                    recognition.stop();
+                } catch (e) {
+                    addLog(`STT stop() помилка: ${e.message || e}`, 'error');
+                }
             } else {
                 window.speechSynthesis.cancel();
                 currentTranscript = "";
@@ -963,7 +1069,15 @@
                 document.getElementById('feedback-sheet').classList.add('hidden');
                 sttSessionActive = true;
                 sttManualStopRequested = false;
-                recognition.start();
+                addLog(`STT: старт запису (${currentType || 'unknown'})`);
+                try {
+                    recognition.start();
+                } catch (e) {
+                    addLog(`STT start() помилка: ${e.message || e}`, 'error');
+                    sttSessionActive = false;
+                    sttManualStopRequested = false;
+                    document.getElementById('stt-status').innerText = 'STT не стартував';
+                }
             }
         };
 
@@ -1001,8 +1115,11 @@
                 // NoMatch — всі бали 0 і нема транскрипту → повторний спробуй
                 if (!scores.transcript && scores.pronunciationScore === 0) {
                     addLog('Azure: мова не розпізнана (тишина або шум), спробуй ще раз', 'warn');
-                    document.getElementById('transcript-preview').innerText = '(не розпізнано — спробуй ще)';
-                    updateDraftClearButton();
+                    const fallbackOk = await fallbackEchoWithWebSpeech();
+                    if (!fallbackOk) {
+                        document.getElementById('transcript-preview').innerText = '(не розпізнано — спробуй ще)';
+                        updateDraftClearButton();
+                    }
                     return;
                 }
 
@@ -1031,6 +1148,58 @@
                 document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
                 document.getElementById('stt-status').innerText = '';
             }
+        }
+
+        async function fallbackEchoWithWebSpeech() {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRec) {
+                addLog('Fallback STT: Web Speech API недоступний', 'warn');
+                return false;
+            }
+
+            addLog('Fallback STT: пробуємо Web Speech API…', 'warn');
+            return await new Promise(resolve => {
+                let done = false;
+                const finish = (ok) => {
+                    if (done) return;
+                    done = true;
+                    resolve(ok);
+                };
+
+                try {
+                    const r = new SpeechRec();
+                    r.lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'en-US';
+                    r.interimResults = false;
+                    r.continuous = false;
+                    r.maxAlternatives = 1;
+
+                    r.onresult = (e) => {
+                        const text = (e.results?.[0]?.[0]?.transcript || '').trim();
+                        if (!text) return;
+                        currentTranscript = text;
+                        document.getElementById('transcript-preview').innerText = text;
+                        updateDraftClearButton();
+                        addMessage('user', text);
+                        phoneAttemptNumber = phoneCompletedTurns + 1;
+                        _phoneSetAiActive(true);
+                        runEchoFeedback(text).finally(() => _phoneSetAiActive(false));
+                        addLog('Fallback STT: розпізнавання успішне', 'success');
+                        finish(true);
+                    };
+
+                    r.onerror = (e) => {
+                        addLog(`Fallback STT error: ${e.error}`, 'warn');
+                        finish(false);
+                    };
+
+                    r.onend = () => setTimeout(() => finish(Boolean((currentTranscript || '').trim())), 0);
+                    r.start();
+                    setTimeout(() => finish(false), 9000);
+                } catch (e) {
+                    addLog(`Fallback STT exception: ${e.message || e}`, 'warn');
+                    finish(false);
+                }
+            });
         }
 
         // --- Helpers ---
