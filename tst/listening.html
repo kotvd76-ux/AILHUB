@@ -787,6 +787,56 @@
         return ls(keyMap[provider] || `sp_api_key_${provider}`, '').trim();
     }
 
+    // ── Рандомізатор ─────────────────────────────────────────────────────────
+    function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    // ── Антишаблонна інструкція ───────────────────────────────────────────────
+    const LISTEN_ANTI_TEMPLATE =
+        '\n\nВАЖЛИВО — РІЗНОМАНІТНІСТЬ: НЕ використовуй банальні, нудні приклади. ' +
+        'Кожне речення — несподіване, конкретне, з живими деталями.';
+
+    // ── Статистика seeds (localStorage) ──────────────────────────────────────
+    const LISTEN_STATS_LS_KEY = 'sp_listen_seeds';
+    const LISTEN_STATS_MAX    = 20;
+    const LISTEN_EX_ID        = 'listening';
+
+    function getListenUsedSeeds() {
+        try {
+            const all = JSON.parse(localStorage.getItem(LISTEN_STATS_LS_KEY) || '{}');
+            return Array.isArray(all[LISTEN_EX_ID]) ? all[LISTEN_EX_ID] : [];
+        } catch { return []; }
+    }
+
+    function saveListenUsedSeed(seed) {
+        try {
+            const all  = JSON.parse(localStorage.getItem(LISTEN_STATS_LS_KEY) || '{}');
+            const list = Array.isArray(all[LISTEN_EX_ID]) ? all[LISTEN_EX_ID] : [];
+            if (!list.includes(seed)) {
+                list.push(seed);
+                if (list.length > LISTEN_STATS_MAX) list.splice(0, list.length - LISTEN_STATS_MAX);
+                all[LISTEN_EX_ID] = list;
+                localStorage.setItem(LISTEN_STATS_LS_KEY, JSON.stringify(all));
+            }
+        } catch (e) { log(`Stats LS write failed: ${e.message}`, 'warn'); }
+    }
+
+    // ── Fallback пул seeds ────────────────────────────────────────────────────
+    const LISTEN_SEEDS_FALLBACK = [
+        'під час пожежі у будинку', 'на концерті рок-гурту', 'в черзі до стоматолога',
+        'у застряглому ліфті', 'на нічному ринку', 'під час грози в горах',
+        'на першому побаченні', 'під час марафону', 'у ветеринарній клініці',
+        'під час автомобільної поломки', 'в готелі без бронювання', 'на фермерському ринку',
+    ];
+
+    function pickFreshListenSeed(usedSeeds) {
+        const pool   = LISTEN_SEEDS_FALLBACK;
+        const unused = pool.filter(s => !usedSeeds.includes(s));
+        if (unused.length > 0) return pickRandom(unused);
+        const recent    = usedSeeds.slice(-5);
+        const notRecent = pool.filter(s => !recent.includes(s));
+        return notRecent.length > 0 ? pickRandom(notRecent) : pickRandom(pool);
+    }
+
     // ── Випадковий підбір теми ────────────────────────────────────────────────
     function resolveListenTheme() {
         const sel = document.getElementById('theme-select');
@@ -795,7 +845,7 @@
         // Авто: випадкова тема
         const themes = (typeof getPriorityThemes === 'function') ? getPriorityThemes() : [];
         if (!themes.length) return 'General';
-        const picked = themes[Math.floor(Math.random() * themes.length)];
+        const picked = pickRandom(themes);
         return picked.value;
     }
 
@@ -836,6 +886,23 @@
         const model    = getActiveModel(provider);
         const personality = ls('sp_personality', LISTEN_CONFIG.defaultPersonality);
         const strictness  = ls('sp_strictness',  LISTEN_CONFIG.defaultStrictness);
+
+        // ── Seed + forbidBlock (як у verbs) ──────────────────────────────────
+        const usedSeeds = getListenUsedSeeds();
+        const _sNouns   = (typeof getSeedNouns === 'function') ? getSeedNouns() : [];
+        const _sVerbs   = (typeof getSeedVerbs === 'function') ? getSeedVerbs() : [];
+        const seed = (_sNouns.length && _sVerbs.length)
+            ? `${pickRandom(_sNouns)} — ${pickRandom(_sVerbs)}${theme ? ' — ' + theme : ''}`
+            : pickFreshListenSeed(usedSeeds);
+
+        const recentSeeds = usedSeeds.slice(-8);
+        const forbidBlock = recentSeeds.length > 0
+            ? `\n\nЗАБОРОНЕНО — ці контексти вже були в попередніх сесіях, не повторюй:\n` +
+              recentSeeds.map(s => `  • «${s}»`).join('\n')
+            : '';
+
+        const token = Date.now();
+        log(`seed: «${seed}» | theme: ${theme} | ${level}`, 'info');
 
         log(`Провайдер: ${provider} | Модель: ${model} | Ключ: ${apiKey ? apiKey.slice(0,8)+'…' : provider === 'pollinations' ? '(анонімний)' : '❌ ВІДСУТНІЙ'}`);
         if (!apiKey && provider !== 'pollinations') throw new Error(`API-ключ для провайдера "${provider}" не вказано у налаштуваннях.`);
@@ -881,7 +948,10 @@ Return VALID JSON ONLY:
     "translation": "${LC.uiLanguage} full translation"
 }] }
 Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
-        `.trim();
+        `.trim()
+        + LISTEN_ANTI_TEMPLATE
+        + forbidBlock
+        + `\n\nКОНТЕКСТ СЕСІЇ: Прив'яжи всі ${LISTEN_CONFIG.tasksPerSession} фрази до ситуації «${seed}». Session-token: ${token}`;
 
         let url, body;
         const headers = { 'Content-Type': 'application/json' };
@@ -942,6 +1012,7 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
             const parsed = JSON.parse(content);
             if (!parsed.tasks) throw new Error('Відсутнє поле "tasks" у JSON');
             log(`Розібрано ${parsed.tasks.length} завдань`, 'success');
+            saveListenUsedSeed(seed);
             return parsed.tasks;
         } catch (e) {
             log(`JSON Parse Error: ${e.message}`, 'error');
