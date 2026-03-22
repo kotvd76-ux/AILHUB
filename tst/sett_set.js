@@ -197,6 +197,17 @@ const SETTINGS_CONFIG = {
                 { id: 'pt-PT-RaquelNeural',   name: 'Raquel (pt-PT ♀)',  icon: 'fa-person-dress' },
                 { id: 'pl-PL-ZofiaNeural',    name: 'Zofia (pl-PL ♀)',   icon: 'fa-person-dress' },
             ]
+        },
+        elevenlabs: {
+            desc: 'ElevenLabs — найбільш природні голоси',
+            list: [
+                { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel',  icon: 'fa-person-dress' },
+                { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi',    icon: 'fa-person-dress' },
+                { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella',   icon: 'fa-person-dress' },
+                { id: 'ErXwobaYiN019PkySvjV',  name: 'Antoni',  icon: 'fa-person'       },
+                { id: 'VR6AewLTigWG4xSOukaG',  name: 'Arnold',  icon: 'fa-person'       },
+                { id: 'pNInz6obpgDQGcFmaJgB',  name: 'Adam',    icon: 'fa-person'       },
+            ]
         }
     },
 
@@ -275,7 +286,7 @@ const SETTINGS_CONFIG = {
         azureSpeechRegion: 'sp_azure_speech_region',  // Azure регіон (eastus тощо)
 
         // ── Озвучка (TTS) — незалежний провайдер ────────────
-        // 'openai' | 'azure' | 'pollinations' | 'offline'
+        // 'openai' | 'elevenlabs' | 'azure' | 'pollinations' | 'piper' | 'offline'
         ttsProvider: 'sp_tts_provider',
 
         // ── AI Вимова (Pronunciation TTS) ───────────────────
@@ -285,6 +296,10 @@ const SETTINGS_CONFIG = {
 
         // ── Провайдер розпізнавання мовлення (STT) ───────────
         sttProvider: 'sp_stt_provider',  // 'webspeech'|'deepgram'|'google'|'assemblyai'
+
+        // ── TTS API ключі та URL ──────────────────────────────
+        apiKeyElevenLabs: 'sp_api_key_elevenlabs',  // ElevenLabs API key
+        piperServerUrl:   'sp_piper_server_url',    // Piper TTS server URL (e.g. http://localhost:5000)
 
         // ── STT API ключі ────────────────────────────────────
         apiKeyDeepgram:   'sp_api_key_deepgram',    // Deepgram API key
