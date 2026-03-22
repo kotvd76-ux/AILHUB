@@ -557,17 +557,25 @@ class AzureSpeechConnector {
                             if (nbest) {
                                 L(`NBest[0]: Confidence=${nbest.Confidence} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
                                 L(`NBest[0].Words count=${nbest.Words?.length||0}`);
+                                // Логуємо першe слово для діагностики структури
+                                if (nbest.Words?.length) {
+                                    L(`  first word raw: ${JSON.stringify(nbest.Words[0]).slice(0,200)}`);
+                                }
                                 words = (nbest.Words || []).map(w => {
+                                    // AccuracyScore та ErrorType вкладені в PronunciationAssessment
+                                    const pa = w.PronunciationAssessment || {};
+                                    const acc = pa.AccuracyScore ?? w.AccuracyScore ?? 0;
+                                    const err = pa.ErrorType   ?? w.ErrorType   ?? 'None';
                                     const phonemes = w.Phonemes || [];
                                     const badPhonemes = phonemes
-                                        .filter(p => (p.AccuracyScore || 0) < 65)
+                                        .filter(p => ((p.PronunciationAssessment?.AccuracyScore ?? p.AccuracyScore ?? 100)) < 65)
                                         .map(p => p.Phoneme || '')
                                         .filter(Boolean);
-                                    L(`  word="${w.Word}" acc=${w.AccuracyScore} err=${w.ErrorType} phonemes=${phonemes.length} bad=${badPhonemes.length}`);
+                                    L(`  word="${w.Word}" acc=${acc} err=${err} phonemes=${phonemes.length} bad=${badPhonemes.length}`);
                                     return {
-                                        word:          w.Word        || '',
-                                        accuracyScore: Math.round(w.AccuracyScore || 0),
-                                        errorType:     w.ErrorType   || 'None',
+                                        word:          w.Word || '',
+                                        accuracyScore: Math.round(acc),
+                                        errorType:     err,
                                         badPhonemes,
                                     };
                                 });
