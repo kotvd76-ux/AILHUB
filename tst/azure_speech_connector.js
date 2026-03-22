@@ -420,6 +420,9 @@ class AzureSpeechConnector {
             SDK.PronunciationAssessmentGranularity.Word,
             true  // enableMiscue
         );
+        if (typeof pronunciationConfig.enableProsodyAssessment === 'function') {
+            pronunciationConfig.enableProsodyAssessment();
+        }
 
         const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
         const recognizer  = new SDK.SpeechRecognizer(speechConfig, audioConfig);
@@ -506,8 +509,11 @@ class AzureSpeechConnector {
             SDK.PronunciationAssessmentGranularity.Phoneme,
             true  // enableMiscue
         );
+        if (typeof pronunciationConfig.enableProsodyAssessment === 'function') {
+            pronunciationConfig.enableProsodyAssessment();
+        }
 
-        L(`PronunciationAssessmentConfig created (Phoneme granularity, enableMiscue=true)`);
+        L(`PronunciationAssessmentConfig created (Phoneme granularity, enableMiscue=true, prosody=true)`);
 
         const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
         const recognizer  = new SDK.SpeechRecognizer(speechConfig, audioConfig);
@@ -648,6 +654,9 @@ class AzureSpeechConnector {
                 SDK.PronunciationAssessmentGranularity.Word,
                 true
             );
+            if (typeof pronunciationConfig.enableProsodyAssessment === 'function') {
+                pronunciationConfig.enableProsodyAssessment();
+            }
             const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
             recognizer = new SDK.SpeechRecognizer(speechConfig, audioConfig);
             pronunciationConfig.applyTo(recognizer);
