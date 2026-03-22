@@ -185,17 +185,17 @@ const SETTINGS_CONFIG = {
         azure: {
             desc: 'Azure Neural TTS — найбільш природній голос',
             list: [
-                { id: 'es-ES-AlvaroNeural',   name: 'Alvaro (es-ES ♂)',  icon: 'fa-person'       },
-                { id: 'es-ES-ElviraNeural',   name: 'Elvira (es-ES ♀)',  icon: 'fa-person-dress' },
-                { id: 'es-MX-JorgeNeural',    name: 'Jorge (es-MX ♂)',   icon: 'fa-person'       },
-                { id: 'es-MX-DaliaNeural',    name: 'Dalia (es-MX ♀)',   icon: 'fa-person-dress' },
-                { id: 'en-US-JennyNeural',    name: 'Jenny (en-US ♀)',   icon: 'fa-person-dress' },
-                { id: 'en-US-GuyNeural',      name: 'Guy (en-US ♂)',     icon: 'fa-person'       },
-                { id: 'fr-FR-DeniseNeural',   name: 'Denise (fr-FR ♀)',  icon: 'fa-person-dress' },
-                { id: 'de-DE-KatjaNeural',    name: 'Katja (de-DE ♀)',   icon: 'fa-person-dress' },
-                { id: 'it-IT-ElsaNeural',     name: 'Elsa (it-IT ♀)',    icon: 'fa-person-dress' },
-                { id: 'pt-PT-RaquelNeural',   name: 'Raquel (pt-PT ♀)',  icon: 'fa-person-dress' },
-                { id: 'pl-PL-ZofiaNeural',    name: 'Zofia (pl-PL ♀)',   icon: 'fa-person-dress' },
+                { id: 'es-ES-AlvaroNeural',   name: 'Alvaro (es-ES ♂)',  icon: 'fa-person',       lang: 'es' },
+                { id: 'es-ES-ElviraNeural',   name: 'Elvira (es-ES ♀)',  icon: 'fa-person-dress', lang: 'es' },
+                { id: 'es-MX-JorgeNeural',    name: 'Jorge (es-MX ♂)',   icon: 'fa-person',       lang: 'es' },
+                { id: 'es-MX-DaliaNeural',    name: 'Dalia (es-MX ♀)',   icon: 'fa-person-dress', lang: 'es' },
+                { id: 'en-US-JennyNeural',    name: 'Jenny (en-US ♀)',   icon: 'fa-person-dress', lang: 'en' },
+                { id: 'en-US-GuyNeural',      name: 'Guy (en-US ♂)',     icon: 'fa-person',       lang: 'en' },
+                { id: 'fr-FR-DeniseNeural',   name: 'Denise (fr-FR ♀)',  icon: 'fa-person-dress', lang: 'fr' },
+                { id: 'de-DE-KatjaNeural',    name: 'Katja (de-DE ♀)',   icon: 'fa-person-dress', lang: 'de' },
+                { id: 'it-IT-ElsaNeural',     name: 'Elsa (it-IT ♀)',    icon: 'fa-person-dress', lang: 'it' },
+                { id: 'pt-PT-RaquelNeural',   name: 'Raquel (pt-PT ♀)',  icon: 'fa-person-dress', lang: 'pt' },
+                { id: 'pl-PL-ZofiaNeural',    name: 'Zofia (pl-PL ♀)',   icon: 'fa-person-dress', lang: 'pl' },
             ]
         },
         elevenlabs: {

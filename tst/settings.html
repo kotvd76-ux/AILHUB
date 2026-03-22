@@ -1837,8 +1837,18 @@
             const provider = currentTtsProvider;
             const data     = SETTINGS_CONFIG.onlineVoices[provider] ?? { desc: '', list: [] };
 
+            // Фільтруємо голоси по мові навчання (лише якщо у голосів є поле lang)
+            const targetLang = (typeof getLangConfig === 'function')
+                ? getLangConfig().target.id
+                : (localStorage.getItem('sp_target_lang') || 'es');
+            const hasLangField = data.list.some(v => v.lang);
+            const filtered = hasLangField
+                ? data.list.filter(v => !v.lang || v.lang === targetLang)
+                : data.list;
+            const list = filtered.length ? filtered : data.list;
+
             // Якщо поточний голос не належить цьому провайдеру — скидаємо на перший доступний
-            const validIds = data.list.map(v => v.id);
+            const validIds = list.map(v => v.id);
             if (validIds.length && !validIds.includes(currentVoice)) {
                 currentVoice = validIds[0];
             }
@@ -1846,7 +1856,7 @@
             const grid     = $('online-voice-grid');
             $('online-voice-desc').textContent = data.desc;
             grid.innerHTML = '';
-            data.list.forEach(v => {
+            list.forEach(v => {
                 const btn = document.createElement('button');
                 btn.type      = 'button';
                 btn.id        = 'v-' + v.id;
