@@ -949,8 +949,7 @@
                 isRecording = true;
                 phoneAttemptStartedAt = Date.now();
                 phoneAttemptNumber = phoneCompletedTurns + 1;
-                document.getElementById('mic-ring').classList.remove('hidden');
-                document.getElementById('mic-icon').className = 'fa-solid fa-square';
+                setMicState('recording');
                 document.getElementById('stt-status').innerText = formatListeningStatus(recognition.lang);
                 addLog("Мікрофон активний");
                 updateDraftClearButton();
