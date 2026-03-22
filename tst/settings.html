@@ -522,6 +522,55 @@
             border-color: #ef4444;
         }
 
+        /* ── Таб-бар (AI типи) ───────────────────────────── */
+        .tab-bar {
+            display: flex;
+            gap: .35rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: .25rem;
+            background: rgba(255,255,255,.05);
+            border-radius: 1rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .tab-bar::-webkit-scrollbar { display: none; }
+
+        .tab-btn {
+            flex: 0 0 auto;
+            min-height: 2.625rem;
+            padding: .45rem .875rem;
+            border-radius: .75rem;
+            font-size: .75rem;
+            font-weight: 800;
+            letter-spacing: .07em;
+            border: 2px solid transparent;
+            color: rgba(255,255,255,.42);
+            background: transparent;
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: .3rem;
+        }
+
+        .tab-btn.active {
+            background: var(--orange);
+            color: #fff;
+            border-color: var(--orange);
+            box-shadow: 0 3px 12px rgba(249,115,22,.3);
+        }
+
+        .tab-btn:focus-visible {
+            outline: 3px solid var(--orange);
+            outline-offset: 2px;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
         /* ── Сервіс режим ────────────────────────────────── */
         .card--service {
             border-color: rgba(245,158,11,.35);
@@ -582,7 +631,45 @@
             <h1 class="text-xl font-bold text-white">Налаштування ШІ</h1>
         </header>
 
-        <main class="space-y-5" role="main">
+        <main role="main">
+
+            <!-- ── Таб-бар ────────────────────────────────────── -->
+            <nav class="tab-bar" role="tablist" aria-label="Тип ШІ генерації">
+                <button class="tab-btn active" role="tab" id="tab-t2t"
+                        aria-selected="true" aria-controls="panel-t2t"
+                        onclick="switchTab('t2t')">
+                    <i class="fa-solid fa-message" aria-hidden="true"></i> T2T
+                </button>
+                <button class="tab-btn" role="tab" id="tab-t2i"
+                        aria-selected="false" aria-controls="panel-t2i"
+                        onclick="switchTab('t2i')">
+                    <i class="fa-solid fa-image" aria-hidden="true"></i> T2I
+                </button>
+                <button class="tab-btn" role="tab" id="tab-s2t"
+                        aria-selected="false" aria-controls="panel-s2t"
+                        onclick="switchTab('s2t')">
+                    <i class="fa-solid fa-ear-listen" aria-hidden="true"></i> S2T
+                </button>
+                <button class="tab-btn" role="tab" id="tab-t2s"
+                        aria-selected="false" aria-controls="panel-t2s"
+                        onclick="switchTab('t2s')">
+                    <i class="fa-solid fa-volume-high" aria-hidden="true"></i> T2S
+                </button>
+                <button class="tab-btn" role="tab" id="tab-s2p"
+                        aria-selected="false" aria-controls="panel-s2p"
+                        onclick="switchTab('s2p')">
+                    <i class="fa-solid fa-microphone-lines" aria-hidden="true"></i> S2P
+                </button>
+                <button class="tab-btn" role="tab" id="tab-s2s"
+                        aria-selected="false" aria-controls="panel-s2s"
+                        onclick="switchTab('s2s')">
+                    <i class="fa-solid fa-headphones-simple" aria-hidden="true"></i> S2S
+                </button>
+            </nav>
+
+            <!-- ══ T2T: Text to Text ══════════════════════════════ -->
+            <div id="panel-t2t" class="tab-panel active" role="tabpanel" aria-labelledby="tab-t2t">
+            <div class="space-y-5">
 
             <!-- ── Провайдер ──────────────────────────────────── -->
             <section class="card card--accent" aria-labelledby="lbl-provider">
@@ -674,6 +761,13 @@
 
             </section>
 
+            </div><!-- /space-y-5 t2t -->
+            </div><!-- /panel-t2t -->
+
+            <!-- ══ T2I: Text to Image ══════════════════════════════ -->
+            <div id="panel-t2i" class="tab-panel" role="tabpanel" aria-labelledby="tab-t2i">
+            <div class="space-y-5">
+
             <!-- ── Генерація зображень ────────────────────────── -->
             <section class="card" aria-labelledby="lbl-image-model">
                 <label id="lbl-image-model" for="image-model-select" class="field-label">Генерація зображень</label>
@@ -703,6 +797,7 @@
                 </p>
 
                 <!-- Pollinations ключ + модель — показується коли вибрано pollinations -->
+
                 <div id="pollinations-img-key-box" class="hidden" style="margin-top:1rem">
                     <label class="field-label" style="margin-bottom:0.4rem">
                         Модель зображення
@@ -807,6 +902,39 @@
                     </p>
                 </div>
             </section>
+
+            </div><!-- /space-y-5 t2i -->
+            </div><!-- /panel-t2i -->
+
+            <!-- ══ S2T: Speech to Text ════════════════════════════ -->
+            <div id="panel-s2t" class="tab-panel" role="tabpanel" aria-labelledby="tab-s2t">
+            <div class="space-y-5">
+
+            <!-- ── Розпізнавання мовлення (Real-time STT) ────── -->
+            <section class="card" aria-labelledby="lbl-stt">
+                <label id="lbl-stt" class="field-label">
+                    <i class="fa-solid fa-ear-listen" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
+                    Розпізнавання мовлення (Real-time STT)
+                </label>
+                <select id="stt-provider" class="field"
+                        onchange="handleSttProviderChange()"
+                        aria-label="Провайдер Real-time STT">
+                    <option value="openai">OpenAI Realtime</option>
+                    <option value="azure">Azure Speech</option>
+                    <option value="gemini">Gemini NAD</option>
+                </select>
+                <p id="stt-provider-hint" class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                    Провайдер живого розпізнавання мовлення в модулях Chat, Phone, Listening.
+                    Для Azure — вкажіть ключ у секції T2S.
+                </p>
+            </section>
+
+            </div><!-- /space-y-5 s2t -->
+            </div><!-- /panel-s2t -->
+
+            <!-- ══ T2S: Text to Speech ════════════════════════════ -->
+            <div id="panel-t2s" class="tab-panel" role="tabpanel" aria-labelledby="tab-t2s">
+            <div class="space-y-5">
 
             <!-- ── Озвучка (TTS) ──────────────────────────────── -->
             <section class="card" aria-labelledby="lbl-tts">
@@ -922,6 +1050,13 @@
                 </div>
             </section>
 
+            </div><!-- /space-y-5 t2s -->
+            </div><!-- /panel-t2s -->
+
+            <!-- ══ S2P: Speech to Pronunciation ══════════════════ -->
+            <div id="panel-s2p" class="tab-panel" role="tabpanel" aria-labelledby="tab-s2p">
+            <div class="space-y-5">
+
             <!-- ── AI Вимова (Pronunciation TTS) ────────────── -->
             <section class="card" aria-labelledby="lbl-pronunciation">
                 <label id="lbl-pronunciation" class="field-label">
@@ -938,28 +1073,57 @@
                     <option value="pollinations">Pollinations TTS (безкоштовно)</option>
                 </select>
                 <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
-                    TTS-провайдер для вправ вимови. Azure-ключ — у секції «Озвучка» вище.
+                    TTS-провайдер для вправ вимови. Azure-ключ — у секції T2S.
                 </p>
             </section>
 
-            <!-- ── Розпізнавання мовлення (Real-time STT) ────── -->
-            <section class="card" aria-labelledby="lbl-stt">
-                <label id="lbl-stt" class="field-label">
-                    <i class="fa-solid fa-ear-listen" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
-                    Розпізнавання мовлення (Real-time STT)
-                </label>
-                <select id="stt-provider" class="field"
-                        onchange="handleSttProviderChange()"
-                        aria-label="Провайдер Real-time STT">
-                    <option value="openai">OpenAI Realtime</option>
-                    <option value="azure">Azure Speech</option>
-                    <option value="gemini">Gemini NAD</option>
-                </select>
-                <p id="stt-provider-hint" class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
-                    Провайдер живого розпізнавання мовлення в модулях Chat, Phone, Listening.
-                    Для Azure — вкажіть ключ у секції «AI Вимова» вище.
+            </div><!-- /space-y-5 s2p -->
+            </div><!-- /panel-s2p -->
+
+            <!-- ══ S2S: Speech to Speech (real-time) ════════════ -->
+            <div id="panel-s2s" class="tab-panel" role="tabpanel" aria-labelledby="tab-s2s">
+            <div class="space-y-5">
+
+            <section class="card card--accent">
+                <p class="field-label" style="margin-bottom:.625rem;">
+                    <i class="fa-solid fa-headphones-simple" aria-hidden="true" style="margin-right:.35rem;opacity:.8"></i>
+                    Speech to Speech — реальний час
+                </p>
+                <p style="color:rgba(255,255,255,.5);font-size:.875rem;line-height:1.55;margin:0;">
+                    Режим голос-до-голосу поєднує розпізнавання мовлення (S2T)
+                    та озвучку відповіді (T2S). Використовується в модулях Chat і Phone.
                 </p>
             </section>
+
+            <section class="card">
+                <p class="field-label" style="margin-bottom:.625rem;">
+                    <i class="fa-solid fa-ear-listen" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
+                    Розпізнавання мовлення (вхід)
+                </p>
+                <div id="s2s-stt-summary" style="color:var(--orange-l);font-size:.9375rem;font-weight:600;margin-bottom:.875rem;">—</div>
+                <button class="btn-export" onclick="switchTab('s2t')" style="width:100%;justify-content:center;">
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    Налаштувати S2T
+                </button>
+            </section>
+
+            <section class="card">
+                <p class="field-label" style="margin-bottom:.625rem;">
+                    <i class="fa-solid fa-volume-high" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
+                    Озвучка відповіді (вихід)
+                </p>
+                <div id="s2s-tts-summary" style="color:var(--orange-l);font-size:.9375rem;font-weight:600;margin-bottom:.875rem;">—</div>
+                <button class="btn-export" onclick="switchTab('t2s')" style="width:100%;justify-content:center;">
+                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+                    Налаштувати T2S
+                </button>
+            </section>
+
+            </div><!-- /space-y-5 s2s -->
+            </div><!-- /panel-s2s -->
+
+            <!-- ══ Глобальні налаштування (завжди видимі) ══════ -->
+            <div class="space-y-5" style="margin-top:1.25rem;">
 
             <!-- ── Логування ──────────────────────────────────── -->
             <section class="card" id="section-logging" aria-labelledby="lbl-logging">
@@ -1126,11 +1290,13 @@
 
             </section>
 
-                        <!-- ── Кнопка збереження ───────────────────────────── -->
+            <!-- ── Кнопка збереження ───────────────────────────── -->
             <button class="btn-save" onclick="saveSettings()" aria-label="Зберегти всі налаштування">
                 <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
                 Зберегти конфігурацію
             </button>
+
+            </div><!-- /global space-y-5 -->
 
         </main>
     </div>
@@ -1145,6 +1311,38 @@
     <script>
     (() => {
         'use strict';
+
+        // ── Перемикання вкладок (AI-типи) ──────────────────────
+        const STT_LABELS = { openai: 'OpenAI Realtime', azure: 'Azure Speech', gemini: 'Gemini NAD' };
+        const TTS_LABELS = { openai: 'OpenAI TTS', azure: 'Azure Neural TTS', pollinations: 'Pollinations TTS', offline: 'Offline (Web Speech API)' };
+
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                btn.setAttribute('aria-selected', 'false');
+            });
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            const btn   = document.getElementById('tab-' + tabId);
+            const panel = document.getElementById('panel-' + tabId);
+            if (btn)   { btn.classList.add('active');   btn.setAttribute('aria-selected', 'true'); }
+            if (panel) { panel.classList.add('active'); }
+            localStorage.setItem('sp_active_tab', tabId);
+
+            // Оновлюємо S2S-зведення при відкритті вкладки
+            if (tabId === 's2s') updateS2SSummary();
+        };
+
+        function updateS2SSummary() {
+            const SK = SETTINGS_CONFIG.storageKeys;
+            const sttProv = localStorage.getItem(SK.sttProvider) || 'openai';
+            const ttsProv = localStorage.getItem(SK.ttsProvider) || 'offline';
+            const sttEl = document.getElementById('s2s-stt-summary');
+            const ttsEl = document.getElementById('s2s-tts-summary');
+            if (sttEl) sttEl.textContent = STT_LABELS[sttProv] || sttProv;
+            if (ttsEl) ttsEl.textContent = TTS_LABELS[ttsProv] || ttsProv;
+        }
 
         // ── Collapsible: секція логування ───────────────────────
         window.toggleLoggingSection = function() {
@@ -1239,6 +1437,10 @@
             checkKeyPresence();
             initLoggingSection();
             initServiceMode();
+
+            // Відновлюємо активну вкладку
+            const savedTab = localStorage.getItem('sp_active_tab') || 't2t';
+            switchTab(savedTab);
 
             $('voice-speed').addEventListener('input', function () {
                 $('speed-val').textContent = this.value + '×';
