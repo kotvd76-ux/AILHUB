@@ -728,6 +728,40 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
                 }
             } catch (_) { /* fallback до offline */ }
         }
+
+        // ElevenLabs TTS
+        if (provider === 'elevenlabs' && apiKey) {
+            if (onLoading) onLoading();
+            try {
+                const voiceId = voice || '21m00Tcm4TlvDq8ikWAM'; // default: Rachel
+                const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+                    method: 'POST',
+                    headers: {
+                        'xi-api-key': apiKey,
+                        'Content-Type': 'application/json',
+                        'Accept': 'audio/mpeg'
+                    },
+                    body: JSON.stringify({
+                        text: clean,
+                        model_id: 'eleven_multilingual_v2',
+                        voice_settings: { stability: 0.5, similarity_boost: 0.75 }
+                    })
+                });
+                if (r.ok) {
+                    const url = URL.createObjectURL(await r.blob());
+                    const audio = new Audio(url);
+                    audio.onplay  = () => { if (onStart) onStart(); };
+                    audio.onended = () => { URL.revokeObjectURL(url); if (onEnd) onEnd(); };
+                    audio.play();
+                    return;
+                }
+                const warnMsg = r.status === 401
+                    ? '[speakText/elevenlabs] HTTP 401 — ElevenLabs ключ невірний, перевір Налаштування'
+                    : '[speakText/elevenlabs] HTTP ' + r.status;
+                console.warn(warnMsg);
+                if (typeof window.addLog === 'function') window.addLog(warnMsg, 'warn');
+            } catch (e) { console.warn('[speakText/elevenlabs] fetch error:', e.message); }
+        }
     }
 
     // Offline TTS (Web Speech API)
