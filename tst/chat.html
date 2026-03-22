@@ -1600,8 +1600,17 @@ function App() {
                       <table style={{width:'100%',borderCollapse:'collapse',fontSize:'0.88rem'}}>
                         <thead>
                           <tr style={{background:'rgba(255,255,255,0.05)'}}>
-                            {['Слово','Точність','Склади','Фон.сер.','Фон.мін.','Тип помилки','Фонеми','✓'].map(h=>(
-                              <th key={h} style={{padding:'10px 14px',color:'#8892b0',fontWeight:700,textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>
+                            {[
+                              {h:'Слово',          title:'Розпізнане слово'},
+                              {h:'Точність',        title:'Загальна точність вимови слова (0–100%)'},
+                              {h:'Точн. складів',   title:'Середня точність вимови кожного складу слова'},
+                              {h:'Фонеми (сер.)',   title:'Середня точність вимови всіх фонем (звуків) слова'},
+                              {h:'Фонеми (мін.)',   title:'Найнижчий бал серед фонем — найпроблемніший звук'},
+                              {h:'Тип помилки',     title:'None — правильно; Mispronunciation — неправильна вимова; Omission — слово пропущено; Insertion — зайве слово'},
+                              {h:'Проблемні звуки', title:'Конкретні фонеми з балом нижче 65%'},
+                              {h:'✓',               title:'Загальний вердикт: ✓ добре / ! прийнятно / ✗ помилка'},
+                            ].map(({h,title})=>(
+                              <th key={h} title={title} style={{padding:'10px 14px',color:'#8892b0',fontWeight:700,textAlign:'left',whiteSpace:'nowrap',cursor:'help'}}>{h}</th>
                             ))}
                           </tr>
                         </thead>
