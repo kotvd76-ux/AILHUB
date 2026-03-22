@@ -575,6 +575,10 @@ class AzureSpeechConnector {
                             L(`JSON.NBest count=${json.NBest?.length||0}`);
                             const nbest = json.NBest?.[0];
                             if (nbest) {
+                                // Diagnostic: log NBest[0] keys and PronunciationAssessment
+                                const nbKeys = Object.keys(nbest).filter(k => k !== 'Words');
+                                L(`NBest[0] keys: ${nbKeys.join(', ')}`);
+                                L(`NBest[0].PronunciationAssessment: ${JSON.stringify(nbest.PronunciationAssessment)}`);
                                 prosodyScoreFromJson = Math.round(nbest.PronunciationAssessment?.ProsodyScore ?? nbest.ProsScore ?? nbest.ProsodyScore ?? 0);
                                 L(`NBest[0]: Confidence=${nbest.Confidence} ProsScore=${nbest.PronunciationAssessment?.ProsodyScore} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
                                 L(`NBest[0].Words count=${nbest.Words?.length||0}`);
