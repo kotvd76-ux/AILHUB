@@ -475,14 +475,25 @@ class AzureSpeechConnector {
     // words: [{word, accuracyScore, errorType, badPhonemes}]
     // badPhonemes — фонеми з AccuracyScore < 65
     static async assessPronunciationWithWords(key, region, targetPhrase, lang) {
+        const L = msg => { if (typeof window.addLog === 'function') window.addLog('[Azure] ' + msg, 'info'); };
+        const LE = msg => { if (typeof window.addLog === 'function') window.addLog('[Azure] ' + msg, 'error'); };
+        const LW = msg => { if (typeof window.addLog === 'function') window.addLog('[Azure] ' + msg, 'warn'); };
+
+        L(`→ assessPronunciationWithWords start`);
+        L(`  key=${key.slice(0,6)}*** region=${region} lang=${lang}`);
+        L(`  text(${targetPhrase.split(/\s+/).length} words): "${targetPhrase.slice(0,60)}${targetPhrase.length>60?'…':''}"`);
+
         if (!window.SpeechSDK) {
+            L('SDK not loaded, loading…');
             await new Promise((resolve, reject) => {
                 const s   = document.createElement('script');
                 s.src     = AzureSpeechConnector.SDK_CDN;
-                s.onload  = resolve;
+                s.onload  = () => { L('SDK loaded ok'); resolve(); };
                 s.onerror = () => reject(new Error('Azure Speech SDK не завантажився'));
                 document.head.appendChild(s);
             });
+        } else {
+            L('SDK already loaded');
         }
         const SDK = window.SpeechSDK;
 
@@ -496,25 +507,30 @@ class AzureSpeechConnector {
             true  // enableMiscue
         );
 
+        L(`PronunciationAssessmentConfig created (Phoneme granularity, enableMiscue=true)`);
+
         const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
         const recognizer  = new SDK.SpeechRecognizer(speechConfig, audioConfig);
         pronunciationConfig.applyTo(recognizer);
 
+        L('Recognizer created, waiting for speech…');
+
         return new Promise((resolve, reject) => {
             recognizer.recognizeOnceAsync(result => {
                 try {
+                    L(`← recognizeOnceAsync callback, reason=${result.reason} (${SDK.ResultReason[result.reason]||result.reason})`);
+                    L(`  result.text="${result.text}"`);
+
                     if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
                         if (result.reason === SDK.ResultReason.Canceled) {
                             const details = SDK.CancellationDetails.fromResult(result);
                             const msg = details.errorDetails || String(details.reason);
-                            if (typeof window.addLog === 'function')
-                                window.addLog(`[Azure/assessWords] Canceled: ${msg}`, 'error');
+                            LE(`Canceled: code=${details.errorCode} reason=${details.reason} details=${msg}`);
                             reject(new Error('Azure: ' + msg));
                             return;
                         }
                         const detail = result.errorDetails || result.reason;
-                        if (typeof window.addLog === 'function')
-                            window.addLog(`[Azure/assessWords] NoMatch reason=${result.reason} details=${detail}`, 'warn');
+                        LW(`NoMatch: reason=${result.reason} details=${detail}`);
                         resolve({
                             transcript: '', words: [],
                             accuracyScore: 0, fluencyScore: 0,
@@ -522,22 +538,50 @@ class AzureSpeechConnector {
                         });
                         return;
                     }
+
+                    // ── Агрегатні бали ──────────────────────────────────────
                     const pa = SDK.PronunciationAssessmentResult.fromResult(result);
-                    const words = (pa.detailedResults || [])
-                        .flatMap(r => r.Words || [])
-                        .map(w => {
-                            const phonemes = w.Phonemes || [];
-                            const badPhonemes = phonemes
-                                .filter(p => (p.AccuracyScore || 0) < 65)
-                                .map(p => p.Phoneme || '')
-                                .filter(Boolean);
-                            return {
-                                word:          w.Word        || '',
-                                accuracyScore: Math.round(w.AccuracyScore || 0),
-                                errorType:     w.ErrorType   || 'None',
-                                badPhonemes,
-                            };
-                        });
+                    L(`PronunciationAssessmentResult scores: acc=${pa.accuracyScore} flu=${pa.fluencyScore} com=${pa.completenessScore} pro=${pa.prosodyScore} overall=${pa.pronunciationScore}`);
+
+                    // ── Пословні дані через JSON відповідь ──────────────────
+                    let words = [];
+                    try {
+                        const jsonStr = result.properties.getProperty(
+                            SDK.PropertyId.SpeechServiceResponse_JsonResult
+                        );
+                        L(`Raw JSON length=${jsonStr?.length||0}`);
+                        if (jsonStr) {
+                            const json = JSON.parse(jsonStr);
+                            L(`JSON.NBest count=${json.NBest?.length||0}`);
+                            const nbest = json.NBest?.[0];
+                            if (nbest) {
+                                L(`NBest[0]: Confidence=${nbest.Confidence} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
+                                L(`NBest[0].Words count=${nbest.Words?.length||0}`);
+                                words = (nbest.Words || []).map(w => {
+                                    const phonemes = w.Phonemes || [];
+                                    const badPhonemes = phonemes
+                                        .filter(p => (p.AccuracyScore || 0) < 65)
+                                        .map(p => p.Phoneme || '')
+                                        .filter(Boolean);
+                                    L(`  word="${w.Word}" acc=${w.AccuracyScore} err=${w.ErrorType} phonemes=${phonemes.length} bad=${badPhonemes.length}`);
+                                    return {
+                                        word:          w.Word        || '',
+                                        accuracyScore: Math.round(w.AccuracyScore || 0),
+                                        errorType:     w.ErrorType   || 'None',
+                                        badPhonemes,
+                                    };
+                                });
+                                L(`Words extracted: ${words.length} total`);
+                            } else {
+                                LW('NBest[0] is empty');
+                            }
+                        } else {
+                            LW('SpeechServiceResponse_JsonResult is empty');
+                        }
+                    } catch(parseErr) {
+                        LE('JSON parse error: ' + parseErr.message);
+                    }
+
                     resolve({
                         transcript:         result.text || '',
                         accuracyScore:      Math.round(pa.accuracyScore      || 0),
@@ -548,11 +592,13 @@ class AzureSpeechConnector {
                         words,
                     });
                 } catch (e) {
+                    LE('callback exception: ' + e.message);
                     reject(e);
                 } finally {
                     recognizer.close();
                 }
             }, err => {
+                LE('recognizeOnceAsync error: ' + String(err));
                 recognizer.close();
                 reject(new Error(String(err)));
             });
