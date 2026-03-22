@@ -460,7 +460,7 @@ class AzureSpeechConnector {
                     let prosFromJson = 0;
                     try {
                         const js = result.properties?.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
-                        if (js) { const nb = JSON.parse(js).NBest?.[0]; if (nb) prosFromJson = Math.round(nb.ProsScore ?? nb.ProsodyScore ?? 0); }
+                        if (js) { const nb = JSON.parse(js).NBest?.[0]; if (nb) prosFromJson = Math.round(nb.PronunciationAssessment?.ProsodyScore ?? nb.ProsScore ?? nb.ProsodyScore ?? 0); }
                     } catch(_) {}
                     resolve({
                         transcript:         result.text || '',
@@ -575,8 +575,8 @@ class AzureSpeechConnector {
                             L(`JSON.NBest count=${json.NBest?.length||0}`);
                             const nbest = json.NBest?.[0];
                             if (nbest) {
-                                prosodyScoreFromJson = Math.round(nbest.ProsScore ?? nbest.ProsodyScore ?? 0);
-                                L(`NBest[0]: Confidence=${nbest.Confidence} ProsScore=${nbest.ProsScore} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
+                                prosodyScoreFromJson = Math.round(nbest.PronunciationAssessment?.ProsodyScore ?? nbest.ProsScore ?? nbest.ProsodyScore ?? 0);
+                                L(`NBest[0]: Confidence=${nbest.Confidence} ProsScore=${nbest.PronunciationAssessment?.ProsodyScore} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
                                 L(`NBest[0].Words count=${nbest.Words?.length||0}`);
                                 // Логуємо першe слово для діагностики структури
                                 if (nbest.Words?.length) {
@@ -701,7 +701,7 @@ class AzureSpeechConnector {
                         let prosFromJson = 0;
                         try {
                             const js = result.properties?.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
-                            if (js) { const nb = JSON.parse(js).NBest?.[0]; if (nb) prosFromJson = Math.round(nb.ProsScore ?? nb.ProsodyScore ?? 0); }
+                            if (js) { const nb = JSON.parse(js).NBest?.[0]; if (nb) prosFromJson = Math.round(nb.PronunciationAssessment?.ProsodyScore ?? nb.ProsScore ?? nb.ProsodyScore ?? 0); }
                         } catch(_) {}
                         resolve({
                             transcript:         result.text || '',
