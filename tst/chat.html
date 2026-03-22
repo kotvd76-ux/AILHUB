@@ -496,6 +496,8 @@ function App() {
   const [pronTheme, setPronTheme]   = useState('');        // вибрана тема або '' для рандомної
   const [pronSource, setPronSource] = useState('ai');      // 'ai' | 'file'
   const [pronFileName, setPronFileName] = useState('');    // ім'я завантаженого файлу
+  const [pronComment, setPronComment]   = useState('');    // AI-коментар по тексту
+  const [pronCommentLoading, setPronCommentLoading] = useState(false);
   const pronAzRecRef = useRef(null);                       // Azure recognizer для скасування
 
   const botRef = useRef(null);
@@ -640,6 +642,7 @@ function App() {
     setPronWords([]);
     setPronScores(null);
     setPronReport('');
+    setPronComment('');
     if (!sessRef.current) sessRef.current = Math.random().toString(36).slice(2,10);
     setScreen('pronunciation');
     if (pronSource === 'file') {
@@ -669,8 +672,27 @@ function App() {
       addLog('pronGenerate ok, words≈' + text.trim().split(/\s+/).length, 'success');
     } catch(e) {
       addLog('pronGenerate error: ' + (e?.message||e), 'error');
-      setPronState('idle');
+      setScreen('setup'); // повертаємось на setup при помилці
     }
+  };
+
+  /* Вимова: AI-коментар щодо вимови тексту (рідною мовою) */
+  const getPronComment = async () => {
+    if (!pronText || pronCommentLoading) return;
+    setPronCommentLoading(true);
+    setPronComment('');
+    try {
+      const L = getLangConfig();
+      const comment = await callAI(
+        [{role:'user', content:`Текст для практики вимови ${L.targetName}:\n\n"${pronText}"\n\nДай короткий коментар (3-5 речень) ${L.uiLanguage||'Ukrainian'} мовою: на які звуки, слова або ритмічні особливості цього конкретного тексту варто звернути увагу. Будь конкретним.`}],
+        `You are a pronunciation coach. Always respond in ${L.uiLanguage||'Ukrainian'}.`,
+        400
+      );
+      setPronComment(comment.trim());
+    } catch(e) {
+      addLog('pronComment error: ' + (e?.message||e), 'error');
+    }
+    setPronCommentLoading(false);
   };
 
   /* Вимова: файл .txt */
@@ -1692,36 +1714,14 @@ function App() {
         <main style={{flex:1,overflowY:'auto',padding:'20px 16px 44px'}}>
           <div className="pw" style={{display:'flex',flexDirection:'column',gap:20,maxWidth:680,margin:'0 auto'}}>
 
-            {/* ── IDLE: вибір джерела тексту ── */}
+            {/* ── IDLE: повернутись на вибір (якщо помилка або скидання) ── */}
             {pronState==='idle'&&(
-              <div style={{display:'flex',flexDirection:'column',gap:14}}>
-                <p style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:4}}>Джерело тексту для читання</p>
-
-                {/* Кнопка: Генерувати */}
-                <button onClick={generatePronText}
-                  style={{display:'flex',alignItems:'center',gap:16,padding:'20px',borderRadius:18,border:'2px solid rgba(167,139,250,0.3)',background:'rgba(167,139,250,0.07)',cursor:'pointer',textAlign:'left',width:'100%',transition:'all .2s'}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,0.7)';e.currentTarget.style.background='rgba(167,139,250,0.14)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,0.3)';e.currentTarget.style.background='rgba(167,139,250,0.07)';}}>
-                  <span style={{fontSize:'1.8rem'}}>🤖</span>
-                  <div style={{flex:1}}>
-                    <div style={{color:'#fff',fontWeight:700,fontSize:'0.95rem'}}>Генерувати текст</div>
-                    <div style={{color:'#8892b0',fontSize:'0.82rem',marginTop:2}}>AI створить текст рівня {sessLevel}{pronTheme?' · тема: '+pronTheme:' · довільна тема'}</div>
-                  </div>
-                  <span style={{color:'#8892b0',fontSize:'1.2rem'}}>›</span>
+              <div style={{textAlign:'center',padding:30}}>
+                <p style={{color:'#8892b0',marginBottom:16}}>Виберіть джерело тексту на екрані налаштувань</p>
+                <button onClick={()=>setScreen('setup')}
+                  style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:12,padding:'12px 24px',color:'#e8edf3',fontSize:'0.9rem',cursor:'pointer'}}>
+                  ← Назад до налаштувань
                 </button>
-
-                {/* Кнопка: Завантажити */}
-                <label style={{display:'flex',alignItems:'center',gap:16,padding:'20px',borderRadius:18,border:'2px dashed rgba(255,255,255,0.18)',background:'rgba(255,255,255,0.04)',cursor:'pointer',textAlign:'left',width:'100%',transition:'all .2s'}}
-                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.4)';}}
-                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.18)';}}>
-                  <span style={{fontSize:'1.8rem'}}>📄</span>
-                  <div style={{flex:1}}>
-                    <div style={{color:'#fff',fontWeight:700,fontSize:'0.95rem'}}>Завантажити текст</div>
-                    <div style={{color:'#8892b0',fontSize:'0.82rem',marginTop:2}}>Свій .txt файл — будь-який текст для практики</div>
-                  </div>
-                  <span style={{color:'#8892b0',fontSize:'1.2rem'}}>📂</span>
-                  <input type="file" accept=".txt" onChange={handlePronFile} style={{display:'none'}}/>
-                </label>
               </div>
             )}
 
@@ -1738,7 +1738,27 @@ function App() {
 
                 {pronState==='text_ready'&&(
                   <div style={{display:'flex',flexDirection:'column',gap:10}}>
-                    <p style={{color:'#8892b0',fontSize:'0.88rem',textAlign:'center'}}>Прочитайте текст вголос чітко та природньо</p>
+
+                    {/* Кнопки: Послухати + Поради ШІ */}
+                    <div style={{display:'flex',gap:8}}>
+                      <button onClick={()=>speak(pronText, getLangConfig().speechLang)}
+                        style={{flex:1,padding:'13px 8px',borderRadius:12,border:'1px solid rgba(255,255,255,0.14)',background:'rgba(255,255,255,0.06)',color:'#e8edf3',fontSize:'0.9rem',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                        🔊 Послухати
+                      </button>
+                      <button onClick={getPronComment} disabled={pronCommentLoading}
+                        style={{flex:1,padding:'13px 8px',borderRadius:12,border:'1px solid rgba(255,255,255,0.14)',background:'rgba(255,255,255,0.06)',color:'#e8edf3',fontSize:'0.9rem',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,opacity:pronCommentLoading?0.6:1}}>
+                        {pronCommentLoading?'⏳ Аналізую…':'💡 Поради ШІ'}
+                      </button>
+                    </div>
+
+                    {/* AI-коментар */}
+                    {pronComment&&(
+                      <div style={{background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.22)',borderRadius:12,padding:'13px 15px',color:'#c4b5fd',fontSize:'0.87rem',lineHeight:1.7}}>
+                        {pronComment}
+                      </div>
+                    )}
+
+                    <p style={{color:'#8892b0',fontSize:'0.88rem',textAlign:'center',marginTop:4}}>Прочитайте текст вголос чітко та природньо</p>
                     <button onClick={startPronAssessment}
                       style={{background:PRON_COLOR,border:'none',borderRadius:16,padding:'16px',color:'#fff',fontSize:'1rem',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
                       🎙 Почати запис
