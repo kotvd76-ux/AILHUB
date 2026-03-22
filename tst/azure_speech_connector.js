@@ -567,16 +567,28 @@ class AzureSpeechConnector {
                                     const acc = pa.AccuracyScore ?? w.AccuracyScore ?? 0;
                                     const err = pa.ErrorType   ?? w.ErrorType   ?? 'None';
                                     const phonemes = w.Phonemes || [];
+                                    const phonemeScores = phonemes
+                                        .map(p => p.PronunciationAssessment?.AccuracyScore ?? p.AccuracyScore ?? null)
+                                        .filter(s => s !== null);
                                     const badPhonemes = phonemes
                                         .filter(p => ((p.PronunciationAssessment?.AccuracyScore ?? p.AccuracyScore ?? 100)) < 65)
                                         .map(p => p.Phoneme || '')
                                         .filter(Boolean);
+                                    const syllables = w.Syllables || [];
+                                    const syllableScores = syllables
+                                        .map(s => s.PronunciationAssessment?.AccuracyScore ?? null)
+                                        .filter(s => s !== null);
+                                    const avg = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+                                    const min = arr => arr.length ? Math.round(Math.min(...arr)) : null;
                                     L(`  word="${w.Word}" acc=${acc} err=${err} phonemes=${phonemes.length} bad=${badPhonemes.length}`);
                                     return {
                                         word:          w.Word || '',
                                         accuracyScore: Math.round(acc),
                                         errorType:     err,
                                         badPhonemes,
+                                        syllableAvg:   avg(syllableScores),
+                                        phonemeAvg:    avg(phonemeScores),
+                                        phonemeMin:    min(phonemeScores),
                                     };
                                 });
                                 L(`Words extracted: ${words.length} total`);
