@@ -494,6 +494,8 @@ function App() {
   const [pronScores, setPronScores] = useState(null);      // агрегатні бали
   const [pronReport, setPronReport] = useState('');
   const [pronTheme, setPronTheme]   = useState('');        // вибрана тема або '' для рандомної
+  const [pronSource, setPronSource] = useState('ai');      // 'ai' | 'file'
+  const [pronFileName, setPronFileName] = useState('');    // ім'я завантаженого файлу
   const pronAzRecRef = useRef(null);                       // Azure recognizer для скасування
 
   const botRef = useRef(null);
@@ -635,13 +637,18 @@ function App() {
 
   /* ── Вимова: запуск екрану ───────────────────────────────── */
   const startPronunciation = () => {
-    setPronState('idle');
-    setPronText('');
     setPronWords([]);
     setPronScores(null);
     setPronReport('');
     if (!sessRef.current) sessRef.current = Math.random().toString(36).slice(2,10);
     setScreen('pronunciation');
+    if (pronSource === 'file') {
+      if (!pronText.trim()) { addLog('Файл не завантажено', 'error'); return; }
+      setPronState('text_ready');
+    } else {
+      setPronText('');
+      generatePronText(); // встановлює pronState='generating' і запускає AI
+    }
   };
 
   /* Вимова: генерація тексту через LLM */
@@ -1226,9 +1233,24 @@ function App() {
                 })}
               </select>
               <p style={{marginTop:8,color:'#8892b0',fontSize:'0.82rem'}}>Текст буде на рівні {sessLevel} · ~40-60 слів</p>
-              <div style={{marginTop:10,background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.25)',borderRadius:10,padding:'10px 14px',color:'#c4b5fd',fontSize:'0.82rem',lineHeight:1.6}}>
-                💡 Потрібен Azure Speech ключ у налаштуваннях для оцінки вимови
+              <div style={{display:'flex',gap:8,marginTop:12}}>
+                <button onClick={()=>setPronSource('ai')}
+                  style={{flex:1,padding:'13px 8px',borderRadius:12,border:'2px solid '+(pronSource==='ai'?'rgba(167,139,250,0.7)':'rgba(255,255,255,0.12)'),background:pronSource==='ai'?'rgba(167,139,250,0.14)':'rgba(255,255,255,0.04)',color:pronSource==='ai'?'#c4b5fd':'#8892b0',fontWeight:pronSource==='ai'?700:400,fontSize:'0.88rem',cursor:'pointer',transition:'all .15s'}}>
+                  🤖 Генерувати текст
+                </button>
+                <label style={{flex:1,padding:'13px 8px',borderRadius:12,border:'2px solid '+(pronSource==='file'?'rgba(167,139,250,0.7)':'rgba(255,255,255,0.12)'),background:pronSource==='file'?'rgba(167,139,250,0.14)':'rgba(255,255,255,0.04)',color:pronSource==='file'?'#c4b5fd':'#8892b0',fontWeight:pronSource==='file'?700:400,fontSize:'0.88rem',cursor:'pointer',textAlign:'center',display:'flex',alignItems:'center',justifyContent:'center',gap:6,transition:'all .15s'}}>
+                  📄 Завантажити .txt
+                  <input type="file" accept=".txt" onChange={e=>{
+                    const f=e.target.files?.[0]; if(!f) return;
+                    const r=new FileReader();
+                    r.onload=ev=>{setPronText((ev.target.result||'').trim());setPronFileName(f.name);setPronSource('file');};
+                    r.readAsText(f);
+                  }} style={{display:'none'}}/>
+                </label>
               </div>
+              {pronSource==='file'&&pronFileName&&(
+                <p style={{marginTop:6,color:'#4ade80',fontSize:'0.82rem'}}>✓ {pronFileName}</p>
+              )}
             </div>
           )}
 
