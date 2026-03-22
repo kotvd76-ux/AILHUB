@@ -225,7 +225,7 @@ const SETTINGS_CONFIG = {
         // Мова, яку вивчають (target language)
         target: [
             { id: 'es', label: 'Іспанська',     labelInstr: 'іспанською',     flag: '🇪🇸', bcp47: 'es-ES', nameEn: 'Spanish',    nameNative: 'Español'    },
-            { id: 'en', label: 'Англійська',    labelInstr: 'англійською',    flag: '🇬🇧', bcp47: 'en-GB', nameEn: 'English',    nameNative: 'English'    },
+            { id: 'en', label: 'Англійська',    labelInstr: 'англійською',    flag: '🇺🇸', bcp47: 'en-US', nameEn: 'English',    nameNative: 'English'    },
             { id: 'fr', label: 'Французька',    labelInstr: 'французькою',    flag: '🇫🇷', bcp47: 'fr-FR', nameEn: 'French',     nameNative: 'Français'   },
             { id: 'de', label: 'Німецька',      labelInstr: 'німецькою',      flag: '🇩🇪', bcp47: 'de-DE', nameEn: 'German',     nameNative: 'Deutsch'    },
             { id: 'it', label: 'Італійська',    labelInstr: 'італійською',    flag: '🇮🇹', bcp47: 'it-IT', nameEn: 'Italian',    nameNative: 'Italiano'   },
