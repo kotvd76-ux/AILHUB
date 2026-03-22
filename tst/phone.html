@@ -1227,6 +1227,7 @@
                 phoneAttemptNumber = phoneCompletedTurns + 1;
                 _phoneSetAiActive(true);
                 setMicState('processing');
+                await new Promise(r => requestAnimationFrame(r)); // дати браузеру перемалювати сіру кнопку
                 await runEchoFeedback(scores.transcript, scores);
             } catch (e) {
                 addLog('Azure assessment помилка: ' + e.message, 'error');
