@@ -1443,7 +1443,7 @@ function App() {
               {fb.pronunciationScores&&(
                 <div style={{marginTop:12,padding:'10px 12px',background:'rgba(236,72,153,0.08)',borderRadius:10,border:'1px solid rgba(236,72,153,0.2)'}}>
                   <p style={{color:'#ec4899',fontWeight:700,fontSize:'0.82rem',marginBottom:8}}>🎤 Вимова</p>
-                  {[{icon:'🎯',label:'Точність',val:fb.pronunciationScores.accuracyScore},{icon:'🌊',label:'Плавність',val:fb.pronunciationScores.fluencyScore},{icon:'✅',label:'Повнота',val:fb.pronunciationScores.completenessScore},{icon:'🎵',label:'Просодія',val:fb.pronunciationScores.prosodyScore}].map(({icon,label,val})=>(
+                  {[{icon:'🎯',label:'Точність',val:fb.pronunciationScores.accuracyScore},{icon:'🌊',label:'Плавність',val:fb.pronunciationScores.fluencyScore},{icon:'✅',label:'Повнота',val:fb.pronunciationScores.completenessScore},{icon:'🎵',label:'Просодія',val:fb.pronunciationScores.prosodyScore}].filter(({val})=>val!=null).map(({icon,label,val})=>(
                     <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:5}}>
                       <span style={{fontSize:'0.8rem',width:18}}>{icon}</span>
                       <span style={{color:'#94a3b8',fontSize:'0.78rem',width:68}}>{label}</span>

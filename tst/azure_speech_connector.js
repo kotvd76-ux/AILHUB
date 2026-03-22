@@ -467,7 +467,7 @@ class AzureSpeechConnector {
                         accuracyScore:      Math.round(pa.accuracyScore      || 0),
                         fluencyScore:       Math.round(pa.fluencyScore       || 0),
                         completenessScore:  Math.round(pa.completenessScore  || 0),
-                        prosodyScore:       Math.round(pa.prosodyScore ?? prosFromJson),
+                        prosodyScore:       (pa.prosodyScore != null ? Math.round(pa.prosodyScore) : (prosFromJson || null)),
                         pronunciationScore: Math.round(pa.pronunciationScore || 0),
                     });
                 } catch (e) {
@@ -632,7 +632,7 @@ class AzureSpeechConnector {
                         accuracyScore:      Math.round(pa.accuracyScore      || 0),
                         fluencyScore:       Math.round(pa.fluencyScore       || 0),
                         completenessScore:  Math.round(pa.completenessScore  || 0),
-                        prosodyScore:       Math.round(pa.prosodyScore ?? prosodyScoreFromJson),
+                        prosodyScore:       (pa.prosodyScore != null ? Math.round(pa.prosodyScore) : (prosodyScoreFromJson || null)),
                         pronunciationScore: Math.round(pa.pronunciationScore || 0),
                         words,
                     });
@@ -712,7 +712,7 @@ class AzureSpeechConnector {
                             accuracyScore:      Math.round(pa.accuracyScore      || 0),
                             fluencyScore:       Math.round(pa.fluencyScore       || 0),
                             completenessScore:  Math.round(pa.completenessScore  || 0),
-                            prosodyScore:       Math.round(pa.prosodyScore ?? prosFromJson),
+                            prosodyScore:       (pa.prosodyScore != null ? Math.round(pa.prosodyScore) : (prosFromJson || null)),
                             pronunciationScore: Math.round(pa.pronunciationScore || 0),
                         });
                     } catch(e) { reject(e); } finally { try { recognizer.close(); } catch(_) {} }
