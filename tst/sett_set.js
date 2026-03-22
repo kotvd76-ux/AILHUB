@@ -290,6 +290,14 @@ const SETTINGS_CONFIG = {
         apiKeyDeepgram:   'sp_api_key_deepgram',    // Deepgram API key
         apiKeyAssemblyAI: 'sp_api_key_assemblyai',  // AssemblyAI API key
         // Google STT reuses sp_api_key_google
+
+        // ── S2S провайдер (голос-до-голосу реальний час) ─────
+        s2sProvider: 'sp_s2s_provider',  // 'gemini'|'openai'|'azure'|'azure-openai'
+
+        // ── Azure OpenAI Realtime (S2S) ───────────────────────
+        s2sAzureOaiEndpoint:   'sp_s2s_azure_oai_endpoint',    // https://my-res.openai.azure.com
+        s2sAzureOaiKey:        'sp_s2s_azure_oai_key',         // Azure OAI API key
+        s2sAzureOaiDeployment: 'sp_s2s_azure_oai_deployment',  // deployment name
     },
 
     // ── Плейсхолдери для полів API-ключів ────────────────────

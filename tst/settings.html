@@ -1131,40 +1131,102 @@
             <div id="panel-s2s" class="tab-panel" role="tabpanel" aria-labelledby="tab-s2s">
             <div class="space-y-5">
 
-            <section class="card card--accent">
-                <p class="field-label" style="margin-bottom:.625rem;">
+            <section class="card card--accent" aria-labelledby="lbl-s2s">
+                <label id="lbl-s2s" class="field-label">
                     <i class="fa-solid fa-headphones-simple" aria-hidden="true" style="margin-right:.35rem;opacity:.8"></i>
-                    Speech to Speech — реальний час
-                </p>
-                <p style="color:rgba(255,255,255,.5);font-size:.875rem;line-height:1.55;margin:0;">
-                    Режим голос-до-голосу поєднує розпізнавання мовлення (S2T)
-                    та озвучку відповіді (T2S). Використовується в модулях Chat і Phone.
+                    Провайдер S2S (голос-до-голосу)
+                </label>
+                <select id="s2s-provider" class="field"
+                        onchange="handleS2sProviderChange()"
+                        aria-label="Провайдер S2S">
+                    <option value="gemini">Gemini 2.5 Flash Live</option>
+                    <option value="openai">OpenAI Realtime</option>
+                    <option value="azure">Azure Voice Live</option>
+                    <option value="azure-openai">Azure OpenAI Realtime</option>
+                </select>
+                <p id="s2s-provider-hint" class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                    Gemini 2.5 Flash — нативний голосовий режим. Використовує Google API Key з T2T.
                 </p>
             </section>
 
+            <!-- Gemini: info (reuses Google key from T2T) -->
+            <div id="s2s-gemini-box" class="hidden">
             <section class="card">
-                <p class="field-label" style="margin-bottom:.625rem;">
-                    <i class="fa-solid fa-ear-listen" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
-                    Розпізнавання мовлення (вхід)
+                <p class="text-xs" style="color:rgba(255,255,255,.4);line-height:1.55;">
+                    Використовує Google API Key з вкладки T2T.<br>
+                    Модель: <span style="color:var(--orange-l)">gemini-2.5-flash-native-audio-preview</span>
                 </p>
-                <div id="s2s-stt-summary" style="color:var(--orange-l);font-size:.9375rem;font-weight:600;margin-bottom:.875rem;">—</div>
-                <button class="btn-export" onclick="switchTab('s2t')" style="width:100%;justify-content:center;">
-                    <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                    Налаштувати S2T
-                </button>
             </section>
+            </div>
 
+            <!-- OpenAI: info (reuses OpenAI key from T2T) -->
+            <div id="s2s-openai-box" class="hidden">
             <section class="card">
-                <p class="field-label" style="margin-bottom:.625rem;">
-                    <i class="fa-solid fa-volume-high" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
-                    Озвучка відповіді (вихід)
+                <p class="text-xs" style="color:rgba(255,255,255,.4);line-height:1.55;">
+                    Використовує OpenAI API Key з вкладки T2T.<br>
+                    Модель: <span style="color:var(--orange-l)">gpt-4o-realtime-preview</span>
                 </p>
-                <div id="s2s-tts-summary" style="color:var(--orange-l);font-size:.9375rem;font-weight:600;margin-bottom:.875rem;">—</div>
-                <button class="btn-export" onclick="switchTab('t2s')" style="width:100%;justify-content:center;">
+            </section>
+            </div>
+
+            <!-- Azure Voice Live: reuses Azure key+region from T2S -->
+            <div id="s2s-azure-box" class="hidden">
+            <section class="card">
+                <p class="text-xs" style="color:rgba(255,255,255,.4);line-height:1.55;">
+                    Використовує Azure Speech Key та Регіон з вкладки T2S.<br>
+                    Azure Cognitive Services Speech SDK — STT + TTS у реальному часі.
+                </p>
+                <button class="btn-export" onclick="switchTab('t2s')"
+                        style="width:100%;justify-content:center;margin-top:.75rem;">
                     <i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
-                    Налаштувати T2S
+                    Вказати Azure ключ у T2S →
                 </button>
             </section>
+            </div>
+
+            <!-- Azure OpenAI Realtime: own endpoint + key + deployment -->
+            <div id="s2s-azure-openai-box" class="hidden">
+            <section class="card">
+                <div style="display:flex;flex-direction:column;gap:.75rem;">
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Azure OpenAI Endpoint
+                        </label>
+                        <input type="text" id="s2s-azure-oai-endpoint" class="field"
+                               autocomplete="off" spellcheck="false"
+                               placeholder="https://my-resource.openai.azure.com"
+                               aria-label="Azure OpenAI Endpoint">
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Azure OpenAI API Key
+                        </label>
+                        <div class="input-wrap">
+                            <input type="password" id="s2s-azure-oai-key" class="field"
+                                   autocomplete="off" autocapitalize="none" spellcheck="false"
+                                   placeholder="..."
+                                   aria-label="Azure OpenAI API ключ">
+                            <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                    onclick="togglePasswordVisibility('s2s-azure-oai-key', this)">
+                                <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                            Deployment Name
+                        </label>
+                        <input type="text" id="s2s-azure-oai-deployment" class="field"
+                               autocomplete="off" spellcheck="false"
+                               placeholder="gpt-4o-realtime-preview"
+                               aria-label="Azure OpenAI Deployment Name">
+                    </div>
+                    <p class="text-xs" style="color:rgba(255,255,255,.35);margin-top:-.25rem;">
+                        Azure OpenAI Portal → Deployments → скопіюйте Endpoint та Key.
+                    </p>
+                </div>
+            </section>
+            </div>
 
             </div><!-- /space-y-5 s2s -->
             </div><!-- /panel-s2s -->
@@ -1360,14 +1422,6 @@
         'use strict';
 
         // ── Перемикання вкладок (AI-типи) ──────────────────────
-        const STT_LABELS = {
-            webspeech:  'Web Speech API (браузер)',
-            deepgram:   'Deepgram',
-            google:     'Google STT',
-            assemblyai: 'AssemblyAI',
-        };
-        const TTS_LABELS = { openai: 'OpenAI TTS', azure: 'Azure Neural TTS', pollinations: 'Pollinations TTS', offline: 'Offline (Web Speech API)' };
-
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-btn').forEach(btn => {
                 btn.classList.remove('active');
@@ -1381,20 +1435,24 @@
             if (btn)   { btn.classList.add('active');   btn.setAttribute('aria-selected', 'true'); }
             if (panel) { panel.classList.add('active'); }
             localStorage.setItem('sp_active_tab', tabId);
-
-            // Оновлюємо S2S-зведення при відкритті вкладки
-            if (tabId === 's2s') updateS2SSummary();
         };
 
-        function updateS2SSummary() {
-            const SK = SETTINGS_CONFIG.storageKeys;
-            const sttProv = localStorage.getItem(SK.sttProvider) || 'openai';
-            const ttsProv = localStorage.getItem(SK.ttsProvider) || 'offline';
-            const sttEl = document.getElementById('s2s-stt-summary');
-            const ttsEl = document.getElementById('s2s-tts-summary');
-            if (sttEl) sttEl.textContent = STT_LABELS[sttProv] || sttProv;
-            if (ttsEl) ttsEl.textContent = TTS_LABELS[ttsProv] || ttsProv;
-        }
+        // ── S2S провайдер ───────────────────────────────────────
+        window.handleS2sProviderChange = function() {
+            const prov = $('s2s-provider').value;
+            const hints = {
+                gemini:         'Gemini 2.5 Flash Live — нативний голосовий режим. Використовує Google API Key з T2T.',
+                openai:         'OpenAI Realtime API — gpt-4o-realtime-preview. Використовує OpenAI API Key з T2T.',
+                azure:          'Azure Voice Live — Azure Cognitive Services Speech. Ключ та регіон з вкладки T2S.',
+                'azure-openai': 'Azure OpenAI Realtime — хмарна модель gpt-4o від Azure. Потрібен власний ендпоінт.',
+            };
+            const hint = $('s2s-provider-hint');
+            if (hint) hint.textContent = hints[prov] || '';
+            $('s2s-gemini-box').classList.toggle('hidden', prov !== 'gemini');
+            $('s2s-openai-box').classList.toggle('hidden', prov !== 'openai');
+            $('s2s-azure-box').classList.toggle('hidden', prov !== 'azure');
+            $('s2s-azure-openai-box').classList.toggle('hidden', prov !== 'azure-openai');
+        };
 
         // ── Collapsible: секція логування ───────────────────────
         window.toggleLoggingSection = function() {
@@ -1466,6 +1524,13 @@
             $('api-key-deepgram').value   = get(SK.apiKeyDeepgram,   '');
             $('api-key-assemblyai').value = get(SK.apiKeyAssemblyAI, '');
             handleSttProviderChange();
+
+            // S2S provider + Azure OAI config
+            $('s2s-provider').value             = get(SK.s2sProvider,           'gemini');
+            $('s2s-azure-oai-endpoint').value   = get(SK.s2sAzureOaiEndpoint,   '');
+            $('s2s-azure-oai-key').value        = get(SK.s2sAzureOaiKey,        '');
+            $('s2s-azure-oai-deployment').value = get(SK.s2sAzureOaiDeployment, 'gpt-4o-realtime-preview');
+            handleS2sProviderChange();
 
             const savedImageModel = get(SK.imageModel, 'pollinations');
             $('image-model-select').value = savedImageModel;
@@ -1955,6 +2020,12 @@
             set(SK.sttProvider,     $('stt-provider').value);
             set(SK.apiKeyDeepgram,   $('api-key-deepgram').value.trim());
             set(SK.apiKeyAssemblyAI, $('api-key-assemblyai').value.trim());
+
+            // S2S provider + Azure OAI config
+            set(SK.s2sProvider,           $('s2s-provider').value);
+            set(SK.s2sAzureOaiEndpoint,   $('s2s-azure-oai-endpoint').value.trim());
+            set(SK.s2sAzureOaiKey,        $('s2s-azure-oai-key').value.trim());
+            set(SK.s2sAzureOaiDeployment, $('s2s-azure-oai-deployment').value.trim());
 
             // Логування
             set(SK.techLogEnabled,  $('toggle-techlog').checked  ? '1' : '0');
