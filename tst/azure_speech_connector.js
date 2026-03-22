@@ -414,15 +414,19 @@ class AzureSpeechConnector {
         const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
         speechConfig.speechRecognitionLanguage = lang;
 
-        const pronunciationConfig = new SDK.PronunciationAssessmentConfig(
-            targetPhrase,
-            SDK.PronunciationAssessmentGradingSystem.HundredMark,
-            SDK.PronunciationAssessmentGranularity.Word,
-            true  // enableMiscue
-        );
-        if (typeof pronunciationConfig.enableProsodyAssessment === 'function') {
-            pronunciationConfig.enableProsodyAssessment();
-        }
+        const pronunciationConfig = SDK.PronunciationAssessmentConfig.fromJSON
+            ? SDK.PronunciationAssessmentConfig.fromJSON(JSON.stringify({
+                referenceText: targetPhrase,
+                gradingSystem: 'HundredMark',
+                granularity: 'Word',
+                enableMiscue: true,
+                enableProsodyAssessment: true,
+              }))
+            : (() => {
+                const c = new SDK.PronunciationAssessmentConfig(targetPhrase, SDK.PronunciationAssessmentGradingSystem.HundredMark, SDK.PronunciationAssessmentGranularity.Word, true);
+                if (typeof c.enableProsodyAssessment === 'function') c.enableProsodyAssessment();
+                return c;
+              })();
 
         const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
         const recognizer  = new SDK.SpeechRecognizer(speechConfig, audioConfig);
@@ -503,15 +507,19 @@ class AzureSpeechConnector {
         const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
         speechConfig.speechRecognitionLanguage = lang;
 
-        const pronunciationConfig = new SDK.PronunciationAssessmentConfig(
-            targetPhrase,
-            SDK.PronunciationAssessmentGradingSystem.HundredMark,
-            SDK.PronunciationAssessmentGranularity.Phoneme,
-            true  // enableMiscue
-        );
-        if (typeof pronunciationConfig.enableProsodyAssessment === 'function') {
-            pronunciationConfig.enableProsodyAssessment();
-        }
+        const pronunciationConfig = SDK.PronunciationAssessmentConfig.fromJSON
+            ? SDK.PronunciationAssessmentConfig.fromJSON(JSON.stringify({
+                referenceText: targetPhrase,
+                gradingSystem: 'HundredMark',
+                granularity: 'Phoneme',
+                enableMiscue: true,
+                enableProsodyAssessment: true,
+              }))
+            : (() => {
+                const c = new SDK.PronunciationAssessmentConfig(targetPhrase, SDK.PronunciationAssessmentGradingSystem.HundredMark, SDK.PronunciationAssessmentGranularity.Phoneme, true);
+                if (typeof c.enableProsodyAssessment === 'function') c.enableProsodyAssessment();
+                return c;
+              })();
 
         L(`PronunciationAssessmentConfig created (Phoneme granularity, enableMiscue=true, prosody=true)`);
 
@@ -648,15 +656,19 @@ class AzureSpeechConnector {
             const SDK = window.SpeechSDK;
             const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
             speechConfig.speechRecognitionLanguage = lang;
-            const pronunciationConfig = new SDK.PronunciationAssessmentConfig(
-                targetPhrase,
-                SDK.PronunciationAssessmentGradingSystem.HundredMark,
-                SDK.PronunciationAssessmentGranularity.Word,
-                true
-            );
-            if (typeof pronunciationConfig.enableProsodyAssessment === 'function') {
-                pronunciationConfig.enableProsodyAssessment();
-            }
+            const pronunciationConfig = SDK.PronunciationAssessmentConfig.fromJSON
+                ? SDK.PronunciationAssessmentConfig.fromJSON(JSON.stringify({
+                    referenceText: targetPhrase,
+                    gradingSystem: 'HundredMark',
+                    granularity: 'Word',
+                    enableMiscue: true,
+                    enableProsodyAssessment: true,
+                  }))
+                : (() => {
+                    const c = new SDK.PronunciationAssessmentConfig(targetPhrase, SDK.PronunciationAssessmentGradingSystem.HundredMark, SDK.PronunciationAssessmentGranularity.Word, true);
+                    if (typeof c.enableProsodyAssessment === 'function') c.enableProsodyAssessment();
+                    return c;
+                  })();
             const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
             recognizer = new SDK.SpeechRecognizer(speechConfig, audioConfig);
             pronunciationConfig.applyTo(recognizer);
