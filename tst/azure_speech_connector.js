@@ -500,7 +500,7 @@ class AzureSpeechConnector {
             await new Promise((resolve, reject) => {
                 const s   = document.createElement('script');
                 s.src     = AzureSpeechConnector.SDK_CDN;
-                s.onload  = () => { L('SDK loaded ok'); resolve(); };
+                s.onload  = () => { L(`SDK loaded ok, version=${window.SpeechSDK?.Version ?? window.SpeechSDK?.BuildInfo?.Version ?? 'unknown'}`); resolve(); };
                 s.onerror = () => reject(new Error('Azure Speech SDK не завантажився'));
                 document.head.appendChild(s);
             });
@@ -508,6 +508,7 @@ class AzureSpeechConnector {
             L('SDK already loaded');
         }
         const SDK = window.SpeechSDK;
+        L(`SDK version=${SDK?.Version ?? SDK?.BuildInfo?.Version ?? 'unknown'}, enableProsodyAssessment available=${typeof SDK.PronunciationAssessmentConfig?.prototype?.enableProsodyAssessment === 'function'}`);
 
         const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
         speechConfig.speechRecognitionLanguage = lang;
@@ -522,7 +523,8 @@ class AzureSpeechConnector {
                     enableProsodyAssessment: true,
                   }))
                 : new SDK.PronunciationAssessmentConfig(targetPhrase, SDK.PronunciationAssessmentGradingSystem.HundredMark, SDK.PronunciationAssessmentGranularity.Phoneme, true);
-            if (typeof c.enableProsodyAssessment === 'function') c.enableProsodyAssessment();
+            if (typeof c.enableProsodyAssessment === 'function') { c.enableProsodyAssessment(); L('enableProsodyAssessment() called ok'); }
+            else L('WARN: enableProsodyAssessment() method not found on config object');
             return c;
         })();
 
