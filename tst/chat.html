@@ -648,7 +648,8 @@ function App() {
   const generatePronText = async () => {
     const L = getLangConfig();
     const themes = SETTINGS_CONFIG.priorityThemes || [];
-    const theme = pronTheme || (themes.length ? themes[Math.floor(Math.random()*themes.length)] : 'Travel');
+    const pickRaw = themes.length ? themes[Math.floor(Math.random()*themes.length)] : 'Travel';
+    const theme = pronTheme || (typeof pickRaw === 'object' ? pickRaw.value : pickRaw);
     setPronState('generating');
     try {
       const text = await callAI(
@@ -1218,9 +1219,11 @@ function App() {
               <select value={pronTheme} onChange={e=>setPronTheme(e.target.value)}
                 style={{width:'100%',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'13px 15px',color:'#fff',fontSize:'1rem',outline:'none',cursor:'pointer'}}>
                 <option value="">🎲 Довільна тема</option>
-                {(SETTINGS_CONFIG.priorityThemes||[]).map(t=>(
-                  <option key={t} value={t}>{t}</option>
-                ))}
+                {(SETTINGS_CONFIG.priorityThemes||[]).map(t=>{
+                  const v = typeof t==='object' ? t.value : t;
+                  const lbl = typeof t==='object' ? t.label : t;
+                  return <option key={v} value={v}>{lbl}</option>;
+                })}
               </select>
               <p style={{marginTop:8,color:'#8892b0',fontSize:'0.82rem'}}>Текст буде на рівні {sessLevel} · ~40-60 слів</p>
               <div style={{marginTop:10,background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.25)',borderRadius:10,padding:'10px 14px',color:'#c4b5fd',fontSize:'0.82rem',lineHeight:1.6}}>
