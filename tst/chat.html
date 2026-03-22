@@ -741,12 +741,21 @@ function App() {
 
   /* Вимова: LLM-аналіз таблиці */
   const analyzePronunciation = async () => {
-    if (!pronWords.length || !pronScores) return;
+    if (!pronScores) return;
     setPronState('analyzing');
     const L = getLangConfig();
-    const tableStr = pronWords.map(w =>
-      `${w.word} | ${w.accuracyScore}% | ${w.errorType} | ${w.badPhonemes && w.badPhonemes.length ? w.badPhonemes.join(', ') : '—'}`
-    ).join('\n');
+
+    let tableStr;
+    if (pronWords.length) {
+      tableStr = pronWords.map(w =>
+        `${w.word} | ${w.accuracyScore}% | ${w.errorType} | ${w.badPhonemes && w.badPhonemes.length ? w.badPhonemes.join(', ') : '—'}`
+      ).join('\n');
+      addLog('pronAnalyze: using ' + pronWords.length + ' words data', 'info');
+    } else {
+      tableStr = '(пословні дані відсутні — аналіз на основі загальних балів)';
+      addLog('pronAnalyze: no per-word data, analyzing from scores only', 'warn');
+    }
+
     try {
       const rep = await callAI(
         [{role:'user', content: CHAT_PROMPTS.pronAnalyze(L.targetName, L.uiLanguage, pronText, tableStr, pronScores)}],
