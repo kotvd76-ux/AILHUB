@@ -910,23 +910,70 @@
             <div id="panel-s2t" class="tab-panel" role="tabpanel" aria-labelledby="tab-s2t">
             <div class="space-y-5">
 
-            <!-- ── Розпізнавання мовлення (Real-time STT) ────── -->
+            <!-- ── Розпізнавання мовлення (STT) ─────────────── -->
             <section class="card" aria-labelledby="lbl-stt">
                 <label id="lbl-stt" class="field-label">
                     <i class="fa-solid fa-ear-listen" aria-hidden="true" style="margin-right:.35rem;opacity:.7"></i>
-                    Розпізнавання мовлення (Real-time STT)
+                    Розпізнавання мовлення (STT)
                 </label>
                 <select id="stt-provider" class="field"
                         onchange="handleSttProviderChange()"
-                        aria-label="Провайдер Real-time STT">
-                    <option value="openai">OpenAI Realtime</option>
-                    <option value="azure">Azure Speech</option>
-                    <option value="gemini">Gemini NAD</option>
+                        aria-label="Провайдер STT">
+                    <option value="webspeech">Web Speech API (офлайн, браузер)</option>
+                    <option value="deepgram">Deepgram (онлайн, потрібен ключ)</option>
+                    <option value="google">Google STT (онлайн, Google API Key)</option>
+                    <option value="assemblyai">AssemblyAI (онлайн, потрібен ключ)</option>
                 </select>
                 <p id="stt-provider-hint" class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
-                    Провайдер живого розпізнавання мовлення в модулях Chat, Phone, Listening.
-                    Для Azure — вкажіть ключ у секції T2S.
+                    Вбудований Web Speech API браузера. Не потребує ключа.
                 </p>
+
+                <!-- Deepgram API Key -->
+                <div id="stt-deepgram-box" class="hidden" style="margin-top:.875rem">
+                    <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                        Deepgram API Key
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-deepgram" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="Token ..."
+                               aria-label="Deepgram API ключ">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-deepgram', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                        Ключ з console.deepgram.com/keys
+                    </p>
+                </div>
+
+                <!-- AssemblyAI API Key -->
+                <div id="stt-assemblyai-box" class="hidden" style="margin-top:.875rem">
+                    <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                        AssemblyAI API Key
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-assemblyai" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="..."
+                               aria-label="AssemblyAI API ключ">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-assemblyai', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                        Ключ з www.assemblyai.com/dashboard
+                    </p>
+                </div>
+
+                <!-- Google STT note -->
+                <div id="stt-google-box" class="hidden" style="margin-top:.875rem">
+                    <p class="text-xs" style="color:rgba(255,255,255,.4);">
+                        Використовує Google API Key з вкладки T2T.
+                    </p>
+                </div>
             </section>
 
             </div><!-- /space-y-5 s2t -->
@@ -1313,7 +1360,12 @@
         'use strict';
 
         // ── Перемикання вкладок (AI-типи) ──────────────────────
-        const STT_LABELS = { openai: 'OpenAI Realtime', azure: 'Azure Speech', gemini: 'Gemini NAD' };
+        const STT_LABELS = {
+            webspeech:  'Web Speech API (браузер)',
+            deepgram:   'Deepgram',
+            google:     'Google STT',
+            assemblyai: 'AssemblyAI',
+        };
         const TTS_LABELS = { openai: 'OpenAI TTS', azure: 'Azure Neural TTS', pollinations: 'Pollinations TTS', offline: 'Offline (Web Speech API)' };
 
         window.switchTab = function(tabId) {
@@ -1409,8 +1461,10 @@
             $('pronunciation-provider').value = get(SK.pronunciationProvider, 'same');
             handlePronunciationChange();
 
-            // Real-time STT provider
-            $('stt-provider').value = get(SK.sttProvider, 'openai');
+            // STT provider + keys
+            $('stt-provider').value       = get(SK.sttProvider,     'webspeech');
+            $('api-key-deepgram').value   = get(SK.apiKeyDeepgram,   '');
+            $('api-key-assemblyai').value = get(SK.apiKeyAssemblyAI, '');
             handleSttProviderChange();
 
             const savedImageModel = get(SK.imageModel, 'pollinations');
@@ -1490,16 +1544,20 @@
             set(SK.azureSpeechRegion, $('azure-speech-region').value.trim() || 'eastus');
         };
 
-        // ── STT провайдер: підказка ─────────────────────────────
+        // ── STT провайдер: підказка + показ ключів ─────────────
         window.handleSttProviderChange = function() {
             const prov  = $('stt-provider').value;
             const hints = {
-                openai: 'OpenAI Realtime API — gpt-4o-realtime-preview. Використовує основний OpenAI ключ.',
-                azure:  'Azure Speech Service. Вкажіть ключ і регіон у секції «Озвучка» вище.',
-                gemini: 'Gemini Live NAD. Використовує основний Google Gemini ключ.',
+                webspeech:  'Вбудований Web Speech API браузера. Не потребує ключа. Підтримка залежить від браузера.',
+                deepgram:   'Deepgram Nova-3 — хмарне розпізнавання. Потрібен API ключ з console.deepgram.com.',
+                google:     'Google Cloud Speech-to-Text. Використовує Google API Key з вкладки T2T.',
+                assemblyai: 'AssemblyAI Universal-2 — хмарне розпізнавання. Потрібен API ключ з assemblyai.com.',
             };
             const hint = $('stt-provider-hint');
             if (hint) hint.textContent = hints[prov] || '';
+            $('stt-deepgram-box').classList.toggle('hidden', prov !== 'deepgram');
+            $('stt-assemblyai-box').classList.toggle('hidden', prov !== 'assemblyai');
+            $('stt-google-box').classList.toggle('hidden', prov !== 'google');
         };
 
         // ── Будуємо select провайдерів з конфігу ───────────────
@@ -1893,8 +1951,10 @@
             // AI Вимова
             set(SK.pronunciationProvider, $('pronunciation-provider').value);
 
-            // Real-time STT
-            set(SK.sttProvider, $('stt-provider').value);
+            // STT provider + keys
+            set(SK.sttProvider,     $('stt-provider').value);
+            set(SK.apiKeyDeepgram,   $('api-key-deepgram').value.trim());
+            set(SK.apiKeyAssemblyAI, $('api-key-assemblyai').value.trim());
 
             // Логування
             set(SK.techLogEnabled,  $('toggle-techlog').checked  ? '1' : '0');

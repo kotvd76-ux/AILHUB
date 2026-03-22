@@ -283,8 +283,13 @@ const SETTINGS_CONFIG = {
         // 'same' — використовує той самий ttsProvider
         pronunciationProvider: 'sp_pronunciation_provider',
 
-        // ── Провайдер розпізнавання мовлення (Real-time STT) ─
-        sttProvider: 'sp_stt_provider',  // 'openai'|'azure'|'gemini'
+        // ── Провайдер розпізнавання мовлення (STT) ───────────
+        sttProvider: 'sp_stt_provider',  // 'webspeech'|'deepgram'|'google'|'assemblyai'
+
+        // ── STT API ключі ────────────────────────────────────
+        apiKeyDeepgram:   'sp_api_key_deepgram',    // Deepgram API key
+        apiKeyAssemblyAI: 'sp_api_key_assemblyai',  // AssemblyAI API key
+        // Google STT reuses sp_api_key_google
     },
 
     // ── Плейсхолдери для полів API-ключів ────────────────────
