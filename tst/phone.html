@@ -779,30 +779,18 @@
             if (isAzure) {
                 const pct = n => Math.max(0, Math.min(100, Math.round(n || 0)));
                 const col = n => pct(n) >= 75 ? '#34d399' : pct(n) >= 55 ? '#fbbf24' : '#f87171';
-                const bar = n => `<div style="flex:1;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden"><div style="width:${pct(n)}%;height:100%;background:${col(n)};border-radius:3px;transition:width .4s"></div></div>`;
                 const overall = pct(scores.pronunciationScore);
                 const badge = overall >= 85 ? '✨ Відмінно!' : overall >= 70 ? '👍 Добре!' : overall >= 50 ? '💪 Майже!' : '🔄 Спробуй ще';
-                const rows = [
-                    { icon: '🎯', label: 'Точність',  val: scores.accuracyScore },
-                    { icon: '🌊', label: 'Плавність', val: scores.fluencyScore },
-                    { icon: '✅', label: 'Повнота',   val: scores.completenessScore },
-                    { icon: '🎵', label: 'Просодія',  val: scores.prosodyScore },
-                ];
-                const rowsHtml = rows.map(r => `
-  <div style="display:flex;align-items:center;gap:8px">
-    <span style="font-size:.65rem;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;width:72px">${r.icon} ${r.label}</span>
-    ${bar(r.val)}
-    <span style="font-size:.75rem;color:${col(r.val)};min-width:36px;text-align:right">${pct(r.val)}</span>
-  </div>`).join('');
-                return `<div style="display:flex;flex-direction:column;gap:10px">
+                const sc = (label, val) => `<span style="color:${col(val)}">${label}=${pct(val)}</span>`;
+                return `<div style="display:flex;flex-direction:column;gap:6px">
   <div style="display:flex;align-items:center;justify-content:space-between">
-    <span style="font-size:.8rem;font-weight:900;color:#f97316;letter-spacing:.08em;text-transform:uppercase">${badge}</span>
-    <span style="font-size:.65rem;color:#475569">Azure · /100</span>
+    <span style="font-size:.8rem;font-weight:900;color:#f97316">${badge}</span>
+    <span style="font-size:.65rem;color:#475569">Azure</span>
   </div>
-  ${rowsHtml}
-  <div style="padding-top:6px;border-top:1px solid rgba(255,255,255,.06)">
-    <p style="font-size:.65rem;color:#475569;margin:0 0 3px">Ціль: <span style="color:#94a3b8">${esc(target)}</span></p>
-    <p style="font-size:.65rem;color:#475569;margin:0">Ти сказав: <span style="color:#94a3b8">${esc(said)}</span></p>
+  <div style="font-size:.75rem;font-family:monospace;letter-spacing:.03em">${sc('acc',scores.accuracyScore)} ${sc('flu',scores.fluencyScore)} ${sc('comp',scores.completenessScore)} ${sc('overall',scores.pronunciationScore)}</div>
+  <div style="font-size:.65rem;color:#475569">
+    <span style="color:#64748b">↗</span> <span style="color:#94a3b8">${esc(target)}</span><br>
+    <span style="color:#64748b">↘</span> <span style="color:#94a3b8">${esc(said)}</span>
   </div>
 </div>`;
             }
@@ -1149,9 +1137,7 @@
                             transcriptLen: (currentTranscript || '').trim().length,
                         });
                         isRecording = false;
-                        document.getElementById('mic-ring').classList.add('hidden');
-                        document.getElementById('mic-icon').className = 'fa-solid fa-microphone';
-                        document.getElementById('stt-status').innerText = '';
+                        setMicState('idle');
                         const text = (currentTranscript || '').trim();
                         if (text) {
                             addMessage('user', text);
@@ -1208,8 +1194,7 @@
             const targetPhrase = lastAiMessage || '';
             const lang = (typeof getLangConfig === 'function') ? getLangConfig().speechLang : 'es-ES';
 
-            document.getElementById('mic-ring').classList.remove('hidden');
-            document.getElementById('mic-icon').className = 'fa-solid fa-square text-4xl text-white';
+            setMicState('recording');
             document.getElementById('stt-status').innerText = '🎤 ГОВОРИ ФРАЗУ…';
             document.getElementById('feedback-sheet').classList.add('hidden');
             currentTranscript = '';
@@ -1241,6 +1226,7 @@
 
                 phoneAttemptNumber = phoneCompletedTurns + 1;
                 _phoneSetAiActive(true);
+                setMicState('processing');
                 await runEchoFeedback(scores.transcript, scores);
             } catch (e) {
                 addLog('Azure assessment помилка: ' + e.message, 'error');
@@ -1253,9 +1239,6 @@
                 azurePronunciationActive = false;
                 isRecording = false;
                 _phoneSetAiActive(false);
-                document.getElementById('mic-ring').classList.add('hidden');
-                document.getElementById('mic-icon').className = 'fa-solid fa-microphone text-4xl text-white';
-                document.getElementById('stt-status').innerText = '';
             }
         }
 
