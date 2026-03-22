@@ -993,13 +993,15 @@
                 <select id="tts-provider-select" class="field"
                         onchange="handleTtsProviderChange()"
                         aria-label="Провайдер TTS">
-                    <optgroup label="Онлайн — потрібен ключ">
-                        <option value="openai">OpenAI TTS (Alloy, Shimmer, Nova...)</option>
-                        <option value="azure">Azure Neural TTS (найбільш природній)</option>
-                        <option value="pollinations">Pollinations TTS (безкоштовно)</option>
+                    <optgroup label="🎧 Online — потрібен ключ">
+                        <option value="openai">OpenAI TTS</option>
+                        <option value="elevenlabs">ElevenLabs</option>
+                        <option value="azure">Azure Neural TTS</option>
+                        <option value="pollinations">Pollinations.ai (безкоштовно)</option>
                     </optgroup>
-                    <optgroup label="Офлайн — без ключа">
-                        <option value="offline">Offline — Web Speech API</option>
+                    <optgroup label="🔒 Offline — без ключа">
+                        <option value="piper">Piper TTS (локальний сервер)</option>
+                        <option value="offline">Web Speech API (браузер)</option>
                     </optgroup>
                 </select>
 
@@ -1034,6 +1036,41 @@
                     <p class="text-xs" style="color:rgba(255,255,255,.35);margin-top:-.25rem;">
                         Ключ з Azure Portal → Cognitive Services → Keys and Endpoint.
                         Використовується і для TTS Вимови, і для Real-time STT.
+                    </p>
+                </div>
+
+                <!-- ElevenLabs API Key -->
+                <div id="tts-elevenlabs-box" class="hidden" style="margin-top:.875rem">
+                    <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                        ElevenLabs API Key
+                    </label>
+                    <div class="input-wrap">
+                        <input type="password" id="api-key-elevenlabs" class="field"
+                               autocomplete="off" autocapitalize="none" spellcheck="false"
+                               placeholder="..."
+                               aria-label="ElevenLabs API ключ">
+                        <button class="eye-btn" type="button" aria-label="Показати/приховати ключ"
+                                onclick="togglePasswordVisibility('api-key-elevenlabs', this)">
+                            <i class="fa-solid fa-eye" aria-hidden="true"></i>
+                        </button>
+                    </div>
+                    <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                        Ключ з elevenlabs.io → Profile → API Key
+                    </p>
+                </div>
+
+                <!-- Piper TTS Server -->
+                <div id="tts-piper-box" class="hidden" style="margin-top:.875rem">
+                    <label class="field-label" style="font-size:.6rem;color:rgba(255,255,255,.45);margin-bottom:.35rem;">
+                        Piper Server URL
+                    </label>
+                    <input type="url" id="piper-server-url" class="field"
+                           autocomplete="off" spellcheck="false"
+                           placeholder="http://localhost:5000"
+                           aria-label="Piper TTS server URL">
+                    <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
+                        Локальний Piper TTS сервер. Встановити:
+                        <span style="opacity:.7">github.com/rhasspy/piper</span>
                     </p>
                 </div>
 
@@ -1118,6 +1155,8 @@
                     <option value="openai">OpenAI TTS</option>
                     <option value="azure">Azure Neural TTS</option>
                     <option value="pollinations">Pollinations TTS (безкоштовно)</option>
+                    <option value="elevenlabs">ElevenLabs</option>
+                    <option value="piper">Piper TTS (локальний сервер)</option>
                 </select>
                 <p class="text-xs mt-2" style="color:rgba(255,255,255,.35);">
                     TTS-провайдер для вправ вимови. Azure-ключ — у секції T2S.
@@ -1515,6 +1554,10 @@
             $('azure-speech-key').value    = get(SK.azureSpeechKey,    '');
             $('azure-speech-region').value = get(SK.azureSpeechRegion, 'eastus');
 
+            // ElevenLabs + Piper
+            $('api-key-elevenlabs').value = get(SK.apiKeyElevenLabs, '');
+            $('piper-server-url').value   = get(SK.piperServerUrl,   '');
+
             // Pronunciation TTS provider
             $('pronunciation-provider').value = get(SK.pronunciationProvider, 'same');
             handlePronunciationChange();
@@ -1584,18 +1627,22 @@
         // ── TTS провайдер ───────────────────────────────────────
         window.handleTtsProviderChange = function() {
             currentTtsProvider = $('tts-provider-select').value;
-            const isOffline = currentTtsProvider === 'offline';
-            const isAzure   = currentTtsProvider === 'azure';
+            const isOffline    = currentTtsProvider === 'offline';
+            const isAzure      = currentTtsProvider === 'azure';
+            const isElevenLabs = currentTtsProvider === 'elevenlabs';
+            const isPiper      = currentTtsProvider === 'piper';
 
-            $('tts-azure-box').classList.toggle('hidden', !isAzure);
-            $('section-tts-online').classList.toggle('hidden', isOffline);
+            $('tts-azure-box').classList.toggle('hidden',       !isAzure);
+            $('tts-elevenlabs-box').classList.toggle('hidden',  !isElevenLabs);
+            $('tts-piper-box').classList.toggle('hidden',       !isPiper);
+            $('section-tts-online').classList.toggle('hidden',  isOffline || isPiper);
             $('section-tts-offline').classList.toggle('hidden', !isOffline);
 
-            if (!isOffline) renderOnlineVoices();
+            if (!isOffline && !isPiper) renderOnlineVoices();
 
             // Зберігаємо одразу — speakText() в інших модулях читає з localStorage
             set(SK.ttsProvider, currentTtsProvider);
-            set(SK.ttsMode, isOffline ? 'offline' : 'online'); // legacy compat
+            set(SK.ttsMode, (isOffline || isPiper) ? 'offline' : 'online'); // legacy compat
         };
 
         // ── AI Вимова: зміна провайдера ─────────────────────────
@@ -2012,6 +2059,10 @@
             // Azure Speech
             set(SK.azureSpeechKey,    $('azure-speech-key').value.trim());
             set(SK.azureSpeechRegion, $('azure-speech-region').value.trim() || 'eastus');
+
+            // ElevenLabs + Piper
+            set(SK.apiKeyElevenLabs, $('api-key-elevenlabs').value.trim());
+            set(SK.piperServerUrl,   $('piper-server-url').value.trim());
 
             // AI Вимова
             set(SK.pronunciationProvider, $('pronunciation-provider').value);
