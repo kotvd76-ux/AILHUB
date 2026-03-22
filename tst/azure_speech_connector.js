@@ -457,12 +457,17 @@ class AzureSpeechConnector {
                         return;
                     }
                     const pa = SDK.PronunciationAssessmentResult.fromResult(result);
+                    let prosFromJson = 0;
+                    try {
+                        const js = result.properties?.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
+                        if (js) { const nb = JSON.parse(js).NBest?.[0]; if (nb) prosFromJson = Math.round(nb.ProsScore ?? nb.ProsodyScore ?? 0); }
+                    } catch(_) {}
                     resolve({
                         transcript:         result.text || '',
                         accuracyScore:      Math.round(pa.accuracyScore      || 0),
                         fluencyScore:       Math.round(pa.fluencyScore       || 0),
                         completenessScore:  Math.round(pa.completenessScore  || 0),
-                        prosodyScore:       Math.round(pa.prosodyScore       || 0),
+                        prosodyScore:       Math.round(pa.prosodyScore ?? prosFromJson),
                         pronunciationScore: Math.round(pa.pronunciationScore || 0),
                     });
                 } catch (e) {
@@ -559,6 +564,7 @@ class AzureSpeechConnector {
 
                     // ── Пословні дані через JSON відповідь ──────────────────
                     let words = [];
+                    let prosodyScoreFromJson = 0;
                     try {
                         const jsonStr = result.properties.getProperty(
                             SDK.PropertyId.SpeechServiceResponse_JsonResult
@@ -569,7 +575,8 @@ class AzureSpeechConnector {
                             L(`JSON.NBest count=${json.NBest?.length||0}`);
                             const nbest = json.NBest?.[0];
                             if (nbest) {
-                                L(`NBest[0]: Confidence=${nbest.Confidence} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
+                                prosodyScoreFromJson = Math.round(nbest.ProsScore ?? nbest.ProsodyScore ?? 0);
+                                L(`NBest[0]: Confidence=${nbest.Confidence} ProsScore=${nbest.ProsScore} Lexical="${(nbest.Lexical||'').slice(0,80)}"`);
                                 L(`NBest[0].Words count=${nbest.Words?.length||0}`);
                                 // Логуємо першe слово для діагностики структури
                                 if (nbest.Words?.length) {
@@ -621,7 +628,7 @@ class AzureSpeechConnector {
                         accuracyScore:      Math.round(pa.accuracyScore      || 0),
                         fluencyScore:       Math.round(pa.fluencyScore       || 0),
                         completenessScore:  Math.round(pa.completenessScore  || 0),
-                        prosodyScore:       Math.round(pa.prosodyScore       || 0),
+                        prosodyScore:       Math.round(pa.prosodyScore ?? prosodyScoreFromJson),
                         pronunciationScore: Math.round(pa.pronunciationScore || 0),
                         words,
                     });
@@ -691,12 +698,17 @@ class AzureSpeechConnector {
                             return;
                         }
                         const pa = SDK.PronunciationAssessmentResult.fromResult(result);
+                        let prosFromJson = 0;
+                        try {
+                            const js = result.properties?.getProperty(SDK.PropertyId.SpeechServiceResponse_JsonResult);
+                            if (js) { const nb = JSON.parse(js).NBest?.[0]; if (nb) prosFromJson = Math.round(nb.ProsScore ?? nb.ProsodyScore ?? 0); }
+                        } catch(_) {}
                         resolve({
                             transcript:         result.text || '',
                             accuracyScore:      Math.round(pa.accuracyScore      || 0),
                             fluencyScore:       Math.round(pa.fluencyScore       || 0),
                             completenessScore:  Math.round(pa.completenessScore  || 0),
-                            prosodyScore:       Math.round(pa.prosodyScore       || 0),
+                            prosodyScore:       Math.round(pa.prosodyScore ?? prosFromJson),
                             pronunciationScore: Math.round(pa.pronunciationScore || 0),
                         });
                     } catch(e) { reject(e); } finally { try { recognizer.close(); } catch(_) {} }
