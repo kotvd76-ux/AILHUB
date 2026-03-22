@@ -53,6 +53,10 @@
     0%,100% { outline-color:rgba(239,68,68,0.15); }
     50%     { outline-color:rgba(239,68,68,0.5);  }
   }
+  @keyframes pronPulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(167,139,250,0.4); }
+    50%     { box-shadow:0 0 0 12px rgba(167,139,250,0); }
+  }
   /* Мінімальний розмір кнопки для доступності */
   button { min-height: 44px; min-width: 44px; }
 
@@ -128,9 +132,10 @@ const ASPECTS_UI = [
   { id:'pragmatics', label:'Прагматика', icon:'🤝', color:'#4ade80' },
 ];
 const MODES_UI = [
-  { id:'test',   icon:'🧪', label:'Тестування',        desc:'Діагностичний тест рівня',   color:'#e85d4a' },
-  { id:'lesson', icon:'📖', label:'Вільний урок',       desc:'AI обирає тему і веде урок', color:'#4a9ede' },
-  { id:'chat',   icon:'💬', label:'Вільне спілкування', desc:'Розмова + корекції помилок', color:'#4ade80' },
+  { id:'test',          icon:'🧪', label:'Тестування',        desc:'Діагностичний тест рівня',           color:'#e85d4a' },
+  { id:'lesson',        icon:'📖', label:'Вільний урок',       desc:'AI обирає тему і веде урок',         color:'#4a9ede' },
+  { id:'chat',          icon:'💬', label:'Вільне спілкування', desc:'Розмова + корекції помилок',         color:'#4ade80' },
+  { id:'pronunciation', icon:'🗣', label:'Вимова',             desc:'Пословна оцінка вимови + звіт AI',   color:'#a78bfa' },
 ];
 
 /* Повна шкала CEFR для тесту */
@@ -482,6 +487,15 @@ function App() {
   const [noKey,setNoKey]     = useState(false);
   const [tlOn,setTlOn]       = useState(false);
 
+  /* ── Стани вправи «Вимова» ──────────────────────────────── */
+  const [pronState, setPronState]   = useState('idle');    // idle|generating|text_ready|recording|assessed|analyzing|done
+  const [pronText, setPronText]     = useState('');
+  const [pronWords, setPronWords]   = useState([]);        // [{word, accuracyScore, errorType, badPhonemes}]
+  const [pronScores, setPronScores] = useState(null);      // агрегатні бали
+  const [pronReport, setPronReport] = useState('');
+  const [pronTheme, setPronTheme]   = useState('');        // вибрана тема або '' для рандомної
+  const pronAzRecRef = useRef(null);                       // Azure recognizer для скасування
+
   const botRef = useRef(null);
   const inpRef = useRef(null);
 
@@ -617,6 +631,141 @@ function App() {
     // Зміщуємо діапазон до рекомендованого рівня
     const idx = CEFR_ALL.indexOf(rep.cefr);
     if(idx>=0){ setCfFrom(Math.max(0,idx-1)); setCfTo(Math.min(CEFR_ALL.length-1,idx+1)); }
+  };
+
+  /* ── Вимова: запуск екрану ───────────────────────────────── */
+  const startPronunciation = () => {
+    setPronState('idle');
+    setPronText('');
+    setPronWords([]);
+    setPronScores(null);
+    setPronReport('');
+    if (!sessRef.current) sessRef.current = Math.random().toString(36).slice(2,10);
+    setScreen('pronunciation');
+  };
+
+  /* Вимова: генерація тексту через LLM */
+  const generatePronText = async () => {
+    const L = getLangConfig();
+    const themes = SETTINGS_CONFIG.priorityThemes || [];
+    const theme = pronTheme || (themes.length ? themes[Math.floor(Math.random()*themes.length)] : 'Travel');
+    setPronState('generating');
+    try {
+      const text = await callAI(
+        [{role:'user', content: CHAT_PROMPTS.pronGenerate(L.targetName, sessLevel, theme)}],
+        'You are a language teacher creating reading texts for pronunciation practice.',
+        CHAT_CONFIG.pronunciation.maxTokensGenerate
+      );
+      setPronText(text.trim());
+      setPronState('text_ready');
+      addLog('pronGenerate ok, words≈' + text.trim().split(/\s+/).length, 'success');
+    } catch(e) {
+      addLog('pronGenerate error: ' + (e?.message||e), 'error');
+      setPronState('idle');
+    }
+  };
+
+  /* Вимова: файл .txt */
+  const handlePronFile = e => {
+    const f = e.target.files?.[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = ev => { setPronText((ev.target.result||'').trim()); setPronState('text_ready'); };
+    r.readAsText(f, 'UTF-8');
+  };
+
+  /* Вимова: запис та Azure-оцінка */
+  const startPronAssessment = async () => {
+    const azCfg = (typeof getAzureSpeechConfig === 'function') ? getAzureSpeechConfig() : null;
+    if (!azCfg || !azCfg.key) {
+      addLog('Azure ключ не вказано — налаштуйте Azure Speech у Settings', 'error');
+      return;
+    }
+    if (!pronText.trim()) return;
+    setPronState('recording');
+    try {
+      const result = await AzureSpeechConnector.assessPronunciationWithWords(
+        azCfg.key, azCfg.region, pronText, getSettings().speechLang
+      );
+      setPronWords(result.words || []);
+      setPronScores(result);
+      setPronState('assessed');
+      addLog('pronAssess ok overall=' + result.pronunciationScore, 'success');
+      if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
+        Logger.study('pronunciation', {
+          exercise_type: 'pronunciation_assessment',
+          level: sessLevel,
+          theme: pronTheme || 'auto',
+          result: result.pronunciationScore >= (CHAT_CONFIG.pronunciation.passThreshold||70) ? 'pass' : 'needs_work',
+          score_total: result.pronunciationScore,
+          score_max: 100,
+          scores: JSON.stringify({accuracy:result.accuracyScore,fluency:result.fluencyScore,completeness:result.completenessScore,prosody:result.prosodyScore,overall:result.pronunciationScore}),
+          task_text: pronText.slice(0,200),
+          session_id: sessRef.current || '',
+        });
+      }
+    } catch(e) {
+      addLog('pronAssess error: ' + (e?.message||e), 'error');
+      setPronState('text_ready');
+    }
+  };
+
+  /* Вимова: LLM-аналіз таблиці */
+  const analyzePronunciation = async () => {
+    if (!pronWords.length || !pronScores) return;
+    setPronState('analyzing');
+    const L = getLangConfig();
+    const tableStr = pronWords.map(w =>
+      `${w.word} | ${w.accuracyScore}% | ${w.errorType} | ${w.badPhonemes && w.badPhonemes.length ? w.badPhonemes.join(', ') : '—'}`
+    ).join('\n');
+    try {
+      const rep = await callAI(
+        [{role:'user', content: CHAT_PROMPTS.pronAnalyze(L.targetName, L.uiLanguage, pronText, tableStr, pronScores)}],
+        'You are an expert pronunciation coach for language learners.',
+        CHAT_CONFIG.pronunciation.maxTokensAnalysis
+      );
+      setPronReport(rep);
+      setPronState('done');
+      addLog('pronAnalyze ok, report length=' + rep.length, 'success');
+      if (typeof Logger !== 'undefined' && typeof Logger.study === 'function') {
+        Logger.study('pronunciation', {
+          exercise_type: 'pronunciation_report',
+          level: sessLevel,
+          theme: pronTheme || 'auto',
+          feedback: rep.slice(0, 500),
+          session_id: sessRef.current || '',
+        });
+      }
+    } catch(e) {
+      addLog('pronAnalyze error: ' + (e?.message||e), 'error');
+      setPronState('assessed');
+    }
+  };
+
+  /* Вимова: завантажити звіт */
+  const downloadPronReport = () => {
+    const ts = new Date().toLocaleString('uk-UA');
+    const lines = [
+      `ЗВІТ З ВИМОВИ — ${ts}`,
+      `Рівень: ${sessLevel} | Тема: ${pronTheme || 'авто'}`,
+      '',
+      'ТЕКСТ ДЛЯ ЧИТАННЯ:',
+      pronText,
+      '',
+      'ПОСЛОВНА ОЦІНКА (Слово | Точність | Тип помилки | Проблемні фонеми):',
+      ...(pronWords||[]).map(w => `${w.word} | ${w.accuracyScore}% | ${w.errorType} | ${(w.badPhonemes||[]).join(', ')||'—'}`),
+      '',
+      pronScores ? `АГРЕГАТНІ БАЛИ: Точність=${pronScores.accuracyScore} Плавність=${pronScores.fluencyScore} Повнота=${pronScores.completenessScore} Просодія=${pronScores.prosodyScore} Загальний=${pronScores.pronunciationScore}` : '',
+      '',
+      'АНАЛІЗ AI:',
+      pronReport,
+    ].join('\n');
+    const blob = new Blob([lines], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `pronunciation_${new Date().toISOString().replace(/[:.]/g,'-').slice(0,19)}.txt`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
   };
 
   /* Запуск тесту */
@@ -1062,6 +1211,24 @@ function App() {
             </div>
           )}
 
+          {/* Вимова: вибір теми (необов'язково) */}
+          {mode.id==='pronunciation'&&(
+            <div style={{width:'100%',maxWidth:440}}>
+              <label style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,display:'block',marginBottom:10}}>Тема тексту (необов'язково)</label>
+              <select value={pronTheme} onChange={e=>setPronTheme(e.target.value)}
+                style={{width:'100%',background:'rgba(255,255,255,0.08)',border:'2px solid rgba(255,255,255,0.16)',borderRadius:12,padding:'13px 15px',color:'#fff',fontSize:'1rem',outline:'none',cursor:'pointer'}}>
+                <option value="">🎲 Довільна тема</option>
+                {(SETTINGS_CONFIG.priorityThemes||[]).map(t=>(
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+              <p style={{marginTop:8,color:'#8892b0',fontSize:'0.82rem'}}>Текст буде на рівні {sessLevel} · ~40-60 слів</p>
+              <div style={{marginTop:10,background:'rgba(167,139,250,0.08)',border:'1px solid rgba(167,139,250,0.25)',borderRadius:10,padding:'10px 14px',color:'#c4b5fd',fontSize:'0.82rem',lineHeight:1.6}}>
+                💡 Потрібен Azure Speech ключ у налаштуваннях для оцінки вимови
+              </div>
+            </div>
+          )}
+
           {/* Аспекти тесту */}
           {mode.id==='test'&&(
             <div style={{width:'100%',maxWidth:440}}>
@@ -1094,7 +1261,7 @@ function App() {
             </div>
           )}
 
-          <button onClick={()=>{if(mode.id==='test'){if(selAsp.length>0)startTest(selAsp);}else{startSess();}}}
+          <button onClick={()=>{if(mode.id==='test'){if(selAsp.length>0)startTest(selAsp);}else if(mode.id==='pronunciation'){startPronunciation();}else{startSess();}}}
             disabled={mode.id==='test'&&selAsp.length===0}
             style={{background:mode.id==='test'&&selAsp.length===0?'rgba(255,255,255,0.1)':mode.color,border:'none',borderRadius:16,padding:'15px 0',color:'#fff',fontSize:'1rem',fontWeight:700,cursor:mode.id==='test'&&selAsp.length===0?'default':'pointer',width:'100%',maxWidth:440}}>
             Почати →
@@ -1451,6 +1618,213 @@ function App() {
       </div>
     </div>
   );
+
+  /* ── ВИМОВА ────────────────────────────────────────── */
+  if(screen==='pronunciation'){
+    const PRON_COLOR = '#a78bfa';
+
+    /* Допоміжні функції відображення */
+    const scoreColor = s => s >= 80 ? '#4ade80' : s >= 50 ? '#fbbf24' : '#f87171';
+    const verdictIcon = w => {
+      if (w.errorType !== 'None') return '✗';
+      if (w.accuracyScore >= 80) return '✓';
+      if (w.accuracyScore >= 50) return '!';
+      return '✗';
+    };
+    const verdictColor = w => {
+      if (w.errorType !== 'None' || w.accuracyScore < 50) return '#f87171';
+      if (w.accuracyScore < 80) return '#fbbf24';
+      return '#4ade80';
+    };
+
+    /* Спіннер */
+    const Spinner = ({text}) => (
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:18,padding:'48px 24px'}} role="status" aria-live="polite">
+        <div style={{display:'flex',gap:10}}>
+          {[0,1,2].map(n=><div key={n} style={{width:12,height:12,borderRadius:'50%',background:PRON_COLOR,animation:'dot 1.2s infinite',animationDelay:(n*.2)+'s'}}/>)}
+        </div>
+        <p style={{color:'#fff',fontWeight:700,fontSize:'1rem'}}>{text}</p>
+      </div>
+    );
+
+    /* Агрегатні бали */
+    const ScoreBar = ({label,value,color}) => (
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+        <span style={{color:'#cbd5e1',fontSize:'0.85rem',width:90,flexShrink:0}}>{label}</span>
+        <div style={{flex:1,height:7,background:'rgba(255,255,255,0.09)',borderRadius:99}} role="progressbar" aria-valuenow={value} aria-valuemax={100}>
+          <div style={{width:value+'%',height:'100%',background:color||scoreColor(value),borderRadius:99,transition:'width .5s ease'}}/>
+        </div>
+        <span style={{color:color||scoreColor(value),fontWeight:700,fontSize:'0.88rem',width:32,textAlign:'right'}}>{value}</span>
+      </div>
+    );
+
+    return (
+      <div style={{minHeight:'100vh',background:BG,display:'flex',flexDirection:'column'}}>
+        <Header onBack={()=>setScreen('home')} title={'🗣 Вимова · '+sessLevel}
+          badge={pronState==='done'?'✓ Звіт':pronState==='assessed'?'📊 Оцінено':undefined}
+          badgeColor={PRON_COLOR} techLogOn={tlOn}/>
+
+        <main style={{flex:1,overflowY:'auto',padding:'20px 16px 44px'}}>
+          <div className="pw" style={{display:'flex',flexDirection:'column',gap:20,maxWidth:680,margin:'0 auto'}}>
+
+            {/* ── IDLE: вибір джерела тексту ── */}
+            {pronState==='idle'&&(
+              <div style={{display:'flex',flexDirection:'column',gap:14}}>
+                <p style={{color:'#8892b0',fontSize:'0.75rem',textTransform:'uppercase',letterSpacing:'0.1em',fontWeight:700,marginBottom:4}}>Джерело тексту для читання</p>
+
+                {/* Кнопка: Генерувати */}
+                <button onClick={generatePronText}
+                  style={{display:'flex',alignItems:'center',gap:16,padding:'20px',borderRadius:18,border:'2px solid rgba(167,139,250,0.3)',background:'rgba(167,139,250,0.07)',cursor:'pointer',textAlign:'left',width:'100%',transition:'all .2s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,0.7)';e.currentTarget.style.background='rgba(167,139,250,0.14)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(167,139,250,0.3)';e.currentTarget.style.background='rgba(167,139,250,0.07)';}}>
+                  <span style={{fontSize:'1.8rem'}}>🤖</span>
+                  <div style={{flex:1}}>
+                    <div style={{color:'#fff',fontWeight:700,fontSize:'0.95rem'}}>Генерувати текст</div>
+                    <div style={{color:'#8892b0',fontSize:'0.82rem',marginTop:2}}>AI створить текст рівня {sessLevel}{pronTheme?' · тема: '+pronTheme:' · довільна тема'}</div>
+                  </div>
+                  <span style={{color:'#8892b0',fontSize:'1.2rem'}}>›</span>
+                </button>
+
+                {/* Кнопка: Завантажити */}
+                <label style={{display:'flex',alignItems:'center',gap:16,padding:'20px',borderRadius:18,border:'2px dashed rgba(255,255,255,0.18)',background:'rgba(255,255,255,0.04)',cursor:'pointer',textAlign:'left',width:'100%',transition:'all .2s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.4)';}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.18)';}}>
+                  <span style={{fontSize:'1.8rem'}}>📄</span>
+                  <div style={{flex:1}}>
+                    <div style={{color:'#fff',fontWeight:700,fontSize:'0.95rem'}}>Завантажити текст</div>
+                    <div style={{color:'#8892b0',fontSize:'0.82rem',marginTop:2}}>Свій .txt файл — будь-який текст для практики</div>
+                  </div>
+                  <span style={{color:'#8892b0',fontSize:'1.2rem'}}>📂</span>
+                  <input type="file" accept=".txt" onChange={handlePronFile} style={{display:'none'}}/>
+                </label>
+              </div>
+            )}
+
+            {/* ── GENERATING: спіннер ── */}
+            {pronState==='generating'&&<Spinner text="Генерую текст…"/>}
+
+            {/* ── TEXT_READY / RECORDING: показуємо текст ── */}
+            {(pronState==='text_ready'||pronState==='recording')&&pronText&&(
+              <div style={{display:'flex',flexDirection:'column',gap:16}}>
+                <div style={{background:'rgba(255,255,255,0.05)',border:'2px solid rgba(167,139,250,0.3)',borderRadius:18,padding:'22px 20px'}}>
+                  <p style={{color:'#8892b0',fontSize:'0.72rem',textTransform:'uppercase',letterSpacing:'.08em',fontWeight:700,marginBottom:10}}>Текст для читання</p>
+                  <p style={{color:'#e8edf3',fontSize:'1.15rem',lineHeight:1.85,letterSpacing:'.01em'}}>{pronText}</p>
+                </div>
+
+                {pronState==='text_ready'&&(
+                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                    <p style={{color:'#8892b0',fontSize:'0.88rem',textAlign:'center'}}>Прочитайте текст вголос чітко та природньо</p>
+                    <button onClick={startPronAssessment}
+                      style={{background:PRON_COLOR,border:'none',borderRadius:16,padding:'16px',color:'#fff',fontSize:'1rem',fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:10}}>
+                      🎙 Почати запис
+                    </button>
+                    <button onClick={()=>{setPronText('');setPronState('idle');}}
+                      style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:12,padding:'12px',color:'#8892b0',fontSize:'0.9rem',cursor:'pointer'}}>
+                      ← Змінити текст
+                    </button>
+                  </div>
+                )}
+
+                {pronState==='recording'&&(
+                  <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:14}} role="status" aria-live="polite">
+                    <div style={{width:60,height:60,borderRadius:'50%',background:'rgba(167,139,250,0.15)',border:'3px solid '+PRON_COLOR,display:'flex',alignItems:'center',justifyContent:'center',animation:'pronPulse 1.5s ease-in-out infinite'}}>
+                      <span style={{fontSize:'1.6rem'}}>🎙</span>
+                    </div>
+                    <p style={{color:PRON_COLOR,fontWeight:700,fontSize:'1rem'}}>Слухаю… говоріть текст</p>
+                    <p style={{color:'#8892b0',fontSize:'0.85rem'}}>Читайте весь текст від початку до кінця</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── ASSESSED: таблиця + агрегатні бали ── */}
+            {(pronState==='assessed'||pronState==='analyzing'||pronState==='done')&&pronScores&&(
+              <div style={{display:'flex',flexDirection:'column',gap:18}}>
+
+                {/* Агрегатні бали */}
+                <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,padding:'18px 20px'}}>
+                  <p style={{color:'#fff',fontWeight:700,fontSize:'0.9rem',marginBottom:14}}>📊 Загальні результати</p>
+                  <ScoreBar label="Точність"   value={pronScores.accuracyScore}/>
+                  <ScoreBar label="Плавність"  value={pronScores.fluencyScore}/>
+                  <ScoreBar label="Повнота"    value={pronScores.completenessScore}/>
+                  <ScoreBar label="Просодія"   value={pronScores.prosodyScore}/>
+                  <ScoreBar label="Загальний"  value={pronScores.pronunciationScore} color={PRON_COLOR}/>
+                  {pronScores.transcript&&<p style={{marginTop:12,color:'#8892b0',fontSize:'0.82rem'}}>📝 Розпізнано: <span style={{color:'#cbd5e1'}}>{pronScores.transcript}</span></p>}
+                </div>
+
+                {/* Таблиця слів */}
+                {pronWords.length>0&&(
+                  <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,overflow:'hidden'}}>
+                    <p style={{color:'#fff',fontWeight:700,fontSize:'0.9rem',padding:'14px 18px',borderBottom:'1px solid rgba(255,255,255,0.07)'}}>🔤 Пословна оцінка</p>
+                    <div style={{overflowX:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',fontSize:'0.88rem'}}>
+                        <thead>
+                          <tr style={{background:'rgba(255,255,255,0.05)'}}>
+                            {['Слово','Точність','Тип помилки','Фонеми','✓'].map(h=>(
+                              <th key={h} style={{padding:'10px 14px',color:'#8892b0',fontWeight:700,textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pronWords.map((w,i)=>(
+                            <tr key={i} style={{borderBottom:'1px solid rgba(255,255,255,0.05)',background:i%2===0?'transparent':'rgba(255,255,255,0.02)'}}>
+                              <td style={{padding:'9px 14px',color:'#e8edf3',fontWeight:600}}>{w.word}</td>
+                              <td style={{padding:'9px 14px',color:scoreColor(w.accuracyScore),fontWeight:700}}>{w.accuracyScore}%</td>
+                              <td style={{padding:'9px 14px',color:w.errorType==='None'?'#4b5563':'#fbbf24',fontSize:'0.82rem'}}>{w.errorType}</td>
+                              <td style={{padding:'9px 14px',color:'#f87171',fontSize:'0.8rem',maxWidth:140}}>{(w.badPhonemes&&w.badPhonemes.length)?w.badPhonemes.join(', '):'—'}</td>
+                              <td style={{padding:'9px 14px',color:verdictColor(w),fontWeight:800,fontSize:'1rem',textAlign:'center'}}>{verdictIcon(w)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Кнопки після оцінки */}
+                {pronState==='assessed'&&(
+                  <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                    <button onClick={analyzePronunciation}
+                      style={{background:PRON_COLOR,border:'none',borderRadius:14,padding:'15px',color:'#fff',fontWeight:700,cursor:'pointer',fontSize:'1rem',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                      📊 Аналізувати вимову
+                    </button>
+                    <button onClick={()=>{setPronState('text_ready');setPronWords([]);setPronScores(null);}}
+                      style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:12,padding:'12px',color:'#8892b0',fontSize:'0.9rem',cursor:'pointer'}}>
+                      🔄 Записати знову
+                    </button>
+                  </div>
+                )}
+
+                {/* Аналіз: спіннер */}
+                {pronState==='analyzing'&&<Spinner text="Аналізую результати…"/>}
+
+                {/* Звіт */}
+                {pronState==='done'&&pronReport&&(
+                  <div style={{display:'flex',flexDirection:'column',gap:14}}>
+                    <div style={{background:'rgba(167,139,250,0.07)',border:'2px solid rgba(167,139,250,0.25)',borderRadius:16,padding:'20px'}}>
+                      <p style={{color:PRON_COLOR,fontWeight:700,fontSize:'0.9rem',marginBottom:12}}>🤖 Аналіз AI</p>
+                      <div style={{color:'#cbd5e1',fontSize:'0.95rem',lineHeight:1.75,whiteSpace:'pre-wrap'}}>{pronReport}</div>
+                    </div>
+                    <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                      <button onClick={downloadPronReport}
+                        style={{flex:1,minWidth:140,background:'rgba(74,222,128,0.15)',border:'2px solid rgba(74,222,128,0.4)',borderRadius:12,padding:'13px',color:'#4ade80',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
+                        ⬇ Завантажити звіт
+                      </button>
+                      <button onClick={()=>{setPronState('idle');setPronText('');setPronWords([]);setPronScores(null);setPronReport('');}}
+                        style={{flex:1,minWidth:140,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:12,padding:'13px',color:'#8892b0',fontWeight:700,cursor:'pointer',fontSize:'0.9rem'}}>
+                        🔄 Нова вправа
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
+        </main>
+      </div>
+    );
+  }
 }
 
 (async () => {
