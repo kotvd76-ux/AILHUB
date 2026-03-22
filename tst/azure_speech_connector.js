@@ -470,6 +470,95 @@ class AzureSpeechConnector {
         });
     }
 
+    // ── Pronunciation Assessment з пословними та фонемними даними ───────────
+    // Аналогічний assessPronunciation(), але повертає також масив слів з фонемами.
+    // words: [{word, accuracyScore, errorType, badPhonemes}]
+    // badPhonemes — фонеми з AccuracyScore < 65
+    static async assessPronunciationWithWords(key, region, targetPhrase, lang) {
+        if (!window.SpeechSDK) {
+            await new Promise((resolve, reject) => {
+                const s   = document.createElement('script');
+                s.src     = AzureSpeechConnector.SDK_CDN;
+                s.onload  = resolve;
+                s.onerror = () => reject(new Error('Azure Speech SDK не завантажився'));
+                document.head.appendChild(s);
+            });
+        }
+        const SDK = window.SpeechSDK;
+
+        const speechConfig = SDK.SpeechConfig.fromSubscription(key, region);
+        speechConfig.speechRecognitionLanguage = lang;
+
+        const pronunciationConfig = new SDK.PronunciationAssessmentConfig(
+            targetPhrase,
+            SDK.PronunciationAssessmentGradingSystem.HundredMark,
+            SDK.PronunciationAssessmentGranularity.Phoneme,
+            true  // enableMiscue
+        );
+
+        const audioConfig = SDK.AudioConfig.fromDefaultMicrophoneInput();
+        const recognizer  = new SDK.SpeechRecognizer(speechConfig, audioConfig);
+        pronunciationConfig.applyTo(recognizer);
+
+        return new Promise((resolve, reject) => {
+            recognizer.recognizeOnceAsync(result => {
+                try {
+                    if (result.reason !== SDK.ResultReason.RecognizedSpeech) {
+                        if (result.reason === SDK.ResultReason.Canceled) {
+                            const details = SDK.CancellationDetails.fromResult(result);
+                            const msg = details.errorDetails || String(details.reason);
+                            if (typeof window.addLog === 'function')
+                                window.addLog(`[Azure/assessWords] Canceled: ${msg}`, 'error');
+                            reject(new Error('Azure: ' + msg));
+                            return;
+                        }
+                        const detail = result.errorDetails || result.reason;
+                        if (typeof window.addLog === 'function')
+                            window.addLog(`[Azure/assessWords] NoMatch reason=${result.reason} details=${detail}`, 'warn');
+                        resolve({
+                            transcript: '', words: [],
+                            accuracyScore: 0, fluencyScore: 0,
+                            completenessScore: 0, prosodyScore: 0, pronunciationScore: 0,
+                        });
+                        return;
+                    }
+                    const pa = SDK.PronunciationAssessmentResult.fromResult(result);
+                    const words = (pa.detailedResults || [])
+                        .flatMap(r => r.Words || [])
+                        .map(w => {
+                            const phonemes = w.Phonemes || [];
+                            const badPhonemes = phonemes
+                                .filter(p => (p.AccuracyScore || 0) < 65)
+                                .map(p => p.Phoneme || '')
+                                .filter(Boolean);
+                            return {
+                                word:          w.Word        || '',
+                                accuracyScore: Math.round(w.AccuracyScore || 0),
+                                errorType:     w.ErrorType   || 'None',
+                                badPhonemes,
+                            };
+                        });
+                    resolve({
+                        transcript:         result.text || '',
+                        accuracyScore:      Math.round(pa.accuracyScore      || 0),
+                        fluencyScore:       Math.round(pa.fluencyScore       || 0),
+                        completenessScore:  Math.round(pa.completenessScore  || 0),
+                        prosodyScore:       Math.round(pa.prosodyScore       || 0),
+                        pronunciationScore: Math.round(pa.pronunciationScore || 0),
+                        words,
+                    });
+                } catch (e) {
+                    reject(e);
+                } finally {
+                    recognizer.close();
+                }
+            }, err => {
+                recognizer.close();
+                reject(new Error(String(err)));
+            });
+        });
+    }
+
     // ── Cancelable варіант assessPronunciation ────────────────────────────────
     // Повертає { promise, recognizer } щоб клієнт міг закрити recognizer достроково.
     static assessPronunciationCancelable(key, region, targetPhrase, lang) {

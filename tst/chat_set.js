@@ -54,6 +54,14 @@ const CHAT_CONFIG = {
         close: '---КІНЕЦЬ---',
     },
 
+    // ── Вимова: параметри вправи ──────────────────────────────
+    pronunciation: {
+        maxTokensGenerate: 250,   // генерація тексту для читання
+        maxTokensAnalysis: 700,   // LLM-аналіз пословної таблиці
+        badPhonemeThreshold: 65,  // поріг для позначення проблемних фонем
+        passThreshold: 70,        // Overall score ≥ 70 → 'pass'
+    },
+
     // ── Native Audio Dialog (Gemini Live API) ─────────────────
     // Активується тоглом у setup-екрані режиму «Вільне спілкування»
     // тільки якщо provider === 'google'
@@ -270,6 +278,38 @@ const CHAT_PROMPTS = {
                 `Model answer: ${modelAnswer}\nLearner answer: "${answer}"\n` +
                 `Respond ONLY JSON: {"score":0-10,"correct":true|false,"feedback":"${L.uiLanguage} 1-2 sentences","error_analysis":"brief"}`;
         },
+    },
+
+    // ── Вимова: генерація тексту для читання ─────────────────
+    // @param lang {string}  — цільова мова, напр. 'Spanish'
+    // @param level {string} — рівень CEFR, напр. 'B1'
+    // @param theme {string} — тема, напр. 'Travel'
+    pronGenerate: (lang, level, theme) =>
+        `Generate a ${level} level reading passage in ${lang} about "${theme}". ` +
+        `40-60 words. Natural, flowing text suitable for pronunciation practice. ` +
+        `Return only the text, no instructions, no title, no labels.`,
+
+    // ── Вимова: LLM-аналіз пословної таблиці ─────────────────
+    // @param lang      {string} — цільова мова
+    // @param nativeLang {string} — мова інтерфейсу (мова звіту)
+    // @param text      {string} — оригінальний текст
+    // @param tableStr  {string} — таблиця у вигляді рядків
+    // @param scores    {object} — агрегатні бали
+    pronAnalyze: (lang, nativeLang, text, tableStr, scores) => {
+        const scoresLine = `Accuracy=${scores.accuracyScore} Fluency=${scores.fluencyScore} ` +
+            `Completeness=${scores.completenessScore} Prosody=${scores.prosodyScore} Overall=${scores.pronunciationScore}`;
+        return (
+            `You are a ${lang} pronunciation coach. Analyze the student's pronunciation results.\n\n` +
+            `Reference text:\n"${text}"\n\n` +
+            `Word-by-word assessment (Word | Accuracy% | Error Type | Bad Phonemes):\n${tableStr}\n\n` +
+            `Aggregate scores: ${scoresLine}\n\n` +
+            `Write a structured report in ${nativeLang}:\n` +
+            `1. Overall performance (1-2 sentences with score context)\n` +
+            `2. Specific problem sounds and phonemes found\n` +
+            `3. Error patterns (omissions, mispronunciations, insertions if any)\n` +
+            `4. Top 3 actionable recommendations with examples\n\n` +
+            `Be encouraging but specific. Keep it concise (200-300 words).`
+        );
     },
 
     // ── Тест: фінальний звіт CEFR ─────────────────────────────
