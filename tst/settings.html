@@ -2022,23 +2022,6 @@
                 badge.style.display = 'inline-flex';
                 if (sectionLogging)   sectionLogging.style.display   = '';
                 if (sectionLanguages) sectionLanguages.style.display = '';
-                // Автоматично розгортаємо секції логування та мов
-                const logBody  = $('logging-body');
-                const logChevr = $('logging-chevron');
-                const logBtn   = $('logging-toggle');
-                if (logBody && logBody.style.display === 'none') {
-                    logBody.style.display = 'block';
-                    if (logChevr) logChevr.style.transform = 'rotate(180deg)';
-                    if (logBtn) logBtn.setAttribute('aria-expanded', 'true');
-                }
-                const langBody  = $('languages-body');
-                const langChevr = $('languages-chevron');
-                const langBtn   = $('languages-toggle');
-                if (langBody && langBody.style.display === 'none') {
-                    langBody.style.display = 'block';
-                    if (langChevr) langChevr.style.transform = 'rotate(180deg)';
-                    if (langBtn) langBtn.setAttribute('aria-expanded', 'true');
-                }
             } else {
                 badge.style.display = 'none';
                 if (sectionLogging)   sectionLogging.style.display   = 'none';
