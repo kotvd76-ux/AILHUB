@@ -686,6 +686,33 @@
 
         <main role="main">
 
+            <!-- ── Глобальне: Сервіс режим ───────────────────── -->
+            <div class="service-mode-row" id="service-mode-card" style="margin-bottom:1.25rem;padding:.875rem 1rem;border-radius:.875rem;background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.18);">
+                <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.35rem;">
+                        <label id="lbl-service-mode" class="field-label"
+                               style="color:#f59e0b;margin-bottom:0;cursor:pointer;"
+                               for="toggle-service-mode">
+                            <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true" style="margin-right:.35rem;opacity:.85"></i>
+                            Сервіс режим
+                        </label>
+                        <span id="service-badge" class="service-badge" style="display:none;">
+                            <i class="fa-solid fa-circle" style="font-size:.45rem"></i> АКТИВНИЙ
+                        </span>
+                    </div>
+                    <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:0;line-height:1.45;">
+                        Вмикає по всьому хабу: кнопки «Діагностика» в усіх модулях,
+                        кнопку «Сервіс» на головній сторінці, перемикачі мови та логування.
+                    </p>
+                </div>
+                <label class="switcher" aria-label="Увімкнути сервіс режим" style="flex-shrink:0">
+                    <input type="checkbox" id="toggle-service-mode"
+                           onchange="onToggleServiceMode(this.checked)">
+                    <span class="switcher__track" aria-hidden="true"></span>
+                    <span class="switcher__thumb" aria-hidden="true"></span>
+                </label>
+            </div>
+
             <!-- ── Таб-бар ────────────────────────────────────── -->
             <nav class="tab-bar" role="tablist" aria-label="Тип ШІ генерації">
                 <button class="tab-btn active" role="tab" id="tab-t2t"
@@ -1159,32 +1186,6 @@
                     </div>
                 </div>
 
-                <!-- Сервіс режим -->
-                <div class="service-mode-row" id="service-mode-card" style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.08);">
-                    <div style="flex:1">
-                        <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.4rem;">
-                            <label id="lbl-service-mode" class="field-label"
-                                   style="color:#f59e0b;margin-bottom:0;cursor:pointer;"
-                                   for="toggle-service-mode">
-                                <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true" style="margin-right:.35rem;opacity:.85"></i>
-                                Сервіс режим
-                            </label>
-                            <span id="service-badge" class="service-badge" style="display:none;">
-                                <i class="fa-solid fa-circle" style="font-size:.45rem"></i> АКТИВНИЙ
-                            </span>
-                        </div>
-                        <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:0;line-height:1.45;">
-                            Вмикає по всьому хабу: кнопки «Діагностика» в усіх модулях,
-                            кнопку «Сервіс» на головній сторінці, перемикачі мови та логування.
-                        </p>
-                    </div>
-                    <label class="switcher" aria-label="Увімкнути сервіс режим" style="flex-shrink:0">
-                        <input type="checkbox" id="toggle-service-mode"
-                               onchange="onToggleServiceMode(this.checked)">
-                        <span class="switcher__track" aria-hidden="true"></span>
-                        <span class="switcher__thumb" aria-hidden="true"></span>
-                    </label>
-                </div>
             </section>
 
             </div><!-- /space-y-5 t2s -->

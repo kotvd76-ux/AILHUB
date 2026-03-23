@@ -1155,6 +1155,12 @@ window.addEventListener('DOMContentLoaded', () => {
   // Спроба автоматично підтягнути сьогоднішні логи з сервера
   loadServerLogs('study');
   loadServerLogs('tech');
+  // Hash-навігація: service.html#techlogs, #studylogs тощо
+  const _hash = window.location.hash.slice(1);
+  if (_hash) {
+    const _el = document.querySelector(`.sb-item[onclick*="'${_hash}'"]`);
+    if (_el) sw(_hash, _el);
+  }
 });
 </script>
 </body>
