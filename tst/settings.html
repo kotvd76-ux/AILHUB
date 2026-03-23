@@ -243,31 +243,57 @@
             margin-top: .625rem;
         }
 
-        /* ── Кнопки рівня вправ ──────────────────────────── */
-        .level-btn {
-            flex: 1 1 0;
-            min-width: 2.75rem;
-            padding: .45rem .5rem;
-            border-radius: .625rem;
-            border: 1.5px solid rgba(249,115,22,.25);
-            background: rgba(249,115,22,.07);
-            color: rgba(255,255,255,.55);
-            font-family: inherit;
-            font-size: .8125rem;
-            font-weight: 600;
+        /* ── Слайдер рівня вправ ─────────────────────────── */
+        .level-slider-wrap { position: relative; padding-bottom: 1.5rem; }
+        .level-slider-wrap input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(249,115,22,.2);
+            outline: none;
             cursor: pointer;
-            text-align: center;
-            transition: background .15s, color .15s, border-color .15s;
-            -webkit-tap-highlight-color: transparent;
         }
-        .level-btn:hover {
-            border-color: rgba(249,115,22,.55);
-            color: rgba(255,255,255,.85);
-        }
-        .level-btn.active {
+        .level-slider-wrap input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
             background: var(--orange);
-            border-color: var(--orange);
-            color: #fff;
+            border: 3px solid #1e2130;
+            cursor: pointer;
+            box-shadow: 0 0 0 2px rgba(249,115,22,.35);
+            transition: box-shadow .15s;
+        }
+        .level-slider-wrap input[type=range]::-moz-range-thumb {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: var(--orange);
+            border: 3px solid #1e2130;
+            cursor: pointer;
+            box-shadow: 0 0 0 2px rgba(249,115,22,.35);
+        }
+        .level-slider-wrap input[type=range]:focus::-webkit-slider-thumb {
+            box-shadow: 0 0 0 4px rgba(249,115,22,.45);
+        }
+        .level-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: .45rem;
+        }
+        .level-slider-labels span {
+            font-size: .75rem;
+            font-weight: 600;
+            color: rgba(255,255,255,.38);
+            cursor: pointer;
+            transition: color .15s;
+            user-select: none;
+        }
+        .level-slider-labels span.active {
+            color: var(--orange);
         }
 
         .speed-val {
@@ -567,11 +593,11 @@
         .tab-btn {
             flex: 0 0 auto;
             min-height: 2.625rem;
-            padding: .45rem .875rem;
+            padding: .4rem .5rem;
             border-radius: .75rem;
-            font-size: .75rem;
+            font-size: .7rem;
             font-weight: 800;
-            letter-spacing: .07em;
+            letter-spacing: .04em;
             border: 2px solid transparent;
             color: rgba(255,255,255,.42);
             background: transparent;
@@ -1300,6 +1326,24 @@
             <!-- ══ Глобальні налаштування (завжди видимі) ══════ -->
             <div class="space-y-5" style="margin-top:1.25rem;">
 
+            <!-- ── Рівень складності вправ ────────────────────── -->
+            <section class="card" aria-labelledby="lbl-exercise-level">
+                <label id="lbl-exercise-level" class="field-label">
+                    <i class="fa-solid fa-graduation-cap" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
+                    Рівень складності вправ
+                </label>
+                <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:.25rem 0 .85rem;line-height:1.45;">
+                    Глобальний CEFR-рівень — використовується у всіх вправах за замовчуванням.
+                </p>
+                <div class="level-slider-wrap">
+                    <input type="range" id="exercise-level-slider"
+                           min="0" max="4" step="1" value="2"
+                           aria-labelledby="lbl-exercise-level"
+                           aria-valuetext="B1">
+                    <div class="level-slider-labels" id="exercise-level-labels"></div>
+                </div>
+            </section>
+
             <!-- ── Логування ──────────────────────────────────── -->
             <section class="card" id="section-logging" aria-labelledby="lbl-logging">
 
@@ -1414,20 +1458,6 @@
                 </div>
 
                 </div><!-- /logging-body -->
-            </section>
-
-            <!-- ── Рівень складності вправ ────────────────────── -->
-            <section class="card" aria-labelledby="lbl-exercise-level">
-                <label id="lbl-exercise-level" class="field-label">
-                    <i class="fa-solid fa-graduation-cap" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
-                    Рівень складності вправ
-                </label>
-                <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:.25rem 0 .85rem;line-height:1.45;">
-                    Глобальний CEFR-рівень — використовується у всіх вправах за замовчуванням.
-                </p>
-                <div id="exercise-level-btns" role="group" aria-labelledby="lbl-exercise-level"
-                     style="display:flex;gap:.4rem;flex-wrap:wrap;">
-                </div>
             </section>
 
             <!-- ── Мови навчання (collapsible) ───────────────── -->
@@ -1556,38 +1586,43 @@
         };
 
         // ── Рівень складності вправ ────────────────────────────
+        const EXERCISE_LEVELS = ['A2', 'B1', 'B2', 'C1', 'C2'];
+
         function initExerciseLevelBtns() {
-            const SK_local  = SETTINGS_CONFIG.storageKeys;
-            const saved     = (localStorage.getItem(SK_local.exerciseLevel) || 'B1').toUpperCase();
-            const levels    = typeof getExerciseLevels === 'function' ? getExerciseLevels() : [
-                { value: 'A1', label: 'A1' }, { value: 'A2', label: 'A2' },
-                { value: 'B1', label: 'B1' }, { value: 'B2', label: 'B2' }, { value: 'C1', label: 'C1' }
-            ];
-            const container = document.getElementById('exercise-level-btns');
-            if (!container) return;
-            container.innerHTML = '';
-            levels.forEach(({ value }) => {
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'level-btn' + (value === saved ? ' active' : '');
-                btn.textContent = value;
-                btn.setAttribute('aria-pressed', value === saved ? 'true' : 'false');
-                btn.setAttribute('aria-label', 'Рівень ' + value);
-                btn.addEventListener('click', () => {
-                    container.querySelectorAll('.level-btn').forEach(b => {
-                        b.classList.remove('active');
-                        b.setAttribute('aria-pressed', 'false');
-                    });
-                    btn.classList.add('active');
-                    btn.setAttribute('aria-pressed', 'true');
+            const SK_local = SETTINGS_CONFIG.storageKeys;
+            const saved    = (localStorage.getItem(SK_local.exerciseLevel) || 'B1').toUpperCase();
+            const idx      = Math.max(0, EXERCISE_LEVELS.indexOf(saved));
+            const slider   = document.getElementById('exercise-level-slider');
+            const labelsEl = document.getElementById('exercise-level-labels');
+            if (!slider || !labelsEl) return;
+
+            slider.max   = EXERCISE_LEVELS.length - 1;
+            slider.value = idx;
+            slider.setAttribute('aria-valuetext', EXERCISE_LEVELS[idx]);
+
+            labelsEl.innerHTML = '';
+            EXERCISE_LEVELS.forEach((lv, i) => {
+                const span = document.createElement('span');
+                span.textContent = lv;
+                if (i === idx) span.classList.add('active');
+                span.addEventListener('click', () => {
+                    slider.value = i;
+                    slider.dispatchEvent(new Event('input'));
                 });
-                container.appendChild(btn);
+                labelsEl.appendChild(span);
+            });
+
+            slider.addEventListener('input', () => {
+                const i = +slider.value;
+                slider.setAttribute('aria-valuetext', EXERCISE_LEVELS[i]);
+                labelsEl.querySelectorAll('span').forEach((s, j) =>
+                    s.classList.toggle('active', j === i));
             });
         }
 
         function getSelectedExerciseLevel() {
-            const active = document.querySelector('#exercise-level-btns .level-btn.active');
-            return active ? active.textContent.trim() : 'B1';
+            const slider = document.getElementById('exercise-level-slider');
+            return slider ? EXERCISE_LEVELS[+slider.value] ?? 'B1' : 'B1';
         }
 
         // ── Скорочення ─────────────────────────────────────────
