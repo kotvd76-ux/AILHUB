@@ -1754,13 +1754,13 @@ async function speakSpanish(text, onEnd) {
   window.speechSynthesis.cancel();
   if (_ttsAudio) { _ttsAudio.pause(); _ttsAudio = null; }
 
-  if (mode === 'online' && apiKey) {
+  if (mode === 'online' && (apiKey || serverHasKey('openai'))) {
     // ── Online: OpenAI TTS ──────────────────────
     try {
-      const res = await fetch('https://api.openai.com/v1/audio/speech', {
-        method:  'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ model: 'tts-1', input: text, voice, speed })
+      const { url: _ttsu, headers: _ttsh } = await aiRequest('openai', '/v1/audio/speech', apiKey);
+      const res = await fetch(_ttsu, {
+        method: 'POST', headers: _ttsh,
+        body:   JSON.stringify({ model: 'tts-1', input: text, voice, speed })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const url = URL.createObjectURL(await res.blob());
@@ -2840,7 +2840,7 @@ async function goGenerateEx(exNum, retryCount = 0) {
                  : (localStorage.getItem(`sp_api_key_${provider}`) || '');
 
   // Pollinations може працювати без ключа (анонімний доступ)
-  if (!apiKey && provider !== 'pollinations') {
+  if (!apiKey && !serverHasKey(provider) && provider !== 'pollinations') {
     showCardError(exIdx, 'API-ключ не вказано.<br>Перейдіть до <b>Налаштувань</b> та введіть ключ.');
     return;
   }
@@ -2916,9 +2916,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
 
     _verbsAiRequestCount++;
     if (provider === 'openai') {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      const { url: _u, headers: _h } = await aiRequest('openai', '/v1/chat/completions', apiKey);
+      const res = await fetch(_u, {
+        method: 'POST', headers: _h,
         body: JSON.stringify({
           model, temperature: 0.9,
           response_format: { type: 'json_object' },
@@ -2932,9 +2932,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
       responseText = _dOai.choices[0].message.content;
 
     } else if (provider === 'google') {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const { url: _u, headers: _h } = await aiRequest('google', `/v1beta/models/${model}:generateContent`, apiKey);
+      const res = await fetch(_u,
+        { method: 'POST', headers: _h,
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: { responseMimeType: 'application/json', temperature: 1.0 }
@@ -2948,13 +2948,9 @@ async function goGenerateEx(exNum, retryCount = 0) {
       responseText = _dGem.candidates[0].content.parts[0].text;
 
     } else if (provider === 'anthropic') {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': apiKey, 'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
+      const { url: _u, headers: _h } = await aiRequest('anthropic', '/v1/messages', apiKey);
+      const res = await fetch(_u, {
+        method: 'POST', headers: _h,
         body: JSON.stringify({
           model, max_tokens: 2000, temperature: 0.8,
           messages: [{ role: 'user', content: prompt }]

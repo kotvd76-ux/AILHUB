@@ -423,6 +423,57 @@ function isKeyHardcoded(provider) {
     return !!(HARDCODED_KEYS[provider] || '').trim();
 }
 
+// ── Серверний AI проксі ──────────────────────────────────────
+// Ключі на роутері: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY (env-змінні).
+// Фронтенд викликає /ai/<provider>/... — ключ ніколи не залишає сервер.
+
+let _srvKeys = null;
+let _srvKeysPromise = null;
+
+function _initSrvKeys() {
+    if (_srvKeysPromise) return _srvKeysPromise;
+    _srvKeysPromise = fetch(window.location.origin + '/ai/keys', { cache: 'no-store' })
+        .then(r => r.ok ? r.json() : {})
+        .catch(() => ({}))
+        .then(keys => { _srvKeys = keys; return keys; });
+    return _srvKeysPromise;
+}
+_initSrvKeys(); // запускаємо одразу при завантаженні
+
+// Синхронна перевірка (якщо /ai/keys вже завантажено).
+// Використовувати у простих if-умовах для перевірки наявності ключа.
+function serverHasKey(provider) {
+    return !!(_srvKeys && _srvKeys[provider]);
+}
+
+// Повертає Promise<{url, headers}> готових для fetch-запиту до AI API.
+// Якщо сервер має ключ — проксі (ключ не передається в браузер).
+// Інакше — прямий запит з ключем з localStorage/HARDCODED_KEYS.
+async function aiRequest(provider, path, keyFallback) {
+    const keys = _srvKeys !== null ? _srvKeys : await _initSrvKeys();
+    if (keys[provider]) {
+        return {
+            url:     window.location.origin + '/ai/' + provider + path,
+            headers: { 'Content-Type': 'application/json' },
+        };
+    }
+    const BASE = {
+        openai:    'https://api.openai.com',
+        anthropic: 'https://api.anthropic.com',
+        google:    'https://generativelanguage.googleapis.com',
+    };
+    const headers = { 'Content-Type': 'application/json' };
+    if (provider === 'openai') {
+        headers['Authorization'] = 'Bearer ' + keyFallback;
+    } else if (provider === 'anthropic') {
+        headers['x-api-key']       = keyFallback;
+        headers['anthropic-version'] = '2023-06-01';
+        headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
+    const keyParam = provider === 'google' ? '?key=' + keyFallback : '';
+    return { url: BASE[provider] + path + keyParam, headers };
+}
+
 
 // ── Глобальна функція отримання пріоритетних тем ─────────────
 // Повертає єдиний список тем для всіх вправ з безпечним fallback.
@@ -685,12 +736,13 @@ async function speakText(text, forceLang, { onLoading, onStart, onEnd, speedOver
         }
 
         // OpenAI TTS
-        if (provider === 'openai' && apiKey) {
+        if (provider === 'openai' && (apiKey || serverHasKey('openai'))) {
             if (onLoading) onLoading();
             try {
-                const r = await fetch('https://api.openai.com/v1/audio/speech', {
+                const { url: _ttsu, headers: _ttsh } = await aiRequest('openai', '/v1/audio/speech', apiKey);
+                const r = await fetch(_ttsu, {
                     method: 'POST',
-                    headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+                    headers: _ttsh,
                     body: JSON.stringify({ model: 'tts-1', voice, input: clean, speed: Math.max(0.25, Math.min(4, speed)) })
                 });
                 if (r.ok) {

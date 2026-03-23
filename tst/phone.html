@@ -643,7 +643,7 @@
             _phoneAiRequestCount++;
             const activeKey = config.apiKeys[config.provider];
             // Pollinations може працювати без ключа (анонімний доступ)
-            if (!activeKey && config.provider !== 'pollinations') throw new Error('Немає API ключа для: ' + config.provider);
+            if (!activeKey && !serverHasKey(config.provider) && config.provider !== 'pollinations') throw new Error('Немає API ключа для: ' + config.provider);
 
             // Витягуємо системний промпт
             const sys = customSystem || (messages[0]?.role === 'system' ? messages[0].content : '');
@@ -651,9 +651,9 @@
 
             if (config.provider === 'openai') {
                 const allMsgs = sys ? [{ role: 'system', content: sys }, ...chatMsgs] : chatMsgs;
-                const res = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${activeKey}` },
+                const { url: _u, headers: _h } = await aiRequest('openai', '/v1/chat/completions', activeKey);
+                const res = await fetch(_u, {
+                    method: 'POST', headers: _h,
                     body: JSON.stringify({ model: config.model, messages: allMsgs })
                 });
                 const _dOai = await res.json();
@@ -662,12 +662,12 @@
                 return _dOai.choices[0].message.content;
 
             } else if (config.provider === 'google') {
-                const url = `https://generativelanguage.googleapis.com/v1beta/models/${config.model}:generateContent?key=${activeKey}`;
+                const { url: _u, headers: _h } = await aiRequest('google', `/v1beta/models/${config.model}:generateContent`, activeKey);
                 const payload = {
                     contents: [{ parts: [{ text: chatMsgs.map(m => `${m.role}: ${m.content}`).join('\n') }] }],
                 };
                 if (sys) payload.systemInstruction = { parts: [{ text: sys }] };
-                const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const res = await fetch(_u, { method: 'POST', headers: _h, body: JSON.stringify(payload) });
                 const _dGem = await res.json();
                 if (!res.ok) { addLog(`Gemini error: ${JSON.stringify(_dGem)}`, 'error'); throw new Error('API error'); }
                 Logger.tech('phone', 'ai_response', 'AI response received', { provider: 'google', model: config.model, tokens_in: _dGem.usageMetadata?.promptTokenCount ?? null, tokens_out: _dGem.usageMetadata?.candidatesTokenCount ?? null, request_num: _phoneAiRequestCount });
@@ -676,9 +676,9 @@
             } else if (config.provider === 'anthropic') {
                 const payload = { model: config.model, max_tokens: 1024, messages: chatMsgs };
                 if (sys) payload.system = sys;
-                const res = await fetch('https://api.anthropic.com/v1/messages', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'x-api-key': activeKey, 'anthropic-version': '2023-06-01' },
+                const { url: _u, headers: _h } = await aiRequest('anthropic', '/v1/messages', activeKey);
+                const res = await fetch(_u, {
+                    method: 'POST', headers: _h,
                     body: JSON.stringify(payload)
                 });
                 const _dAnth = await res.json();
@@ -1333,14 +1333,14 @@
                 const googleKey = (localStorage.getItem('sp_api_key_google_img') || '').trim()
                                || ((typeof getApiKey === 'function') ? getApiKey('google') : (localStorage.getItem('sp_api_key_google') || ''));
                 addLog('Генерація зображення. Модель: gemini-2.5-flash-image (Nano Banana)');
-                if (!googleKey) {
+                if (!googleKey && !serverHasKey('google')) {
                     addLog('Google API ключ не вказано в налаштуваннях → Pollinations', 'error');
                 } else {
                     try {
-                        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${googleKey}`;
-                        const res = await fetchWithTimeout(geminiUrl, {
+                        const { url: _gu, headers: _gh } = await aiRequest('google', '/v1beta/models/gemini-2.5-flash-image:generateContent', googleKey);
+                        const res = await fetchWithTimeout(_gu, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: _gh,
                             body: JSON.stringify({
                                 contents: [{ parts: [{ text: prompt }] }],
                                 generationConfig: { responseModalities: ['IMAGE'] }
@@ -1418,13 +1418,13 @@
                 const oaiKey = (localStorage.getItem(SK.apiKeyOpenaiImg || 'sp_api_key_openai_img') || '').trim()
                             || getConfig().apiKeys.openai;
                 addLog(`Генерація зображення. Модель: ${oaiModel}`);
-                if (!oaiKey) {
+                if (!oaiKey && !serverHasKey('openai')) {
                     addLog('OpenAI ключ не вказано → Pollinations', 'error');
                 } else {
                     try {
-                        const res = await fetch('https://api.openai.com/v1/images/generations', {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${oaiKey}`, 'Content-Type': 'application/json' },
+                        const { url: _ou, headers: _oh } = await aiRequest('openai', '/v1/images/generations', oaiKey);
+                        const res = await fetch(_ou, {
+                            method: 'POST', headers: _oh,
                             body: JSON.stringify({ model: oaiModel, prompt, n: 1, size: '1024x1024' })
                         });
                         if (!res.ok) { const err = await res.text(); throw new Error(`OpenAI ${res.status}: ${err.slice(0,200)}`); }
@@ -1449,15 +1449,14 @@
                 const gKey = (localStorage.getItem(SK2.apiKeyGoogleImg || 'sp_api_key_google_img') || '').trim()
                            || getConfig().apiKeys.google;
                 addLog(`Генерація зображення. Модель: ${gModel}`);
-                if (!gKey) {
+                if (!gKey && !serverHasKey('google')) {
                     addLog('Google API ключ не вказано → Pollinations', 'error');
                 } else {
                     try {
-                        const res = await fetch(
-                            `https://generativelanguage.googleapis.com/v1beta/models/${gModel}:generateImages?key=${gKey}`,
-                            {
+                        const { url: _giu, headers: _gih } = await aiRequest('google', `/v1beta/models/${gModel}:generateImages`, gKey);
+                        const res = await fetch(_giu, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers: _gih,
                                 body: JSON.stringify({ prompt: { text: prompt }, imageCount: 1 })
                             }
                         );

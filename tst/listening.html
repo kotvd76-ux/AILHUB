@@ -906,7 +906,7 @@
         log(`seed: «${seed}» | theme: ${theme} | ${level}`, 'info');
 
         log(`Провайдер: ${provider} | Модель: ${model} | Ключ: ${apiKey ? apiKey.slice(0,8)+'…' : provider === 'pollinations' ? '(анонімний)' : '❌ ВІДСУТНІЙ'}`);
-        if (!apiKey && provider !== 'pollinations') throw new Error(`API-ключ для провайдера "${provider}" не вказано у налаштуваннях.`);
+        if (!apiKey && !serverHasKey(provider) && provider !== 'pollinations') throw new Error(`API-ключ для провайдера "${provider}" не вказано у налаштуваннях.`);
 
         // ── Мовна конфігурація ──────────────────────────────
         const LC = (typeof getLangConfig === 'function') ? getLangConfig() : {
@@ -958,16 +958,13 @@ Create ${LISTEN_CONFIG.tasksPerSession} unique tasks.
         const headers = { 'Content-Type': 'application/json' };
 
         if (provider === 'google') {
-            url  = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            ({ url, headers } = await aiRequest('google', `/v1beta/models/${model}:generateContent`, apiKey));
             body = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: 'application/json' } };
         } else if (provider === 'openai') {
-            url  = 'https://api.openai.com/v1/chat/completions';
-            headers['Authorization'] = `Bearer ${apiKey}`;
+            ({ url, headers } = await aiRequest('openai', '/v1/chat/completions', apiKey));
             body = { model, messages: [{ role: 'system', content: prompt }], response_format: { type: 'json_object' } };
         } else if (provider === 'anthropic') {
-            url  = 'https://api.anthropic.com/v1/messages';
-            headers['x-api-key']         = apiKey;
-            headers['anthropic-version'] = '2023-06-01';
+            ({ url, headers } = await aiRequest('anthropic', '/v1/messages', apiKey));
             body = { model, max_tokens: 2000, messages: [{ role: 'user', content: prompt + ' Output ONLY JSON content.' }] };
         } else if (provider === 'pollinations') {
             url  = 'https://gen.pollinations.ai/v1/chat/completions';

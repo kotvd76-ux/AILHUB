@@ -171,14 +171,14 @@ const callAI = async (messages, system, maxTokens) => {
   maxTokens = maxTokens || 1000;
   const { provider, model, apiKey } = getSettings();
   // Pollinations може працювати без ключа (анонімний доступ)
-  if (!apiKey && provider !== 'pollinations') throw new Error('API ключ для ' + provider + ' не вказано. Відкрийте налаштування.');
+  if (!apiKey && !serverHasKey(provider) && provider !== 'pollinations') throw new Error('API ключ для ' + provider + ' не вказано. Відкрийте налаштування.');
   _chatAiRequestCount++;
   addLog('callAI ' + provider + '/' + model, 'info');
 
   if (provider === 'openai') {
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'Authorization':'Bearer '+apiKey },
+    const { url: _u, headers: _h } = await aiRequest('openai', '/v1/chat/completions', apiKey);
+    const r = await fetch(_u, {
+      method: 'POST', headers: _h,
       body: JSON.stringify({ model, max_tokens:maxTokens, messages:[{role:'system',content:system},...messages] }),
     });
     const d = await r.json();
@@ -187,9 +187,9 @@ const callAI = async (messages, system, maxTokens) => {
     return (d.choices||[])[0]?.message?.content || '';
   }
   if (provider === 'google') {
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+apiKey, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json' },
+    const { url: _u, headers: _h } = await aiRequest('google', `/v1beta/models/${model}:generateContent`, apiKey);
+    const r = await fetch(_u, {
+      method: 'POST', headers: _h,
       body: JSON.stringify({
         system_instruction: { parts:[{text:system}] },
         contents: messages.map(m=>({ role:m.role==='assistant'?'model':'user', parts:[{text:m.content}] })),
@@ -220,12 +220,9 @@ const callAI = async (messages, system, maxTokens) => {
     return (d.choices || [])[0]?.message?.content || '';
   }
   /* Anthropic */
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type':'application/json', 'x-api-key':apiKey,
-      'anthropic-version':'2023-06-01', 'anthropic-dangerous-direct-browser-access':'true',
-    },
+  const { url: _u, headers: _h } = await aiRequest('anthropic', '/v1/messages', apiKey);
+  const r = await fetch(_u, {
+    method: 'POST', headers: _h,
     body: JSON.stringify({ model, max_tokens:maxTokens, system, messages }),
   });
   const d = await r.json();

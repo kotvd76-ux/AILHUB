@@ -5,6 +5,7 @@ import sys
 import json
 from datetime import datetime
 import urllib.request
+import urllib.parse
 
 # ── Параметри з командного рядка ─────────────────────────────
 # Використання: python3 main.py <user_dir> <port>
@@ -326,6 +327,134 @@ def hf_proxy():
         response.content_type = 'application/json'
         return json.dumps({"error": str(e)})
 
+
+# ── AI проксі ────────────────────────────────────────────────
+# Ключі задаються env-змінними на роутері:
+#   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY
+# Фронтенд викликає /ai/<provider>/... замість прямих API URL.
+
+_AI_CFG = {
+    'openai':    {'base': 'https://api.openai.com',                         'env': 'OPENAI_API_KEY'},
+    'anthropic': {'base': 'https://api.anthropic.com',                      'env': 'ANTHROPIC_API_KEY'},
+    'google':    {'base': 'https://generativelanguage.googleapis.com',       'env': 'GOOGLE_API_KEY'},
+}
+
+@route('/ai/keys', method=['GET', 'OPTIONS'])
+def ai_keys():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    if request.method == 'OPTIONS':
+        return ''
+    result = {p: bool(os.environ.get(cfg['env'], '').strip()) for p, cfg in _AI_CFG.items()}
+    response.content_type = 'application/json'
+    return json.dumps(result)
+
+@route('/ai/<provider>/<path:path>', method=['POST', 'GET', 'OPTIONS'])
+def ai_proxy(provider, path):
+    response.set_header('Access-Control-Allow-Origin', '*')
+    response.set_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+    response.set_header('Access-Control-Allow-Headers', 'Content-Type, anthropic-version')
+
+    if request.method == 'OPTIONS':
+        return ''
+
+    if provider not in _AI_CFG:
+        response.status = 400
+        response.content_type = 'application/json'
+        return json.dumps({'error': f'unknown provider: {provider}'})
+
+    cfg     = _AI_CFG[provider]
+    api_key = os.environ.get(cfg['env'], '').strip()
+    if not api_key:
+        response.status = 503
+        response.content_type = 'application/json'
+        return json.dumps({'error': f"{cfg['env']} not set on server"})
+
+    # URL: зберігаємо query-параметри крім key= (Google); ключ додаємо серверний
+    qs = dict(urllib.parse.parse_qsl(request.query_string))
+    qs.pop('key', None)
+    if provider == 'google':
+        qs['key'] = api_key
+
+    target = cfg['base'] + '/' + path
+    if qs:
+        target += '?' + urllib.parse.urlencode(qs)
+
+    # Headers
+    hdrs = {'Content-Type': request.content_type or 'application/json'}
+    if provider == 'openai':
+        hdrs['Authorization'] = f'Bearer {api_key}'
+    elif provider == 'anthropic':
+        hdrs['x-api-key']          = api_key
+        hdrs['anthropic-version']  = '2023-06-01'
+
+    body = request.body.read() or None
+
+    try:
+        req = urllib.request.Request(target, data=body, headers=hdrs, method=request.method)
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            raw = resp.read()
+            ct  = resp.headers.get('Content-Type', 'application/json')
+        response.content_type = ct
+        return raw
+
+    except urllib.error.HTTPError as e:
+        response.status = e.code
+        response.content_type = 'application/json'
+        try:
+            err_body = e.read().decode('utf-8', errors='replace')
+        except Exception:
+            err_body = str(e)
+        return json.dumps({'error': err_body})
+
+    except Exception as e:
+        response.status = 500
+        response.content_type = 'application/json'
+        return json.dumps({'error': str(e)})
+
+# ── Статус логів (/logs/status) ───────────────────────────────
+@route('/logs/status', method=['GET', 'OPTIONS'])
+def logs_status():
+    response.set_header('Access-Control-Allow-Origin', '*')
+    if request.method == 'OPTIONS':
+        return ''
+
+    result = {
+        'user_dir':         USER_DIR,
+        'port':             PORT,
+        'log_dir':          LOG_DIR,
+        'log_dir_exists':   os.path.isdir(LOG_DIR),
+        'log_dir_writable': os.access(LOG_DIR, os.W_OK),
+        'logtypes':         {},
+    }
+
+    for logtype in ('tech', 'study', 'audio'):
+        folder = os.path.join(LOG_DIR, logtype + ('log' if logtype != 'audio' else ''))
+        entry  = {
+            'path':     folder,
+            'exists':   os.path.isdir(folder),
+            'writable': os.access(folder, os.W_OK) if os.path.isdir(folder) else False,
+            'files':    [],
+        }
+        if os.path.isdir(folder):
+            ext   = '.txt' if logtype != 'audio' else '.webm'
+            files = sorted([f for f in os.listdir(folder) if f.endswith(ext)], reverse=True)[:5]
+            for fname in files:
+                fpath = os.path.join(folder, fname)
+                try:
+                    sz = os.path.getsize(fpath)
+                    mt = datetime.fromtimestamp(os.path.getmtime(fpath)).strftime('%Y-%m-%d %H:%M:%S')
+                    lines = 0
+                    if logtype != 'audio':
+                        with open(fpath, 'r', encoding='utf-8', errors='replace') as f:
+                            lines = sum(1 for _ in f)
+                    entry['files'].append({'name': fname, 'size_bytes': sz, 'lines': lines, 'modified': mt})
+                except Exception as ex:
+                    entry['files'].append({'name': fname, 'error': str(ex)})
+        result['logtypes'][logtype] = entry
+
+    response.content_type = 'application/json'
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 # ── Статичні файли (має бути ОСТАННІМ роутом) ─────────────────
 @route('/<filename:path>')
