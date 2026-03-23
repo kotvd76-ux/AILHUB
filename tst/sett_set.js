@@ -268,6 +268,9 @@ const SETTINGS_CONFIG = {
         voice:        'sp_voice',
         voiceNative:  'sp_voice_native',
 
+        // ── Рівень складності вправ ────────────────────────
+        exerciseLevel: 'sp_exercise_level',  // CEFR-рівень: 'A1'|'A2'|'B1'|'B2'|'C1', дефолт: 'B1'
+
         // ── Мови ───────────────────────────────────────────
         targetLang:  'sp_target_lang',   // id мови навчання, дефолт: 'es'
         nativeLang:  'sp_native_lang',   // id рідної мови,   дефолт: 'uk'
@@ -803,6 +806,11 @@ function getDefaultExerciseLevel(allowedLevels = ['A1', 'A2', 'B1', 'B2', 'C1'])
     const valid = Array.isArray(allowedLevels) && allowedLevels.length
         ? allowedLevels
         : ['A1', 'A2', 'B1', 'B2', 'C1'];
+
+    // Спочатку перевіряємо глобальне налаштування з localStorage (налаштування)
+    const savedKey = SETTINGS_CONFIG?.storageKeys?.exerciseLevel || 'sp_exercise_level';
+    const saved = String(localStorage.getItem(savedKey) || '').trim().toUpperCase();
+    if (saved && valid.includes(saved)) return saved;
 
     const configured = String(SETTINGS_CONFIG?.defaultExerciseLevel || '').trim().toUpperCase();
     if (valid.includes(configured)) return configured;
