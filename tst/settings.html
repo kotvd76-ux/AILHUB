@@ -243,6 +243,33 @@
             margin-top: .625rem;
         }
 
+        /* ── Кнопки рівня вправ ──────────────────────────── */
+        .level-btn {
+            flex: 1 1 0;
+            min-width: 2.75rem;
+            padding: .45rem .5rem;
+            border-radius: .625rem;
+            border: 1.5px solid rgba(249,115,22,.25);
+            background: rgba(249,115,22,.07);
+            color: rgba(255,255,255,.55);
+            font-family: inherit;
+            font-size: .8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: background .15s, color .15s, border-color .15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .level-btn:hover {
+            border-color: rgba(249,115,22,.55);
+            color: rgba(255,255,255,.85);
+        }
+        .level-btn.active {
+            background: var(--orange);
+            border-color: var(--orange);
+            color: #fff;
+        }
+
         .speed-val {
             font-size: 1.375rem;
             font-weight: 700;
@@ -1389,6 +1416,20 @@
                 </div><!-- /logging-body -->
             </section>
 
+            <!-- ── Рівень складності вправ ────────────────────── -->
+            <section class="card" aria-labelledby="lbl-exercise-level">
+                <label id="lbl-exercise-level" class="field-label">
+                    <i class="fa-solid fa-graduation-cap" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
+                    Рівень складності вправ
+                </label>
+                <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:.25rem 0 .85rem;line-height:1.45;">
+                    Глобальний CEFR-рівень — використовується у всіх вправах за замовчуванням.
+                </p>
+                <div id="exercise-level-btns" role="group" aria-labelledby="lbl-exercise-level"
+                     style="display:flex;gap:.4rem;flex-wrap:wrap;">
+                </div>
+            </section>
+
             <!-- ── Мови навчання (collapsible) ───────────────── -->
             <section class="card" id="section-languages" aria-labelledby="lbl-languages">
 
@@ -1514,6 +1555,41 @@
             btn.setAttribute('aria-expanded', String(!isOpen));
         };
 
+        // ── Рівень складності вправ ────────────────────────────
+        function initExerciseLevelBtns() {
+            const SK_local  = SETTINGS_CONFIG.storageKeys;
+            const saved     = (localStorage.getItem(SK_local.exerciseLevel) || 'B1').toUpperCase();
+            const levels    = typeof getExerciseLevels === 'function' ? getExerciseLevels() : [
+                { value: 'A1', label: 'A1' }, { value: 'A2', label: 'A2' },
+                { value: 'B1', label: 'B1' }, { value: 'B2', label: 'B2' }, { value: 'C1', label: 'C1' }
+            ];
+            const container = document.getElementById('exercise-level-btns');
+            if (!container) return;
+            container.innerHTML = '';
+            levels.forEach(({ value }) => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'level-btn' + (value === saved ? ' active' : '');
+                btn.textContent = value;
+                btn.setAttribute('aria-pressed', value === saved ? 'true' : 'false');
+                btn.setAttribute('aria-label', 'Рівень ' + value);
+                btn.addEventListener('click', () => {
+                    container.querySelectorAll('.level-btn').forEach(b => {
+                        b.classList.remove('active');
+                        b.setAttribute('aria-pressed', 'false');
+                    });
+                    btn.classList.add('active');
+                    btn.setAttribute('aria-pressed', 'true');
+                });
+                container.appendChild(btn);
+            });
+        }
+
+        function getSelectedExerciseLevel() {
+            const active = document.querySelector('#exercise-level-btns .level-btn.active');
+            return active ? active.textContent.trim() : 'B1';
+        }
+
         // ── Скорочення ─────────────────────────────────────────
         const $ = id => document.getElementById(id);
         const SK = SETTINGS_CONFIG.storageKeys;
@@ -1599,6 +1675,7 @@
             checkKeyPresence();
             initLoggingSection();
             initServiceMode();
+            initExerciseLevelBtns();
 
             // Відновлюємо активну вкладку
             const savedTab = localStorage.getItem('sp_active_tab') || 't2t';
@@ -1945,23 +2022,6 @@
                 badge.style.display = 'inline-flex';
                 if (sectionLogging)   sectionLogging.style.display   = '';
                 if (sectionLanguages) sectionLanguages.style.display = '';
-                // Автоматично розгортаємо секції логування та мов
-                const logBody  = $('logging-body');
-                const logChevr = $('logging-chevron');
-                const logBtn   = $('logging-toggle');
-                if (logBody && logBody.style.display === 'none') {
-                    logBody.style.display = 'block';
-                    if (logChevr) logChevr.style.transform = 'rotate(180deg)';
-                    if (logBtn) logBtn.setAttribute('aria-expanded', 'true');
-                }
-                const langBody  = $('languages-body');
-                const langChevr = $('languages-chevron');
-                const langBtn   = $('languages-toggle');
-                if (langBody && langBody.style.display === 'none') {
-                    langBody.style.display = 'block';
-                    if (langChevr) langChevr.style.transform = 'rotate(180deg)';
-                    if (langBtn) langBtn.setAttribute('aria-expanded', 'true');
-                }
             } else {
                 badge.style.display = 'none';
                 if (sectionLogging)   sectionLogging.style.display   = 'none';
@@ -2060,6 +2120,9 @@
             set(SK.ttsProvider, currentTtsProvider);
             set(SK.ttsMode,     currentTtsProvider === 'offline' ? 'offline' : 'online'); // legacy compat
             set(SK.voice,       currentVoice);
+
+            // Рівень складності вправ
+            set(SK.exerciseLevel, getSelectedExerciseLevel());
 
             // Мови (зберігаються також одразу через onLangChange, але дублюємо для надійності)
             set(SK.targetLang,  $('target-lang').value);
