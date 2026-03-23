@@ -1326,6 +1326,24 @@
             <!-- ══ Глобальні налаштування (завжди видимі) ══════ -->
             <div class="space-y-5" style="margin-top:1.25rem;">
 
+            <!-- ── Рівень складності вправ ────────────────────── -->
+            <section class="card" aria-labelledby="lbl-exercise-level">
+                <label id="lbl-exercise-level" class="field-label">
+                    <i class="fa-solid fa-graduation-cap" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
+                    Рівень складності вправ
+                </label>
+                <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:.25rem 0 .85rem;line-height:1.45;">
+                    Глобальний CEFR-рівень — використовується у всіх вправах за замовчуванням.
+                </p>
+                <div class="level-slider-wrap">
+                    <input type="range" id="exercise-level-slider"
+                           min="0" max="4" step="1" value="2"
+                           aria-labelledby="lbl-exercise-level"
+                           aria-valuetext="B1">
+                    <div class="level-slider-labels" id="exercise-level-labels"></div>
+                </div>
+            </section>
+
             <!-- ── Логування ──────────────────────────────────── -->
             <section class="card" id="section-logging" aria-labelledby="lbl-logging">
 
@@ -1440,24 +1458,6 @@
                 </div>
 
                 </div><!-- /logging-body -->
-            </section>
-
-            <!-- ── Рівень складності вправ ────────────────────── -->
-            <section class="card" aria-labelledby="lbl-exercise-level">
-                <label id="lbl-exercise-level" class="field-label">
-                    <i class="fa-solid fa-graduation-cap" aria-hidden="true" style="margin-right:.4rem;opacity:.7"></i>
-                    Рівень складності вправ
-                </label>
-                <p style="font-size:.75rem;color:rgba(255,255,255,.38);margin:.25rem 0 .85rem;line-height:1.45;">
-                    Глобальний CEFR-рівень — використовується у всіх вправах за замовчуванням.
-                </p>
-                <div class="level-slider-wrap">
-                    <input type="range" id="exercise-level-slider"
-                           min="0" max="4" step="1" value="2"
-                           aria-labelledby="lbl-exercise-level"
-                           aria-valuetext="B1">
-                    <div class="level-slider-labels" id="exercise-level-labels"></div>
-                </div>
             </section>
 
             <!-- ── Мови навчання (collapsible) ───────────────── -->
